@@ -68,5 +68,6 @@ class Client(discord.Client):
 
 client = Client(intents=intents)
 
-client.run('MTUwNTU4OTU0NzY2NzU1NDMwNA.G5y4t9.7ceuY5csyxnk5Z_SZC_s-s384RNRoM8dRFHM_c')
+client.run(TOKEN)
+
  
