@@ -65,9 +65,11 @@ class Client(discord.Client):
                 f"Print: #{card['print']}\n"
                 f"{card['image']}"
             )
+import os
 
 client = Client(intents=intents)
 
+TOKEN = os.getenv("TOKEN")
 client.run(TOKEN)
 
  
