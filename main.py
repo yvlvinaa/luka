@@ -244,4 +244,4 @@ import os
 client = Client(intents=intents)
 
 TOKEN = os.getenv("TOKEN")
-client.run(TOKEN)HM_c")
+client.run(TOKEN)
