@@ -3,12 +3,128 @@ import random
 import time
 import asyncio
 import requests
+import tempfile
+import os
+
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 # Import your database and card assets
 from cards import cards
-from data import inventories, drop_cooldowns, claim_cooldowns
+from data import (
+    inventories,
+    drop_cooldowns,
+    claim_cooldowns,
+    card_prints
+)
+
+# =========================
+
+# PRINT SETTINGS
+
+# =========================
+
+PRINT_SETTINGS = {
+"common": {
+"print_x": 1000,
+"print_y": 335,
+"font_size": 85
+},
+
+"rare": {
+    "print_x": 355,
+    "print_y": 300,
+    "font_size": 85
+}
+
+}
+
+# Font (Fredoka SemiBold)
+
+PRINT_FONT = "Fredoka-SemiBold.ttf"
+
+# Text styling
+
+PRINT_FILL = "white"
+PRINT_STROKE_FILL = "black"
+PRINT_STROKE_WIDTH = 3
+
+def get_frame_type(card):
+# 1⭐, 2⭐, 3⭐ = common frame
+# 4⭐ = rare frame
+ return "rare" if card.get("stars", 1) == 4 else "common"
+
+def format_print(print_num):
+# #1 - #99
+ if print_num < 100:
+    return f"#{print_num}"
+
+# 100
+ if print_num == 100:
+    return "#100"
+
+# 101+
+ if print_num > 100:
+    return "L"
+
+def render_card_with_print(card, print_num):
+    frame_type = get_frame_type(card)
+    settings = PRINT_SETTINGS[frame_type]
+
+    response = requests.get(card["image"])
+    image = Image.open(BytesIO(response.content)).convert("RGBA")
+    image = image.resize((1536, 2048))
+
+    # ----- Bottom gradient shadow -----
+    gradient_height = 250
+
+    gradient = Image.new("L", (image.width, gradient_height), 0)
+
+    for y in range(gradient_height):
+        alpha = int(180 * (y / gradient_height))
+        for x in range(image.width):
+            gradient.putpixel((x, y), alpha)
+
+    shadow = Image.new("RGBA", (image.width, gradient_height), (0, 0, 0, 255))
+    shadow.putalpha(gradient)
+
+    image.paste(
+        shadow,
+        (0, image.height - gradient_height),
+        shadow
+    )
+
+    # Recreate draw object after applying the gradient
+    draw = ImageDraw.Draw(image)
+
+    font = ImageFont.truetype(
+        PRINT_FONT,
+        settings["font_size"]
+    )
+
+    print("SIZE:", image.size)
+    print("PRINT:", format_print(print_num))
+    print("X:", settings["print_x"])
+    print("Y:", settings["print_y"])
+    print("FONT:", settings["font_size"])
+
+    draw.text(
+        (settings["print_x"], settings["print_y"]),
+        format_print(print_num),
+        font=font,
+        fill=PRINT_FILL,
+        stroke_width=PRINT_STROKE_WIDTH,
+        stroke_fill=PRINT_STROKE_FILL
+    )
+
+    temp_file = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".png"
+    )
+
+    image.save(temp_file.name)
+
+    return temp_file.name
 
 # Initialize intents
 intents = discord.Intents.all()
@@ -46,9 +162,25 @@ def get_inventory(user_id):
     return inventories.setdefault(str(user_id), [])
 
 
+def peek_next_print(card_id):
+    """Returns the next print number without reserving it."""
+    return card_prints.get(card_id, 0) + 1
+
+
+def get_next_print(card_id):
+    """Actually assigns the next print number when a card is claimed."""
+    current = card_prints.get(card_id, 0) + 1
+    card_prints[card_id] = current
+    return current
+
+
 def add_card(user_id, card):
-    """Adds a card dictionary to a user's collection."""
-    get_inventory(user_id).append(card)
+    owned_card = {
+        "card": card,
+        "print": get_next_print(card["id"])
+    }
+
+    get_inventory(user_id).append(owned_card)
 
 
 def remove_card(user_id, index):
@@ -93,6 +225,29 @@ def combine_cards(url1, url2):
 
     path = "drop.png"
     combined.save(path)
+    return path
+
+
+def combine_cards_with_prints(card1, card2):
+    print1 = card_prints.get(card1["id"], 0) + 1
+    print2 = card_prints.get(card2["id"], 0) + 1
+
+    img1_path = render_card_with_print(card1, print1)
+    img2_path = render_card_with_print(card2, print2)
+
+    img1 = Image.open(img1_path).resize((400, 560), Image.Resampling.LANCZOS)
+    img2 = Image.open(img2_path).resize((400, 560), Image.Resampling.LANCZOS)
+
+    combined = Image.new("RGBA", (800, 560))
+    combined.paste(img1, (0, 0))
+    combined.paste(img2, (400, 0))
+
+    path = "drop.png"
+    combined.save(path)
+
+    os.remove(img1_path)
+    os.remove(img2_path)
+
     return path
 
 
@@ -174,11 +329,24 @@ class InventoryView(discord.ui.View):
             return embed
 
         text = ""
-        for i, card in enumerate(cards_page, start=start + 1):
+        for i, owned_card in enumerate(cards_page, start=start + 1):
+            card = owned_card["card"]
+
             name = card.get("name", "Unknown")
             star_val = card.get("stars", 1)
+            print_num = owned_card["print"]
+
+            name = card.get("name", "Unknown")
             series = card.get("series", "Unknown Series")
-            text += f"`{i:02d}` ✦ `⭐ {star_val}` **{name}** • *{series}*\n"
+            star_val = card.get("stars", 1)
+            print_num = owned_card["print"]
+
+            text += (
+                f"`{i:02d}` ✦ "
+                f"• `#{print_num}` "
+                f"• `⭐ {star_val}` "
+                f"• **{name}** • *{series}*\n"
+            )
 
         embed.description = text
         total_pages = (len(self.inventory) - 1) // CARDS_PER_PAGE + 1
@@ -261,38 +429,100 @@ class CharacterVersionView(discord.ui.View):
 
     def get_embed(self):
         card = self.versions[self.index]
+
         embed = discord.Embed(color=THEME_COLOR)
-        embed.set_author(name=f"{self.user.name}'s Search", icon_url=self.user.display_avatar.url)
-        
-        name = card.get("name", "Unknown")
-        series = card.get("series", "Unknown Series")
-        star_val = card.get("stars", 1)
+        embed.set_author(
+            name=f"{self.user.name}'s Search",
+            icon_url=self.user.display_avatar.url
+        )
 
         embed.description = (
-            f"## **{name}**\n"
-            f"✦ **Series:** **{series}**\n"
+            f"## **{card.get('name', 'Unknown')}**\n"
+            f"✦ **Series:** **{card.get('series', 'Unknown')}**\n"
             f"───\n"
-            f"✦ **Level:** **{stars(star_val)}**\n"
+            f"✦ **Level:** **{stars(card.get('stars', 1))}**\n"
         )
+
         embed.set_image(url=clean_url(card.get("image", "")))
         embed.set_footer(text=f"Version {self.index + 1}/{len(self.versions)}")
+
         return embed
 
     @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
     async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+            return await interaction.response.send_message(
+                "This isn't your search!",
+                ephemeral=True
+            )
+
         if self.index > 0:
             self.index -= 1
-        await interaction.response.edit_message(embed=self.get_embed(), view=self)
+
+        await interaction.response.edit_message(
+            embed=self.get_embed(),
+            view=self
+        )
+
+    @discord.ui.button(emoji="🔍", style=discord.ButtonStyle.secondary)
+    async def owners(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message(
+                "This isn't your search!",
+                ephemeral=True
+            )
+
+        card = self.versions[self.index]
+        owners_list = []
+
+        for owner_id, inventory in inventories.items():
+            for owned_card in inventory:
+                if owned_card["card"]["id"] == card["id"]:
+                    owners_list.append((owned_card["print"], owner_id))
+
+        owners_list.sort(key=lambda x: x[0])
+
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.title = f"{card['name']} - Owners"
+        embed.set_thumbnail(url=clean_url(card.get("image", "")))
+
+        if not owners_list:
+            embed.description = "Nobody owns this card yet."
+        else:
+            lines = []
+            guild = interaction.guild
+
+            for print_num, owner_id in owners_list:
+                member = guild.get_member(owner_id)
+
+                if member:
+                    lines.append(f"P{print_num}. {member.mention}")
+                else:
+                    lines.append(f"P{print_num}. User {owner_id}")
+
+            embed.description = "\n".join(lines)
+
+        await interaction.response.send_message(
+            embed=embed,
+            ephemeral=False
+        )
 
     @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+            return await interaction.response.send_message(
+                "This isn't your search!",
+                ephemeral=True
+            )
+
         if self.index < len(self.versions) - 1:
             self.index += 1
-        await interaction.response.edit_message(embed=self.get_embed(), view=self)
+
+        await interaction.response.edit_message(
+            embed=self.get_embed(),
+            view=self
+        )
+
 
 # =========================
 # 5. GIFT VIEW (UPDATED)
@@ -317,7 +547,7 @@ class GiftView(discord.ui.View):
             return await interaction.response.send_message("This card is no longer available to trade.", ephemeral=True)
 
         remove_card(self.from_id, self.card_index)
-        add_card(self.to_id, self.card)
+        get_inventory(self.to_id).append(self.card)
 
         await interaction.response.edit_message(
             content=f"🎉 {self.to_user.mention} accepted {self.from_user.mention}'s gift!",
@@ -369,7 +599,9 @@ class Client(discord.Client):
                 index = int(content_lower.split()[1]) - 1
                 if index < 0 or index >= len(inv):
                     raise IndexError
-                card = inv[index]
+                owned_card = inv[index]
+                card = owned_card["card"]
+                print_num = owned_card["print"]            
             except:
                 return await message.channel.send("Invalid card number.")
 
@@ -384,11 +616,28 @@ class Client(discord.Client):
                 f"✦ **Series:** **{series}**\n"
                 f"───\n"
                 f"✦ **Owner:** {message.author.mention}\n"
+                f"✦ **Print:** **{format_print(print_num)}**\n"
                 f"✦ **Level:** **{stars(star_val)}**\n"
             )
-            embed.set_image(url=clean_url(card.get("image", "")))
-            return await message.channel.send(embed=embed)
+            image_path = render_card_with_print(card, print_num)
 
+            file = discord.File(
+                image_path,
+                filename="card.png"
+            )
+
+            embed.set_image(
+                url="attachment://card.png"
+            )
+
+            await message.channel.send(
+                embed=embed,
+                file=file
+            )
+
+            os.remove(image_path)
+
+            return
         # =========================
         # LOOKUP COMMAND (lup <query>)
         # =========================
@@ -428,8 +677,15 @@ class Client(discord.Client):
                 view = CharacterVersionView(all_versions, message.author, user_id)
                 return await message.channel.send(embed=view.get_embed(), view=view)
 
-            # Handling standard name text queries
-            matched_cards = [card for card in cards if query in card.get("name", "").lower()]
+            # Handling standard name text queries            
+            matched_cards = [
+                card for card in cards
+                if (
+                   query in card.get("name", "").lower()
+                   or
+                   query in card.get("series", "").lower()
+                )
+            ]            
 
             if not matched_cards:
                 return await message.channel.send("No cards found.")
@@ -516,7 +772,12 @@ class Client(discord.Client):
             drop_cooldowns[user_id] = now
 
             loop = asyncio.get_event_loop()
-            image_path = await loop.run_in_executor(None, combine_cards, card1.get("image"), card2.get("image"))
+            image_path = await loop.run_in_executor(
+                None,
+                combine_cards_with_prints,
+                card1,
+                card2
+            )
 
             file = discord.File(image_path, filename="drop.png")
             view = CardView(card1, card2)
@@ -529,6 +790,7 @@ class Client(discord.Client):
             return
 
 
+# --- Run Bot Connection ---
 import os
 
 client = Client(intents=intents)
