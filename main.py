@@ -40,8 +40,10 @@ PRINT_SETTINGS = {
 }
 
 # Font (Fredoka SemiBold)
+import os
 
-PRINT_FONT = "Fredoka-SemiBold.ttf"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PRINT_FONT = os.path.join(BASE_DIR, "Fredoka-SemiBold.ttf")
 
 # Text styling
 
