@@ -4,7 +4,6 @@ import time
 import asyncio
 import requests
 import tempfile
-import os
 
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
