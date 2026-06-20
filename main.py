@@ -957,12 +957,18 @@ class Client(discord.Client):
         if content_lower.startswith(("ltrade ", "lt ")):
             target_user = None
 
-            if message.mentions:
+            # Check for reply first
+            if message.reference:
+                try:
+                    replied_msg = await message.channel.fetch_message(message.reference.message_id)
+                    if replied_msg and replied_msg.author:
+                        target_user = replied_msg.author
+                except:
+                    pass
+            
+            # Check for mentions if no reply
+            if not target_user and message.mentions:
                 target_user = message.mentions[0]
-            elif message.reference and message.reference.resolved:
-                replied_msg = message.reference.resolved
-                if replied_msg and replied_msg.author:
-                    target_user = replied_msg.author
 
             if not target_user:
                 return await message.channel.send(
