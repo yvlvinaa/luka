@@ -4,7 +4,6 @@ import time
 import asyncio
 import requests
 import tempfile
-import os
 
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
@@ -25,25 +24,23 @@ from data import (
 # =========================
 
 PRINT_SETTINGS = {
-"common": {
-"print_x": 1000,
-"print_y": 335,
-"font_size": 85
-},
+    "common": {
+        "print_x": 1000,
+        "print_y": 335,
+        "font_size": 85
+    },
 
-"rare": {
-    "print_x": 355,
-    "print_y": 300,
-    "font_size": 85
-}
+    "rare": {
+        "print_x": 355,
+        "print_y": 300,
+        "font_size": 85
+    }
 
 }
 
 # Font (Fredoka SemiBold)
-import os
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PRINT_FONT = os.path.join(BASE_DIR, "Fredoka-SemiBold.ttf")
+PRINT_FONT = "Fredoka-SemiBold.ttf"
 
 # Text styling
 
@@ -52,22 +49,22 @@ PRINT_STROKE_FILL = "black"
 PRINT_STROKE_WIDTH = 3
 
 def get_frame_type(card):
-# 1⭐, 2⭐, 3⭐ = common frame
-# 4⭐ = rare frame
- return "rare" if card.get("stars", 1) == 4 else "common"
+    # 1⭐, 2⭐, 3⭐ = common frame
+    # 4⭐ = rare frame
+    return "rare" if card.get("stars", 1) == 4 else "common"
 
 def format_print(print_num):
-# #1 - #99
- if print_num < 100:
-    return f"#{print_num}"
+    # #1 - #99
+    if print_num < 100:
+        return f"#{print_num}"
 
-# 100
- if print_num == 100:
-    return "#100"
+    # 100
+    if print_num == 100:
+        return "#100"
 
-# 101+
- if print_num > 100:
-    return "L"
+    # 101+
+    if print_num > 100:
+        return "L"
 
 def render_card_with_print(card, print_num):
     frame_type = get_frame_type(card)
@@ -116,7 +113,7 @@ def render_card_with_print(card, print_num):
         font=font,
         fill=PRINT_FILL,
         stroke_width=PRINT_STROKE_WIDTH,
-        stroke_fill=PRINT_STROKE_FILL
+        stroke_fill=PRINT_STROKE_FILL 
     )
 
     temp_file = tempfile.NamedTemporaryFile(
@@ -309,18 +306,25 @@ class CardView(discord.ui.View):
 
 
 # =========================
+
 # 2. INVENTORY VIEW
+
 # =========================
+
 class InventoryView(discord.ui.View):
-    def __init__(self, user, inventory):
+    def __init__(self, user, inventory, viewer_id=None):
         super().__init__(timeout=60)
-        self.user = user
-        self.inventory = inventory
+        self.user = user              # whose inventory is being viewed
+        self.inventory = inventory    # filtered or full inventory
+        self.viewer_id = viewer_id    # who opened the view
         self.page = 0
 
     def get_embed(self):
         embed = discord.Embed(color=THEME_COLOR)
-        embed.set_author(name=f"{self.user.name}'s Collection", icon_url=self.user.display_avatar.url)
+        embed.set_author(
+            name=f"{self.user.name}'s Collection",
+            icon_url=self.user.display_avatar.url
+        )
 
         start = self.page * CARDS_PER_PAGE
         end = start + CARDS_PER_PAGE
@@ -335,17 +339,13 @@ class InventoryView(discord.ui.View):
             card = owned_card["card"]
 
             name = card.get("name", "Unknown")
-            star_val = card.get("stars", 1)
-            print_num = owned_card["print"]
-
-            name = card.get("name", "Unknown")
             series = card.get("series", "Unknown Series")
             star_val = card.get("stars", 1)
             print_num = owned_card["print"]
 
             text += (
                 f"`{i:02d}` ✦ "
-                f"• `#{print_num}` "
+                f"• `{format_print(print_num)}` "
                 f"• `⭐ {star_val}` "
                 f"• **{name}** • *{series}*\n"
             )
@@ -357,16 +357,37 @@ class InventoryView(discord.ui.View):
 
     @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
     async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.viewer_id is not None and interaction.user.id != self.viewer_id:
+            return await interaction.response.send_message(
+                "This isn't your inventory view!",
+                ephemeral=True
+            )
+
         if self.page > 0:
             self.page -= 1
-        await interaction.response.edit_message(embed=self.get_embed(), view=self)
+
+        await interaction.response.edit_message(
+            embed=self.get_embed(),
+            view=self
+        )
 
     @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.viewer_id is not None and interaction.user.id != self.viewer_id:
+            return await interaction.response.send_message(
+                "This isn't your inventory view!",
+                ephemeral=True
+            )
+
         max_page = (len(self.inventory) - 1) // CARDS_PER_PAGE
         if self.page < max_page:
             self.page += 1
-        await interaction.response.edit_message(embed=self.get_embed(), view=self)
+
+        await interaction.response.edit_message(
+            embed=self.get_embed(),
+            view=self
+        )
+
 
 
 # =========================
@@ -419,8 +440,11 @@ class LookupListView(discord.ui.View):
 
 
 # =========================
+
 # 4. CHARACTER VERSION VIEW
+
 # =========================
+
 class CharacterVersionView(discord.ui.View):
     def __init__(self, versions, user, user_id):
         super().__init__(timeout=60)
@@ -497,12 +521,20 @@ class CharacterVersionView(discord.ui.View):
             for print_num, owner_id in owners_list:
                 member = guild.get_member(owner_id)
 
-                if member:
-                    lines.append(f"P{print_num}. {member.mention}")
-                else:
-                    lines.append(f"P{print_num}. User {owner_id}")
+                if member is None:
+                    try:
+                        member = await guild.fetch_member(owner_id)
+                    except:
+                        continue
 
-            embed.description = "\n".join(lines)
+                lines.append(
+                    f"`{format_print(print_num)}.` {member.mention}"
+                )
+
+            if lines:
+                embed.description = "\n".join(lines)
+            else:
+                embed.description = "Nobody owns this card yet."
 
         await interaction.response.send_message(
             embed=embed,
@@ -525,46 +557,117 @@ class CharacterVersionView(discord.ui.View):
             view=self
         )
 
+# =========================
+
+# 5. GIFT VIEW
 
 # =========================
-# 5. GIFT VIEW (UPDATED)
-# =========================
+
 class GiftView(discord.ui.View):
-    def __init__(self, from_user, to_user, card, from_id, to_id, card_index):
+    def __init__(self, from_user, to_user, owned_card, from_id, to_id, card_index):
         super().__init__(timeout=60)
         self.from_user = from_user
         self.to_user = to_user
-        self.card = card
+        self.owned_card = owned_card
+        self.card = owned_card["card"]
+        self.print_num = owned_card["print"]
         self.from_id = from_id
         self.to_id = to_id
         self.card_index = card_index
 
+    def build_embed(self, owner_user, status_text=None):
+        card = self.card
+        star_val = card.get("stars", 1)
+
+        embed = discord.Embed(color=THEME_COLOR)
+
+        if status_text:
+            embed.set_author(
+                name=status_text,
+                icon_url=owner_user.display_avatar.url
+            )
+        else:
+            embed.set_author(
+                name=f"{self.from_user.name} is gifting {self.to_user.name} a card!",
+                icon_url=self.from_user.display_avatar.url
+            )
+
+        embed.description = (
+            f"## **{card.get('name', 'Unknown Character')}**\n"
+            f"✦ **Series:** **{card.get('series', 'Unknown Series')}**\n"
+            f"───\n"
+            f"✦ **Owner:** {owner_user.mention}\n"
+            f"✦ **Print:** **{format_print(self.print_num)}**\n"
+            f"✦ **Level:** **{stars(star_val)}**\n"
+        )
+
+        image_path = render_card_with_print(card, self.print_num)
+        file = discord.File(image_path, filename="card.png")
+        embed.set_image(url="attachment://card.png")
+        os.remove(image_path)
+        return embed, file
+
     @discord.ui.button(emoji="✅", style=discord.ButtonStyle.success)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.to_id:
-            return await interaction.response.send_message("Not your gift.", ephemeral=True)
+            return await interaction.response.send_message(
+                "Not your gift.",
+                ephemeral=True
+            )
 
         giver_inv = get_inventory(self.from_id)
-        if self.card_index >= len(giver_inv) or giver_inv[self.card_index] != self.card:
-            return await interaction.response.send_message("This card is no longer available to trade.", ephemeral=True)
 
-        remove_card(self.from_id, self.card_index)
-        get_inventory(self.to_id).append(self.card)
+        if self.card_index >= len(giver_inv):
+            return await interaction.response.send_message(
+                "This card is no longer available to trade.",
+                ephemeral=True
+            )
+
+        current_owned_card = giver_inv[self.card_index]
+
+        if (
+            current_owned_card["card"]["id"] != self.card["id"]
+            or current_owned_card["print"] != self.print_num
+        ):
+            return await interaction.response.send_message(
+                "This card is no longer available to trade.",
+                ephemeral=True
+            )
+
+        moved_card = remove_card(self.from_id, self.card_index)
+        get_inventory(self.to_id).append(moved_card)
+
+        accepted_embed, file = self.build_embed(
+            self.to_user,
+            status_text=f"{self.to_user.name} accepted {self.from_user.name}'s gift!"
+        )
 
         await interaction.response.edit_message(
-            content=f"🎉 {self.to_user.mention} accepted {self.from_user.mention}'s gift!",
+            content=None,
+            embed=accepted_embed,
             view=None
         )
 
     @discord.ui.button(emoji="❌", style=discord.ButtonStyle.danger)
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.to_id:
-            return await interaction.response.send_message("Not your gift.", ephemeral=True)
+            return await interaction.response.send_message(
+                "Not your gift.",
+                ephemeral=True
+            )
+
+        declined_embed, file = self.build_embed(
+            self.from_user,
+            status_text=f"{self.to_user.name} declined {self.from_user.name}'s gift!"
+        )
 
         await interaction.response.edit_message(
-            content=f"❌ {self.to_user.mention} declined {self.from_user.mention}'s gift!",
+            content=None,
+            embed=declined_embed,
             view=None
         )
+
+
 
 
 # =========================
@@ -588,9 +691,128 @@ class Client(discord.Client):
         # =========================
         # INVENTORY COMMAND (lc)
         # =========================
-        if content_lower == "lc":
-            view = InventoryView(message.author, inv)
-            await message.channel.send(embed=view.get_embed(), view=view)
+        if content_lower.startswith("lc"):
+            target_user = message.author
+            args = content[2:].strip()
+
+            # -------------------------
+            # Reply to someone's message -> view their inventory
+            # -------------------------
+            if message.reference and message.reference.resolved:
+                replied_msg = message.reference.resolved
+                if replied_msg and replied_msg.author:
+                    target_user = replied_msg.author
+
+            # -------------------------
+            # lc <user_id>
+            # lc <user_id> s: <series>
+            # lc <user_id> c: <character>
+            # -------------------------
+            elif args:
+                first_part = args.split()[0]
+                if first_part.isdigit():
+                    member = message.guild.get_member(int(first_part))
+                    if member:
+                        target_user = member
+                        args = args[len(first_part):].strip()
+
+            target_inv = get_inventory(target_user.id)
+            filtered_inventory = target_inv[:]
+
+            args_lower = args.lower()
+
+            # -------------------------
+            # Series filter
+            # lc s: honkai
+            # lc 123456789 s: honkai
+            # -------------------------
+            if "s:" in args_lower:
+                series_query = args_lower.split("s:", 1)[1].strip()
+                filtered_inventory = [
+                    owned_card for owned_card in filtered_inventory
+                    if series_query in owned_card["card"].get("series", "").lower()
+                ]
+
+            # -------------------------
+            # Character filter
+            # lc c: sunday
+            # lc 123456789 c: sunday
+            # -------------------------
+            elif "c:" in args_lower:
+                char_query = args_lower.split("c:", 1)[1].strip()
+                filtered_inventory = [
+                    owned_card for owned_card in filtered_inventory
+                    if char_query in owned_card["card"].get("name", "").lower()
+                ]
+
+            view = InventoryView(
+                target_user,
+                filtered_inventory,
+                viewer_id=message.author.id
+            )
+
+            await message.channel.send(
+                embed=view.get_embed(),
+                view=view
+            )
+            return
+
+
+        # =========================
+        # GIFT COMMAND (lg / lgift)
+        # =========================
+        if content_lower.startswith(("lgift ", "lg ")):
+            if not message.mentions:
+                return await message.channel.send(
+                    "Usage: `lgift @user <inventory number>`"
+                )
+
+            target_user = message.mentions[0]
+
+            if target_user.bot:
+                return await message.channel.send(
+                    "You can't gift cards to bots."
+                )
+
+            if target_user.id == message.author.id:
+                return await message.channel.send(
+                    "You can't gift cards to yourself."
+                )
+
+            parts = message.content.split()
+
+            try:
+                card_index = int(parts[-1]) - 1
+            except:
+                return await message.channel.send(
+                    "Please provide a valid inventory number."
+                )
+
+            if card_index < 0 or card_index >= len(inv):
+                return await message.channel.send(
+                    "Invalid inventory number."
+                )
+
+            owned_card = inv[card_index]
+
+            view = GiftView(
+                message.author,
+                target_user,
+                owned_card,
+                message.author.id,
+                target_user.id,
+                card_index
+            )
+
+            gift_embed, file = view.build_embed(message.author)
+
+            await message.channel.send(
+                content=f"{message.author.mention} is gifting {target_user.mention} a card!",
+                embed=gift_embed,
+                file=file,
+                view=view
+            )
+
             return
 
         # =========================
@@ -640,60 +862,72 @@ class Client(discord.Client):
             os.remove(image_path)
 
             return
+
         # =========================
         # LOOKUP COMMAND (lup <query>)
         # =========================
         if content_lower.startswith("lup "):
             query = content[4:].strip().lower()
             if not query:
-                return await message.channel.send("Please provide a name or a number to search.")
+                return await message.channel.send(
+                    "Please provide a name or a number to search."
+                )
 
-            # Handling numeric selection from a prior text search
+            # =========================
+            # Numeric selection from a previous search
+            # =========================
             if query.isdigit():
                 if user_id not in user_last_lookup:
-                    return await message.channel.send("You haven't searched for anything yet! Search using a name first.")
-                
+                    return await message.channel.send(
+                        "You haven't searched for anything yet! Search using a name first."
+                    )
+
                 selection = int(query) - 1
                 previous_results = user_last_lookup[user_id]
 
                 if selection < 0 or selection >= len(previous_results):
-                    return await message.channel.send("Invalid number selection from your last search.")
+                    return await message.channel.send(
+                        "Invalid number selection from your last search."
+                    )
 
                 chosen_card = previous_results[selection]
-                all_versions = [c for c in cards if c.get("name", "").lower() == chosen_card.get("name", "").lower()]
+
+                all_versions = [
+                    c for c in cards
+                    if c.get("name", "").lower() == chosen_card.get("name", "").lower()
+                ]
                 all_versions.sort(key=lambda x: x.get("stars", 1))
 
-                if len(all_versions) == 1:
-                    card = all_versions[0]
-                    embed = discord.Embed(color=THEME_COLOR)
-                    embed.set_author(name=f"{message.author.name}'s Search", icon_url=message.author.display_avatar.url)
-                    embed.description = (
-                        f"## **{card.get('name', 'Unknown')}**\n"
-                        f"✦ **Series:** **{card.get('series', 'Unknown')}**\n"
-                        f"───\n"
-                        f"✦ **Level:** **{stars(card.get('stars', 1))}**\n"
-                    )
-                    embed.set_image(url=clean_url(card.get("image", "")))
-                    return await message.channel.send(embed=embed)
-                
-                view = CharacterVersionView(all_versions, message.author, user_id)
-                return await message.channel.send(embed=view.get_embed(), view=view)
+                # ALWAYS use CharacterVersionView
+                # even if there's only 1 version,
+                # so the owners button still appears
+                view = CharacterVersionView(
+                    all_versions,
+                    message.author,
+                    user_id
+                )
+                return await message.channel.send(
+                    embed=view.get_embed(),
+                    view=view
+                )
 
-            # Handling standard name text queries            
+            # =========================
+            # Normal text search
+            # =========================
             matched_cards = [
                 card for card in cards
                 if (
-                   query in card.get("name", "").lower()
-                   or
-                   query in card.get("series", "").lower()
+                    query in card.get("name", "").lower()
+                    or query in card.get("series", "").lower()
                 )
-            ]            
+            ]
 
             if not matched_cards:
                 return await message.channel.send("No cards found.")
 
             unique_results = []
             seen_names = set()
+
             for card in matched_cards:
                 card_name_lower = card.get("name", "").lower()
                 if card_name_lower not in seen_names:
@@ -702,29 +936,31 @@ class Client(discord.Client):
 
             user_last_lookup[user_id] = unique_results
 
+            # If search only matches 1 character,
+            # open CharacterVersionView directly
             if len(unique_results) == 1:
-                all_versions = [c for c in cards if c.get("name", "").lower() == unique_results[0].get("name", "").lower()]
+                all_versions = [
+                    c for c in cards
+                    if c.get("name", "").lower() == unique_results[0].get("name", "").lower()
+                ]
                 all_versions.sort(key=lambda x: x.get("stars", 1))
-                
-                if len(all_versions) == 1:
-                    card = all_versions[0]
-                    embed = discord.Embed(color=THEME_COLOR)
-                    embed.set_author(name=f"{message.author.name}'s Search", icon_url=message.author.display_avatar.url)
-                    embed.description = (
-                        f"## **{card.get('name', 'Unknown')}**\n"
-                        f"✦ **Series:** **{card.get('series', 'Unknown')}**\n"
-                        f"───\n"
-                        f"✦ **Level:** **{stars(card.get('stars', 1))}**\n"
-                    )
-                    embed.set_image(url=clean_url(card.get("image", "")))
-                    return await message.channel.send(embed=embed)
-                
-                view = CharacterVersionView(all_versions, message.author, user_id)
-                return await message.channel.send(embed=view.get_embed(), view=view)
 
+                view = CharacterVersionView(
+                    all_versions,
+                    message.author,
+                    user_id
+                )
+                return await message.channel.send(
+                    embed=view.get_embed(),
+                    view=view
+                )
+
+            # Otherwise show the list of matching characters
             view = LookupListView(unique_results, message.author, user_id)
-            return await message.channel.send(embed=view.get_embed(), view=view)
-
+            return await message.channel.send(
+                embed=view.get_embed(),
+                view=view
+            )
 
         # =========================
         # COOLDOWNS COMMAND (lcd)
