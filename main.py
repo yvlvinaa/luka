@@ -4,6 +4,7 @@ import time
 import asyncio
 import requests
 import tempfile
+import os
 
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
@@ -668,6 +669,114 @@ class GiftView(discord.ui.View):
         )
 
 
+# =========================
+
+# 6. TRADE VIEW
+
+# =========================
+
+class TradeView(discord.ui.View):
+    def __init__(self, user1, user2, user1_card, user2_card, user1_id, user2_id):
+        super().__init__(timeout=300)
+        self.user1 = user1
+        self.user2 = user2
+        self.user1_card = user1_card
+        self.user2_card = user2_card
+        self.user1_id = user1_id
+        self.user2_id = user2_id
+        self.user1_locked = False
+        self.user2_locked = False
+        self.user1_confirmed = False
+        self.user2_confirmed = False
+        self.stage = "locking"  # "locking" or "confirming"
+
+    def build_embed(self):
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.title = f"### {self.user1.mention} & {self.user2.mention}'s Trade"
+
+        if self.stage == "confirming":
+            user1_status = "Completed!" if self.user1_confirmed else "Confirming"
+            user2_status = "Completed!" if self.user2_confirmed else "Confirming"
+        else:
+            user1_status = "Pending"
+            user2_status = "Pending"
+
+        user1_text = f"## {self.user1.mention} - {user1_status}\n"
+        card = self.user1_card["card"]
+        name = card.get("name", "Unknown")
+        series = card.get("series", "Unknown Series")
+        star_val = card.get("stars", 1)
+        print_num = self.user1_card["print"]
+        user1_text += f"• `{format_print(print_num)}` ⭐ {star_val} • **{name}** • *{series}*\n"
+
+        user2_text = f"\n## {self.user2.mention} - {user2_status}\n"
+        card = self.user2_card["card"]
+        name = card.get("name", "Unknown")
+        series = card.get("series", "Unknown Series")
+        star_val = card.get("stars", 1)
+        print_num = self.user2_card["print"]
+        user2_text += f"• `{format_print(print_num)}` ⭐ {star_val} • **{name}** • *{series}*\n"
+
+        embed.description = user1_text + "\n────────────────────────" + user2_text + "\n────────────────────────"
+
+        return embed
+
+    @discord.ui.button(emoji="❌", style=discord.ButtonStyle.danger)
+    async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(
+            content="Trade has been declined.",
+            embed=None,
+            view=None
+        )
+
+    @discord.ui.button(emoji="🔒", style=discord.ButtonStyle.secondary)
+    async def lock(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.user1_id:
+            self.user1_locked = True
+        elif interaction.user.id == self.user2_id:
+            self.user2_locked = True
+        else:
+            return await interaction.response.send_message(
+                "This isn't your trade!",
+                ephemeral=True
+            )
+
+        if self.user1_locked and self.user2_locked:
+            self.stage = "confirming"
+            self.lock.emoji = "✅"
+
+        await interaction.response.edit_message(
+            embed=self.build_embed(),
+            view=self
+        )
+
+    @discord.ui.button(emoji="✅", style=discord.ButtonStyle.success)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.stage != "confirming":
+            return await interaction.response.send_message(
+                "Both players need to lock first!",
+                ephemeral=True
+            )
+
+        if interaction.user.id == self.user1_id:
+            self.user1_confirmed = True
+        elif interaction.user.id == self.user2_id:
+            self.user2_confirmed = True
+        else:
+            return await interaction.response.send_message(
+                "This isn't your trade!",
+                ephemeral=True
+            )
+
+        if self.user1_confirmed and self.user2_confirmed:
+            self.decline.disabled = True
+            self.lock.disabled = True
+            self.confirm.disabled = True
+
+        await interaction.response.edit_message(
+            embed=self.build_embed(),
+            view=self
+        )
 
 
 # =========================
@@ -687,6 +796,34 @@ class Client(discord.Client):
         content_lower = content.lower()
         user_id = message.author.id
         inv = get_inventory(user_id)
+
+        # =========================
+        # COOLDOWNS COMMAND (lcd)
+        # =========================
+        if content_lower == "lcd":
+            now = time.time()
+            drop_text = "✨ You can drop your card now!"
+            claim_text = "✨ You can claim a card now!"
+
+            if user_id in drop_cooldowns:
+                remaining = int(DROP_COOLDOWN - (now - drop_cooldowns[user_id]))
+                if remaining > 0:
+                    drop_text = f"⏳ `{format_time(remaining)}` before you can drop"
+
+            if user_id in claim_cooldowns:
+                remaining = int(CLAIM_COOLDOWN - (now - claim_cooldowns[user_id]))
+                if remaining > 0:
+                    claim_text = f"⏳ `{format_time(remaining)}` before you can claim"
+
+            embed = discord.Embed(color=THEME_COLOR)
+            embed.set_author(name=f"{message.author.name}'s Cooldowns", icon_url=message.author.display_avatar.url)
+            embed.description = (
+                f"## Drop\n"
+                f"{drop_text}\n\n"
+                f"## Claim\n"
+                f"{claim_text}"
+            )
+            return await message.channel.send(embed=embed)
 
         # =========================
         # INVENTORY COMMAND (lc)
@@ -810,6 +947,64 @@ class Client(discord.Client):
                 content=f"{message.author.mention} is gifting {target_user.mention} a card!",
                 embed=gift_embed,
                 file=file,
+                view=view
+            )
+
+            return
+
+        # =========================
+        # TRADE COMMAND (lt / ltrade)
+        # =========================
+        if content_lower.startswith(("ltrade ", "lt ")):
+            target_user = None
+
+            if message.mentions:
+                target_user = message.mentions[0]
+            elif message.reference and message.reference.resolved:
+                replied_msg = message.reference.resolved
+                if replied_msg and replied_msg.author:
+                    target_user = replied_msg.author
+
+            if not target_user:
+                return await message.channel.send(
+                    "Usage: `lt @user` (reply to their message or mention them)"
+                )
+
+            if target_user.bot:
+                return await message.channel.send(
+                    "You can't trade with bots."
+                )
+
+            if target_user.id == message.author.id:
+                return await message.channel.send(
+                    "You can't trade with yourself."
+                )
+
+            if len(inv) == 0:
+                return await message.channel.send(
+                    "You don't have any cards to trade."
+                )
+
+            target_inv = get_inventory(target_user.id)
+            if len(target_inv) == 0:
+                return await message.channel.send(
+                    f"{target_user.mention} doesn't have any cards to trade."
+                )
+
+            user1_card = inv[0]
+            user2_card = target_inv[0]
+
+            view = TradeView(
+                message.author,
+                target_user,
+                user1_card,
+                user2_card,
+                message.author.id,
+                target_user.id
+            )
+
+            await message.channel.send(
+                embed=view.build_embed(),
                 view=view
             )
 
@@ -961,34 +1156,6 @@ class Client(discord.Client):
                 embed=view.get_embed(),
                 view=view
             )
-
-        # =========================
-        # COOLDOWNS COMMAND (lcd)
-        # =========================
-        if content_lower == "lcd":
-            now = time.time()
-            drop_text = "✨ You can drop your card now!"
-            claim_text = "✨ You can claim a card now!"
-
-            if user_id in drop_cooldowns:
-                remaining = int(DROP_COOLDOWN - (now - drop_cooldowns[user_id]))
-                if remaining > 0:
-                    drop_text = f"⏳ `{format_time(remaining)}` before you can drop"
-
-            if user_id in claim_cooldowns:
-                remaining = int(CLAIM_COOLDOWN - (now - claim_cooldowns[user_id]))
-                if remaining > 0:
-                    claim_text = f"⏳ `{format_time(remaining)}` before you can claim"
-
-            embed = discord.Embed(color=THEME_COLOR)
-            embed.set_author(name=f"{message.author.name}'s Cooldowns", icon_url=message.author.display_avatar.url)
-            embed.description = (
-                f"## Drop\n"
-                f"{drop_text}\n\n"
-                f"## Claim\n"
-                f"{claim_text}"
-            )
-            return await message.channel.send(embed=embed)
 
         # =========================
         # DROP CARDS COMMAND (ld)
