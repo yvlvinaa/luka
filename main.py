@@ -683,7 +683,65 @@ class GiftView(discord.ui.View):
 
 # =========================
 
-# 6. TRADE VIEW
+# 6. TRADE REQUEST VIEW
+
+# =========================
+
+class TradeRequestView(discord.ui.View):
+    def __init__(self, user1, user2, user1_id, user2_id):
+        super().__init__(timeout=60)
+        self.user1 = user1
+        self.user2 = user2
+        self.user1_id = user1_id
+        self.user2_id = user2_id
+        self.request_id = f"{user1_id}_{user2_id}_{int(time.time())}"
+
+    def get_embed(self):
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.description = f"{self.user2.mention}, you've received a trade request from {self.user1.mention}!"
+        return embed
+
+    @discord.ui.button(emoji="✅", style=discord.ButtonStyle.success, label="Trade")
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user2_id:
+            return await interaction.response.send_message(
+                "This isn't your trade request!",
+                ephemeral=True
+            )
+
+        # Proceed to trade
+        view = TradeView(
+            self.user1,
+            self.user2,
+            self.user1_id,
+            self.user2_id
+        )
+
+        await interaction.response.edit_message(
+            embed=view.build_embed(),
+            view=view
+        )
+
+    @discord.ui.button(emoji="❌", style=discord.ButtonStyle.danger, label="Cancel")
+    async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user2_id:
+            return await interaction.response.send_message(
+                "This isn't your trade request!",
+                ephemeral=True
+            )
+
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.description = "Trade request has been denied."
+
+        await interaction.response.edit_message(
+            embed=embed,
+            view=None
+        )
+
+
+# =========================
+
+# 7. TRADE VIEW
 
 # =========================
 
@@ -710,6 +768,7 @@ class TradeView(discord.ui.View):
 
     def build_embed(self):
         embed = discord.Embed(color=THEME_COLOR)
+        embed.title = "## Trade In Progress"
         
         if self.stage == "selecting":
             user1_status = "Waiting for selection"
@@ -721,7 +780,7 @@ class TradeView(discord.ui.View):
             user1_status = "Completed!" if self.user1_confirmed else "Completing"
             user2_status = "Completed!" if self.user2_confirmed else "Completing"
 
-        user1_text = f"{self.user1.mention} is offering.. - {user1_status}\n"
+        user1_text = f"**<:Bluka:1511044685781663866> {self.user1.mention} is offering.. - {user1_status}**\n"
         if self.user1_card:
             card = self.user1_card["card"]
             name = card.get("name", "Unknown")
@@ -730,7 +789,7 @@ class TradeView(discord.ui.View):
             print_num = self.user1_card["print"]
             user1_text += f"• `{format_print(print_num)}` ⭐ {star_val} • **{name}** • *{series}*\n"
 
-        user2_text = f"{self.user2.mention} is offering.. - {user2_status}\n"
+        user2_text = f"**<:Bluka:1511044685781663866> {self.user2.mention} is offering.. - {user2_status}**\n"
         if self.user2_card:
             card = self.user2_card["card"]
             name = card.get("name", "Unknown")
@@ -741,7 +800,7 @@ class TradeView(discord.ui.View):
 
         embed.description = user1_text + "\n────────────────────────\n" + user2_text
 
-        embed.set_footer(text="-# 💡 **Reminder:** There are no official values for cards in LukaNet right now. Trade based on what you and the other user think is fair.")
+        embed.description += "\n-# 💡 **Reminder:** There are no official values for cards in LukaNet right now. Trade based on what you and the other user think is fair."
 
         return embed
 
@@ -806,13 +865,32 @@ class TradeView(discord.ui.View):
             self.lock.disabled = True
             self.confirm.disabled = True
             
+            embed = discord.Embed(color=THEME_COLOR)
+            embed.title = "Trade Completed!"
+            
+            user1_card = self.user1_card["card"]
+            user2_card = self.user2_card["card"]
+            
+            user1_name = user1_card.get("name", "Unknown")
+            user2_name = user2_card.get("name", "Unknown")
+            
+            embed.description = (
+                f"{self.user1.mention} received **{user2_name}**\n"
+                f"{self.user2.mention} received **{user1_name}**"
+            )
+            
             if self.trade_id in active_trades:
                 del active_trades[self.trade_id]
-
-        await interaction.response.edit_message(
-            embed=self.build_embed(),
-            view=self
-        )
+            
+            await interaction.response.edit_message(
+                embed=embed,
+                view=self
+            )
+        else:
+            await interaction.response.edit_message(
+                embed=self.build_embed(),
+                view=self
+            )
 
 
 # =========================
@@ -1035,21 +1113,18 @@ class Client(discord.Client):
                     f"{target_user.mention} doesn't have any cards to trade."
                 )
 
-            view = TradeView(
+            # Send trade request embed
+            request_view = TradeRequestView(
                 message.author,
                 target_user,
                 message.author.id,
                 target_user.id
             )
 
-            trade_msg = await message.channel.send(
-                embed=view.build_embed(),
-                view=view
+            await message.channel.send(
+                embed=request_view.get_embed(),
+                view=request_view
             )
-            
-            # Store message reference for later updates
-            if view.trade_id in active_trades:
-                active_trades[view.trade_id]["message"] = trade_msg
 
             return
 
