@@ -10,6 +10,46 @@ cards = [
         "image": "https://github.com/yvlvinaa/luka/blob/main/cards/dih%20dc%204%20star.webp?raw=true"
     },
     {
+        "id": "luka_rare",
+        "name": "Luka",
+        "series": "Alien Stage",
+        "stars": 4,
+        "weight": 4,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/luka%204st.png?raw=true"
+    },
+    {
+        "id": "ivan_rare",
+        "name": "Ivan",
+        "series": "Alien Stage",
+        "stars": 4,
+        "weight": 4,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/ivan%204st.png?raw=true"
+    },
+    {
+        "id": "aisha_rare",
+        "name": "Aisha Del Elmir",
+        "series": "Into The Light, Once Again",
+        "stars": 4,
+        "weight": 4,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/aisha%204st.png?raw=true"
+    },
+    {
+        "id": "ysis_rare",
+        "name": "Ysis Del Elmir",
+        "series": "Into The Light, Once Again",
+        "stars": 4,
+        "weight": 4,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/ysis%204st.png?raw=true"
+    },
+    {
+        "id": "luminas_rare",
+        "name": "Luminas",
+        "series": "Into The Light, Once Again",
+        "stars": 4,
+        "weight": 4,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/luminas%204st.png?raw=true"
+    },
+    {
         "id": "mydei_rare",
         "name": "Mydei",
         "series": "Honkai: Star Rail",
@@ -188,7 +228,7 @@ cards = [
     {
         "id": "jinwoo_rare",
         "name": "Lee Jinwoo",
-        "series": "Red Thread Quest",
+        "series": "Behind The Stage",
         "stars": 4,
         "weight": 4,
         "image": "https://github.com/yvlvinaa/luka/blob/main/cards/jinwoo.png?raw=true"
@@ -204,14 +244,6 @@ cards = [
 
     # COMMON CARDS 3
     {
-        "id": "gojo_common",
-        "name": "Satoru Gojo",
-        "series": "Jujutsu Kaisen",
-        "stars": 3,
-        "weight": 8,
-        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/gojo2.png?raw=true"
-    },
-    {
         "id": "sooyoung_common",
         "name": "Han Sooyoung",
         "series": "Omniscient Reader’s Viewpoint",
@@ -226,6 +258,30 @@ cards = [
         "stars": 3,
         "weight": 8,
         "image": "https://github.com/yvlvinaa/luka/blob/main/cards/yoooo%20joon%203%20star.webp?raw=true"
+    },
+    {
+        "id": "marianne_common",
+        "name": "Marianne",
+        "series": "Into The Light, Once Again",
+        "stars": 3,
+        "weight": 8,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/marianne%203st.png?raw=true"
+    },
+    {
+        "id": "rayburn_common",
+        "name": "Rayburn Espelindo",
+        "series": "I Stan The Prince",
+        "stars": 3,
+        "weight": 8,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/rayburn%203st.png?raw=true"
+    },
+    {
+        "id": "angela_common",
+        "name": "Angela Lyvonne",
+        "series": "I Stan The Prince",
+        "stars": 3,
+        "weight": 8,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/angela%203st.png?raw=true"
     },
     {
         "id": "kagami_common",
@@ -332,6 +388,14 @@ cards = [
         "image": "https://github.com/yvlvinaa/luka/blob/main/cards/yoichi%203st.png?raw=true"
     },
     {
+        "id": "xieyu_common",
+        "name": "Xie Yu",
+        "series": "Fake Slackers",
+        "stars": 3,
+        "weight": 8,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/xie%203st.png?raw=true"
+    },
+    {
         "id": "taro_common",
         "name": "Taro Sakamoto",
         "series": "Sakamoto Days",
@@ -371,24 +435,8 @@ cards = [
         "weight": 8,
         "image": "https://github.com/yvlvinaa/luka/blob/main/cards/hikaru.png?raw=true"
     },
-    {
-        "id": "till_common",
-        "name": "Till",
-        "series": "Alien Stage",
-        "stars": 3,
-        "weight": 8,
-        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/Untitled357_20260523221554.webp?raw=true"
-    },
 
     # COMMON CARDS 2
-    {
-        "id": "ivan_common",
-        "name": "Ivan",
-        "series": "Alien Stage",
-        "stars": 2,
-        "weight": 10,
-        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/Untitled357_20260523221830.webp?raw=true"
-    },
     {
         "id": "geto_common",
         "name": "Suguru Geto",
@@ -430,6 +478,22 @@ cards = [
         "image": "https://github.com/yvlvinaa/luka/blob/main/cards/yoichi%202st.png?raw=true"
     },
     {
+        "id": "toki_common",
+        "name": "Toki Ninomae",
+        "series": "Fall in love, false angels",
+        "stars": 2,
+        "weight": 10,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/toki%202st.png?raw=true"
+    },
+    {
+        "id": "katsura_common",
+        "name": "Otoki Katsura",
+        "series": "Fall in love, false angels",
+        "stars": 2,
+        "weight": 10,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/katsura%202st.png?raw=true"
+    },
+    {
         "id": "shin_common",
         "name": "Shin Asakura",
         "series": "Sakamoto Days",
@@ -452,14 +516,6 @@ cards = [
         "stars": 2,
         "weight": 10,
         "image": "https://github.com/yvlvinaa/luka/blob/main/cards/blade%202%20star.webp?raw=true"
-    },
-    {
-        "id": "luka_common",
-        "name": "Luka",
-        "series": "Alien Stage",
-        "stars": 2,
-        "weight": 10,
-        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/Untitled357_20260523221839.webp?raw=true"
     },
     {
         "id": "castorice_common",
@@ -656,6 +712,22 @@ cards = [
         "image": "https://github.com/yvlvinaa/luka/blob/main/cards/eugene%20one%20star%20phantom%20buster.webp?raw=true"
     },
     {
+        "id": "hanako_common",
+        "name": "Hanako Kun",
+        "series": "Toilet Bound Hanako-Kun",
+        "stars": 1,
+        "weight": 10,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/hanako%201st.png?raw=true"
+    },
+    {
+        "id": "nene_common",
+        "name": "Yashiro Nene",
+        "series": "Toilet Bound Hanako-Kun",
+        "stars": 1,
+        "weight": 10,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/nene%201st.png?raw=true"
+    },
+    {
         "id": "kanzaki_common",
         "name": "Kanzaki Kaoru",
         "series": "Phantom Busters",
@@ -686,14 +758,6 @@ cards = [
         "stars": 1,
         "weight": 10,
         "image": "https://github.com/yvlvinaa/luka/blob/main/cards/clorinde%201%20star%20genshin.webp?raw=true"
-    },
-    {
-        "id": "mizi_common",
-        "name": "Mizi",
-        "series": "Alien Stage",
-        "stars": 1,
-        "weight": 10,
-        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/Untitled357_20260523222147.webp?raw=true"
     },
     {
         "id": "riyo_common",
@@ -766,6 +830,54 @@ cards = [
         "stars": 1,
         "weight": 10,
         "image": "https://github.com/yvlvinaa/luka/blob/main/cards/rudo%201%20star.webp?raw=true"
+    },
+    {
+        "id": "sua_common",
+        "name": "Sua",
+        "series": "Alien Stage",
+        "stars": 1,
+        "weight": 10,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/sua%201st.png?raw=true"
+    },
+    {
+        "id": "till_common",
+        "name": "Till",
+        "series": "Alien Stage",
+        "stars": 1,
+        "weight": 10,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/till%201st.png?raw=true"
+    },
+    {
+        "id": "ivan_common",
+        "name": "Ivan",
+        "series": "Alien Stage",
+        "stars": 1,
+        "weight": 10,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/ivan%201st.png?raw=true"
+    },
+    {
+        "id": "mizi_common",
+        "name": "Mizi",
+        "series": "Alien Stage",
+        "stars": 1,
+        "weight": 10,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/mizi%201st.png?raw=true"
+    },
+    {
+        "id": "hyuna_common",
+        "name": "Hyuna",
+        "series": "Alien Stage",
+        "stars": 1,
+        "weight": 10,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/hyuna%201st.png?raw=true"
+    },
+    {
+        "id": "luka_common",
+        "name": "Luka",
+        "series": "Alien Stage",
+        "stars": 1,
+        "weight": 10,
+        "image": "https://github.com/yvlvinaa/luka/blob/main/cards/luka%201st.png?raw=true"
     },
     {
         "id": "fu_common",
