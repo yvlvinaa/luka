@@ -137,6 +137,11 @@ THEME_COLOR = discord.Color.from_rgb(255, 227, 102)
 # Global tracking for lookup history sessions
 user_last_lookup = {}
 
+# Global tracking for trade and gift sessions
+active_trades = {}
+active_gifts = {}
+user_viewing_inventory = {}
+
 
 # =========================
 # HELPERS
@@ -179,7 +184,7 @@ def add_card(user_id, card):
         "print": get_next_print(card["id"])
     }
 
-    get_inventory(user_id).append(owned_card)
+    get_inventory(user_id).insert(0, owned_card)
 
 
 def remove_card(user_id, index):
@@ -296,11 +301,11 @@ class CardView(discord.ui.View):
             f"{interaction.user.mention} claimed **{name}**! {stars(star_val)} from the Stage."
         )
 
-    @discord.ui.button(label="1", style=discord.ButtonStyle.primary)
+    @discord.ui.button(emoji="1️⃣", style=discord.ButtonStyle.primary)
     async def pick1(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.claim(interaction, 1, button)
 
-    @discord.ui.button(label="2", style=discord.ButtonStyle.success)
+    @discord.ui.button(emoji="2️⃣", style=discord.ButtonStyle.primary)
     async def pick2(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.claim(interaction, 2, button)
 
@@ -565,7 +570,7 @@ class CharacterVersionView(discord.ui.View):
 
 class GiftView(discord.ui.View):
     def __init__(self, from_user, to_user, owned_card, from_id, to_id, card_index):
-        super().__init__(timeout=60)
+        super().__init__(timeout=120)
         self.from_user = from_user
         self.to_user = to_user
         self.owned_card = owned_card
@@ -574,6 +579,8 @@ class GiftView(discord.ui.View):
         self.from_id = from_id
         self.to_id = to_id
         self.card_index = card_index
+        self.gift_id = f"{from_id}_{to_id}_{int(time.time())}"
+        active_gifts[self.gift_id] = {"time": time.time()}
 
     def build_embed(self, owner_user, status_text=None):
         card = self.card
@@ -635,12 +642,15 @@ class GiftView(discord.ui.View):
             )
 
         moved_card = remove_card(self.from_id, self.card_index)
-        get_inventory(self.to_id).append(moved_card)
+        get_inventory(self.to_id).insert(0, moved_card)
 
         accepted_embed, file = self.build_embed(
             self.to_user,
             status_text=f"{self.to_user.name} accepted {self.from_user.name}'s gift!"
         )
+
+        if self.gift_id in active_gifts:
+            del active_gifts[self.gift_id]
 
         await interaction.response.edit_message(
             content=None,
@@ -655,6 +665,9 @@ class GiftView(discord.ui.View):
                 "Not your gift.",
                 ephemeral=True
             )
+
+        if self.gift_id in active_gifts:
+            del active_gifts[self.gift_id]
 
         declined_embed, file = self.build_embed(
             self.from_user,
@@ -675,53 +688,68 @@ class GiftView(discord.ui.View):
 # =========================
 
 class TradeView(discord.ui.View):
-    def __init__(self, user1, user2, user1_card, user2_card, user1_id, user2_id):
-        super().__init__(timeout=300)
+    def __init__(self, user1, user2, user1_id, user2_id):
+        super().__init__(timeout=180)
         self.user1 = user1
         self.user2 = user2
-        self.user1_card = user1_card
-        self.user2_card = user2_card
         self.user1_id = user1_id
         self.user2_id = user2_id
+        self.user1_card = None
+        self.user2_card = None
         self.user1_locked = False
         self.user2_locked = False
         self.user1_confirmed = False
         self.user2_confirmed = False
-        self.stage = "locking"  # "locking" or "confirming"
+        self.stage = "selecting"  # "selecting", "locking" or "confirming"
+        self.trade_id = f"{user1_id}_{user2_id}_{int(time.time())}"
+        active_trades[self.trade_id] = {
+            "time": time.time(),
+            "view": self,
+            "message": None
+        }
 
     def build_embed(self):
         embed = discord.Embed(color=THEME_COLOR)
-        embed.title = f"### {self.user1.mention} & {self.user2.mention}'s Trade"
+        
+        if self.stage == "selecting":
+            user1_status = "Waiting for selection"
+            user2_status = "Waiting for selection"
+        elif self.stage == "locking":
+            user1_status = "Pending" if not self.user1_locked else "Confirming"
+            user2_status = "Pending" if not self.user2_locked else "Confirming"
+        elif self.stage == "confirming":
+            user1_status = "Completed!" if self.user1_confirmed else "Completing"
+            user2_status = "Completed!" if self.user2_confirmed else "Completing"
 
-        if self.stage == "confirming":
-            user1_status = "Completed!" if self.user1_confirmed else "Confirming"
-            user2_status = "Completed!" if self.user2_confirmed else "Confirming"
-        else:
-            user1_status = "Pending"
-            user2_status = "Pending"
+        user1_text = f"{self.user1.mention} is offering.. - {user1_status}\n"
+        if self.user1_card:
+            card = self.user1_card["card"]
+            name = card.get("name", "Unknown")
+            series = card.get("series", "Unknown Series")
+            star_val = card.get("stars", 1)
+            print_num = self.user1_card["print"]
+            user1_text += f"• `{format_print(print_num)}` ⭐ {star_val} • **{name}** • *{series}*\n"
 
-        user1_text = f"## {self.user1.mention} - {user1_status}\n"
-        card = self.user1_card["card"]
-        name = card.get("name", "Unknown")
-        series = card.get("series", "Unknown Series")
-        star_val = card.get("stars", 1)
-        print_num = self.user1_card["print"]
-        user1_text += f"• `{format_print(print_num)}` ⭐ {star_val} • **{name}** • *{series}*\n"
+        user2_text = f"{self.user2.mention} is offering.. - {user2_status}\n"
+        if self.user2_card:
+            card = self.user2_card["card"]
+            name = card.get("name", "Unknown")
+            series = card.get("series", "Unknown Series")
+            star_val = card.get("stars", 1)
+            print_num = self.user2_card["print"]
+            user2_text += f"• `{format_print(print_num)}` ⭐ {star_val} • **{name}** • *{series}*\n"
 
-        user2_text = f"\n## {self.user2.mention} - {user2_status}\n"
-        card = self.user2_card["card"]
-        name = card.get("name", "Unknown")
-        series = card.get("series", "Unknown Series")
-        star_val = card.get("stars", 1)
-        print_num = self.user2_card["print"]
-        user2_text += f"• `{format_print(print_num)}` ⭐ {star_val} • **{name}** • *{series}*\n"
+        embed.description = user1_text + "\n────────────────────────\n" + user2_text
 
-        embed.description = user1_text + "\n────────────────────────" + user2_text + "\n────────────────────────"
+        embed.set_footer(text="-# 💡 **Reminder:** There are no official values for cards in LukaNet right now. Trade based on what you and the other user think is fair.")
 
         return embed
 
     @discord.ui.button(emoji="❌", style=discord.ButtonStyle.danger)
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.trade_id in active_trades:
+            del active_trades[self.trade_id]
+        
         await interaction.response.edit_message(
             content="Trade has been declined.",
             embed=None,
@@ -730,6 +758,12 @@ class TradeView(discord.ui.View):
 
     @discord.ui.button(emoji="🔒", style=discord.ButtonStyle.secondary)
     async def lock(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.stage == "selecting":
+            return await interaction.response.send_message(
+                "Both players need to select cards first!",
+                ephemeral=True
+            )
+
         if interaction.user.id == self.user1_id:
             self.user1_locked = True
         elif interaction.user.id == self.user2_id:
@@ -771,6 +805,9 @@ class TradeView(discord.ui.View):
             self.decline.disabled = True
             self.lock.disabled = True
             self.confirm.disabled = True
+            
+            if self.trade_id in active_trades:
+                del active_trades[self.trade_id]
 
         await interaction.response.edit_message(
             embed=self.build_embed(),
@@ -880,6 +917,8 @@ class Client(discord.Client):
                     owned_card for owned_card in filtered_inventory
                     if char_query in owned_card["card"].get("name", "").lower()
                 ]
+
+            user_viewing_inventory[user_id] = target_user.id
 
             view = InventoryView(
                 target_user,
@@ -996,23 +1035,71 @@ class Client(discord.Client):
                     f"{target_user.mention} doesn't have any cards to trade."
                 )
 
-            user1_card = inv[0]
-            user2_card = target_inv[0]
-
             view = TradeView(
                 message.author,
                 target_user,
-                user1_card,
-                user2_card,
                 message.author.id,
                 target_user.id
             )
 
-            await message.channel.send(
+            trade_msg = await message.channel.send(
                 embed=view.build_embed(),
                 view=view
             )
+            
+            # Store message reference for later updates
+            if view.trade_id in active_trades:
+                active_trades[view.trade_id]["message"] = trade_msg
 
+            return
+
+        # =========================
+        # ADD CARD TO TRADE (add <card_number>)
+        # =========================
+        if content_lower.startswith("add "):
+            try:
+                card_num = int(content_lower.split()[1]) - 1
+            except (IndexError, ValueError):
+                return await message.channel.send("Usage: `add <card_number>`")
+
+            if card_num < 0 or card_num >= len(inv):
+                return await message.channel.send("Invalid card number.")
+
+            # Find active trade for this user
+            user_trade = None
+            for trade_id, trade_data in active_trades.items():
+                parts = trade_id.split('_')
+                if str(user_id) in parts and trade_data.get("view"):
+                    user_trade = trade_data["view"]
+                    break
+
+            if not user_trade:
+                return await message.channel.send("You're not in an active trade.")
+
+            owned_card = inv[card_num]
+
+            if user_id == user_trade.user1_id:
+                user_trade.user1_card = owned_card
+            elif user_id == user_trade.user2_id:
+                user_trade.user2_card = owned_card
+            else:
+                return await message.channel.send("You're not part of this trade.")
+
+            # Check if both cards are selected
+            if user_trade.user1_card and user_trade.user2_card:
+                user_trade.stage = "locking"
+
+            # Update the trade message
+            if user_trade.trade_id in active_trades and active_trades[user_trade.trade_id].get("message"):
+                try:
+                    await active_trades[user_trade.trade_id]["message"].edit(
+                        embed=user_trade.build_embed(),
+                        view=user_trade
+                    )
+                except:
+                    pass
+
+            await message.channel.send(f"{message.author.mention} added a card to the trade!", delete_after=5)
             return
 
         # =========================
@@ -1021,9 +1108,14 @@ class Client(discord.Client):
         if content_lower.startswith("lv "):
             try:
                 index = int(content_lower.split()[1]) - 1
-                if index < 0 or index >= len(inv):
+                
+                # Check if user is viewing someone else's inventory
+                viewing_user_id = user_viewing_inventory.get(user_id, user_id)
+                target_inv = get_inventory(viewing_user_id)
+                
+                if index < 0 or index >= len(target_inv):
                     raise IndexError
-                owned_card = inv[index]
+                owned_card = target_inv[index]
                 card = owned_card["card"]
                 print_num = owned_card["print"]            
             except:
@@ -1039,7 +1131,7 @@ class Client(discord.Client):
                 f"## **{name}**\n"
                 f"✦ **Series:** **{series}**\n"
                 f"───\n"
-                f"✦ **Owner:** {message.author.mention}\n"
+                f"✦ **Owner:** <@{viewing_user_id}>\n"
                 f"✦ **Print:** **{format_print(print_num)}**\n"
                 f"✦ **Level:** **{stars(star_val)}**\n"
             )
