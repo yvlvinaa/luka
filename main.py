@@ -753,13 +753,16 @@ class TradeView(discord.ui.View):
         self.user1_id = user1_id
         self.user2_id = user2_id
         self.user1_card = None
+        self.user1_card_index = None
         self.user2_card = None
+        self.user2_card_index = None
         self.user1_locked = False
         self.user2_locked = False
         self.user1_confirmed = False
         self.user2_confirmed = False
         self.stage = "selecting"  # "selecting", "locking" or "confirming"
         self.trade_id = f"{user1_id}_{user2_id}_{int(time.time())}"
+        self.message = None
         active_trades[self.trade_id] = {
             "time": time.time(),
             "view": self,
@@ -787,7 +790,8 @@ class TradeView(discord.ui.View):
             series = card.get("series", "Unknown Series")
             star_val = card.get("stars", 1)
             print_num = self.user1_card["print"]
-            user1_text += f"• `{format_print(print_num)}` ⭐ {star_val} • **{name}** • *{series}*\n"
+            card_num = self.user1_card_index + 1
+            user1_text += f"`({card_num})` • **{name}** • *{series}* • `{format_print(print_num)}`\n"
 
         user2_text = f"**<:Bluka:1511044685781663866> {self.user2.mention} is offering.. - {user2_status}**\n"
         if self.user2_card:
@@ -796,7 +800,8 @@ class TradeView(discord.ui.View):
             series = card.get("series", "Unknown Series")
             star_val = card.get("stars", 1)
             print_num = self.user2_card["print"]
-            user2_text += f"• `{format_print(print_num)}` ⭐ {star_val} • **{name}** • *{series}*\n"
+            card_num = self.user2_card_index + 1
+            user2_text += f"`({card_num})` • **{name}** • *{series}* • `{format_print(print_num)}`\n"
 
         embed.description = user1_text + "\n────────────────────────\n" + user2_text
 
@@ -1071,10 +1076,10 @@ class Client(discord.Client):
         # =========================
         # TRADE COMMAND (lt / ltrade)
         # =========================
-        if content_lower.startswith(("ltrade ", "lt ")):
+        if content_lower.startswith(("ltrade ", "lt")):
             target_user = None
 
-            # Check for reply first
+            # Check for reply first (works for both "lt" and "ltrade @user")
             if message.reference:
                 try:
                     replied_msg = await message.channel.fetch_message(message.reference.message_id)
@@ -1155,8 +1160,10 @@ class Client(discord.Client):
 
             if user_id == user_trade.user1_id:
                 user_trade.user1_card = owned_card
+                user_trade.user1_card_index = card_num
             elif user_id == user_trade.user2_id:
                 user_trade.user2_card = owned_card
+                user_trade.user2_card_index = card_num
             else:
                 return await message.channel.send("You're not part of this trade.")
 
@@ -1174,7 +1181,6 @@ class Client(discord.Client):
                 except:
                     pass
 
-            await message.channel.send(f"{message.author.mention} added a card to the trade!", delete_after=5)
             return
 
         # =========================
