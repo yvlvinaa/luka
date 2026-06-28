@@ -31,30 +31,34 @@ PRINT_SETTINGS = {
     "common": {
         "print_x": 1000,
         "print_y": 355,
-        "font_size": 85
+        "font_size": 100,
+        "stroke": 4
     },
     "rare": {
         "print_x": 355,
         "print_y": 300,
-        "font_size": 85
+        "font_size": 100,
+        "stroke": 4
     }
 }
 
 # Text positioning for card name and series (1536x2048)
 TEXT_SETTINGS = {
     "common": {
-        "name_y": 1800,
-        "series_y": 1900,
-        "name_size": 60,
-        "series_size": 48,
-        "center_x": 768
+        "name_x": 732,
+        "name_y": 1505,
+        "name_size": 130,
+        "series_x": 731,
+        "series_y": 1580,
+        "series_size": 115,
     },
     "rare": {
-        "name_y": 1800,
-        "series_y": 1900,
-        "name_size": 60,
-        "series_size": 48,
-        "center_x": 768
+        "name_x": 766,
+        "name_y": 1512,
+        "name_size": 130,
+        "series_x": 778,
+        "series_y": 1674,
+        "series_size": 115,
     }
 }
 
@@ -165,17 +169,20 @@ def get_image(url):
                 return Image.open(url).convert("RGBA")
             else:
                 print(f"LOCAL IMAGE ERROR: {url} not found")
-                return Image.new("RGBA", (400, 560), (80, 80, 80, 255))
+                return Image.new("RGBA", (1536, 2048), (80, 80, 80, 255))
 
         # Otherwise download from URL
         url = clean_url(url)
         response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         if response.status_code != 200:
             raise Exception(f"HTTP {response.status_code}")
-        return Image.open(BytesIO(response.content)).convert("RGBA")
+        img = Image.open(BytesIO(response.content)).convert("RGBA")
+        # Resize to standard size and use high quality
+        img = img.resize((1536, 2048), Image.Resampling.LANCZOS)
+        return img
     except Exception as e:
         print("IMAGE ERROR:", url, e)
-        return Image.new("RGBA", (400, 560), (80, 80, 80, 255))
+        return Image.new("RGBA", (1536, 2048), (80, 80, 80, 255))
 
 
 def format_print(print_num):
@@ -242,7 +249,7 @@ def generate_card_id(character_name, frame_type):
 
 def render_card_final(card, print_num):
     """
-    Renders the final card image with a gradient shadow and robust fallbacks.
+    Renders the final card image with high quality art and clean text overlay.
     Always returns a temp PNG path.
     """
     try:
@@ -262,25 +269,15 @@ def render_card_final(card, print_num):
         except AttributeError:
             resample_filter = Image.LANCZOS if hasattr(Image, "LANCZOS") else Image.ANTIALIAS
 
+        # Get and resize art image to full card size
         char_image = get_image(card.get("image", ""))
-        char_image = char_image.resize((400, 560), resample_filter)
+        char_image = char_image.resize((1536, 2048), resample_filter)
 
+        # Create base with art underneath frame
         base = Image.new("RGBA", frame.size, (0,0,0,0))
-        art_x, art_y = 568, 0
-        base.paste(char_image, (art_x, art_y), char_image)
+        base.paste(char_image, (0, 0), char_image)
 
-        try:
-            avg_color = average_color_of_image(frame)
-            if abs(avg_color[0] - avg_color[1]) < 10 and abs(avg_color[1] - avg_color[2]) < 10:
-                gradient_color = (0,0,0)
-            else:
-                gradient_color = avg_color
-        except:
-            gradient_color = (0,0,0)
-
-        gradient = create_vertical_gradient(400, 560, color=gradient_color, start_alpha=0, end_alpha=140)
-        base.paste(gradient, (art_x, art_y), gradient)
-
+        # Resize frame if needed and composite
         if frame.size != base.size:
             frame = frame.resize(base.size, resample_filter)
         final = Image.alpha_composite(base, frame)
@@ -288,6 +285,7 @@ def render_card_final(card, print_num):
         draw = ImageDraw.Draw(final)
         print_settings = PRINT_SETTINGS.get(frame_name if frame_name in PRINT_SETTINGS else "common")
 
+        # Draw print number
         try:
             print_font = ImageFont.truetype(PRINT_FONT, print_settings["font_size"])
         except:
@@ -298,10 +296,11 @@ def render_card_final(card, print_num):
             format_print(print_num),
             font=print_font,
             fill=(255,255,255),
-            stroke_width=TEXT_STROKE_WIDTH,
+            stroke_width=print_settings["stroke"],
             stroke_fill=TEXT_STROKE_COLOR
         )
 
+        # Draw name and series text
         text_settings = TEXT_SETTINGS.get(frame_name if frame_name in TEXT_SETTINGS else "common")
         try:
             name_font = ImageFont.truetype(TEXT_FONT, text_settings["name_size"])
@@ -312,7 +311,7 @@ def render_card_final(card, print_num):
 
         name = card.get("name", "Unknown")
         draw.text(
-            (text_settings["center_x"], text_settings["name_y"]),
+            (text_settings["name_x"], text_settings["name_y"]),
             name,
             font=name_font,
             fill=TEXT_COLOR,
@@ -323,7 +322,7 @@ def render_card_final(card, print_num):
 
         series = card.get("series", "Unknown Series")
         draw.text(
-            (text_settings["center_x"], text_settings["series_y"]),
+            (text_settings["series_x"], text_settings["series_y"]),
             series,
             font=series_font,
             fill=TEXT_COLOR,
@@ -332,6 +331,7 @@ def render_card_final(card, print_num):
             anchor="mm"
         )
 
+        # Add star overlay for common cards
         if frame_name == "common" and card.get("stars", 1) < 4:
             star_count = card.get("stars", 1)
             star_path = f"stars/star_{star_count}.png"
@@ -340,7 +340,7 @@ def render_card_final(card, print_num):
                 final.paste(star_overlay, (0, 0), star_overlay)
 
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        final.save(temp_file.name)
+        final.save(temp_file.name, quality=95)
         return temp_file.name
     except Exception as e:
         print("RENDER ERROR:", e)
@@ -354,6 +354,38 @@ def render_card_final(card, print_num):
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         fallback.save(temp_file.name)
         return temp_file.name
+
+
+def render_drop_cards(card1, card2, print_num1, print_num2):
+    """
+    Renders two cards side by side (both 1536x2048 = 3072x2048 total).
+    Returns a temp PNG path.
+    """
+    try:
+        resample_filter = Image.Resampling.LANCZOS
+    except AttributeError:
+        resample_filter = Image.LANCZOS if hasattr(Image, "LANCZOS") else Image.ANTIALIAS
+
+    # Render both cards individually
+    card1_path = render_card_final(card1, print_num1)
+    card2_path = render_card_final(card2, print_num2)
+
+    card1_img = Image.open(card1_path).convert("RGBA")
+    card2_img = Image.open(card2_path).convert("RGBA")
+
+    # Create combined image (side by side)
+    combined = Image.new("RGBA", (3072, 2048), (0, 0, 0, 0))
+    combined.paste(card1_img, (0, 0), card1_img)
+    combined.paste(card2_img, (1536, 0), card2_img)
+
+    # Clean up temp files
+    os.remove(card1_path)
+    os.remove(card2_path)
+
+    # Save combined
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    combined.save(temp_file.name, quality=95)
+    return temp_file.name
 
 
 # =========================
@@ -793,7 +825,7 @@ class GiftView(discord.ui.View):
 
         if self.card_index >= len(giver_inv):
             return await interaction.response.send_message(
-                "This card is no longer available to trade.",
+                "This card is no longer available to gift.",
                 ephemeral=True
             )
 
@@ -804,7 +836,7 @@ class GiftView(discord.ui.View):
             or current_owned_card["print"] != self.print_num
         ):
             return await interaction.response.send_message(
-                "This card is no longer available to trade.",
+                "This card is no longer available to gift.",
                 ephemeral=True
             )
 
@@ -1175,20 +1207,23 @@ class Client(discord.Client):
                 if requested_frame == "common":
                     frame_name = "common"
                 elif requested_frame == "rare":
-                    try:
-                        files = [f for f in os.listdir(frames_dir) if f.lower().startswith("rare")]
-                        if not files:
-                            return await message.channel.send("No rare frames found on disk.")
-                        chosen = random.choice(files)
-                        frame_name = os.path.splitext(chosen)[0]
-                    except Exception:
-                        return await message.channel.send("Error listing frames directory.")
+                    return await message.channel.send("For rare frames, please specify the color (e.g., `blue`, `red`, `purple`, `yellow`, `orange`, `green`, `pink`)")
                 else:
-                    candidate = requested_frame
-                    candidate_path = os.path.join(frames_dir, f"{candidate}.png")
-                    if not os.path.exists(candidate_path):
-                        return await message.channel.send(f"Frame `{candidate}` not found. Use `common`, `rare`, or an exact frame filename without extension.")
-                    frame_name = candidate
+                    # Try to match as a rare color or exact frame name
+                    rare_colors = ["blue", "red", "purple", "yellow", "orange", "green", "pink"]
+                    if requested_frame in rare_colors:
+                        candidate_path = os.path.join(frames_dir, f"{requested_frame}.png")
+                        if os.path.exists(candidate_path):
+                            frame_name = requested_frame
+                        else:
+                            return await message.channel.send(f"Rare frame `{requested_frame}` not found. Available colors: {', '.join(rare_colors)}")
+                    else:
+                        # Try as direct frame name
+                        candidate_path = os.path.join(frames_dir, f"{requested_frame}.png")
+                        if os.path.exists(candidate_path):
+                            frame_name = requested_frame
+                        else:
+                            return await message.channel.send(f"Frame `{requested_frame}` not found. Use `common`, a rare color ({', '.join(rare_colors)}), or an exact frame name.")
 
                 if stars_val not in [1, 2, 3, 4]:
                     return await message.channel.send("Stars must be 1, 2, 3, or 4.")
@@ -1645,9 +1680,11 @@ class Client(discord.Client):
             loop = asyncio.get_event_loop()
             image_path = await loop.run_in_executor(
                 None,
-                render_card_final,
+                render_drop_cards,
                 card1,
-                peek_next_print(card1["id"])
+                card2,
+                peek_next_print(card1["id"]),
+                peek_next_print(card2["id"])
             )
 
             if image_path:
@@ -1661,7 +1698,7 @@ class Client(discord.Client):
                 )
                 os.remove(image_path)
             else:
-                await message.channel.send(f"{message.author.mention} Error rendering card.")
+                await message.channel.send(f"{message.author.mention} Error rendering cards.")
             return
 
         # =========================
@@ -1687,14 +1724,8 @@ class Client(discord.Client):
             ]
             all_versions.sort(key=lambda x: x.get("stars", 1))
 
-            if len(all_versions) == 1:
-                # Only one version, show it without navigation buttons
-                view = FindcardVersionView(all_versions, message.author, user_id)
-                return await message.channel.send(embed=view.get_embed(), view=view)
-            else:
-                # Multiple versions, show with navigation buttons
-                view = FindcardVersionView(all_versions, message.author, user_id)
-                return await message.channel.send(embed=view.get_embed(), view=view)
+            view = FindcardVersionView(all_versions, message.author, user_id)
+            return await message.channel.send(embed=view.get_embed(), view=view)
 
 # --- Run Bot Connection ---
 import os
