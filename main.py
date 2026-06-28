@@ -577,7 +577,10 @@ class CharacterVersionView(discord.ui.View):
             f"✦ **Level:** **{stars(card.get('stars', 1))}**\n"
         )
 
-        embed.set_image(url=clean_url(card.get("image", "")))
+        image_url = clean_url(card.get("image", ""))
+        if image_url and (image_url.startswith("http") or image_url.startswith("card_art/")):
+            embed.set_image(url=image_url)
+        
         embed.set_footer(text=f"Version {self.index + 1}/{len(self.versions)}")
 
         return embed
@@ -697,7 +700,11 @@ class FindcardVersionView(discord.ui.View):
             f"✦ **Claims:** **{claims}**\n"
         )
 
-        embed.set_thumbnail(url=clean_url(card.get("image", "")))
+        # Only set thumbnail if URL is valid
+        image_url = clean_url(card.get("image", ""))
+        if image_url and (image_url.startswith("http") or image_url.startswith("card_art/")):
+            embed.set_thumbnail(url=image_url)
+        
         embed.set_footer(text=f"Version {self.index + 1}/{len(self.versions)}")
 
         return embed
