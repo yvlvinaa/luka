@@ -665,7 +665,65 @@ class CharacterVersionView(discord.ui.View):
         )
 
 # =========================
-# 5. GIFT VIEW
+# 5. FINDCARD VERSION VIEW
+# =========================
+
+class FindcardVersionView(discord.ui.View):
+    def __init__(self, versions, user, user_id):
+        super().__init__(timeout=60)
+        self.versions = versions
+        self.user = user
+        self.user_id = user_id
+        self.index = 0
+
+    def get_embed(self):
+        card = self.versions[self.index]
+        cid = card.get("id", "unknown")
+        name = card.get("name", "Unknown")
+        series = card.get("series", "Unknown Series")
+        stars_val = card.get("stars", 1)
+        frame = card.get("frame", "common")
+        claims = card_prints.get(cid, 0)
+
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.set_author(name="Card Information", icon_url=self.user.display_avatar.url)
+
+        embed.description = (
+            f"## **{name}**\n"
+            f"✦ **Series:** **{series}**\n"
+            f"✦ **ID:** `{cid}`\n"
+            f"✦ **Stars:** {stars(stars_val)}\n"
+            f"✦ **Frame:** **{frame}**\n"
+            f"✦ **Claims:** **{claims}**\n"
+        )
+
+        embed.set_thumbnail(url=clean_url(card.get("image", "")))
+        embed.set_footer(text=f"Version {self.index + 1}/{len(self.versions)}")
+
+        return embed
+
+    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.index > 0:
+            self.index -= 1
+
+        await interaction.response.edit_message(
+            embed=self.get_embed(),
+            view=self
+        )
+
+    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.index < len(self.versions) - 1:
+            self.index += 1
+
+        await interaction.response.edit_message(
+            embed=self.get_embed(),
+            view=self
+        )
+
+# =========================
+# 6. GIFT VIEW
 # =========================
 
 class GiftView(discord.ui.View):
@@ -787,7 +845,7 @@ class GiftView(discord.ui.View):
 
 
 # =========================
-# 6. TRADE REQUEST VIEW
+# 7. TRADE REQUEST VIEW
 # =========================
 
 class TradeRequestView(discord.ui.View):
@@ -850,7 +908,7 @@ class TradeRequestView(discord.ui.View):
 
 
 # =========================
-# 7. TRADE VIEW
+# 8. TRADE VIEW
 # =========================
 
 class TradeView(discord.ui.View):
@@ -1615,22 +1673,21 @@ class Client(discord.Client):
             if not card:
                 return await message.channel.send("Card not found.")
 
-            cid = card.get("id", "unknown")
-            name = card.get("name", "Unknown")
-            series = card.get("series", "Unknown Series")
-            stars_val = card.get("stars", 1)
-            frame = card.get("frame", "common")
-            claims = card_prints.get(cid, 0)
+            # Find all versions of this card
+            all_versions = [
+                c for c in cards
+                if c.get("name", "").lower() == card.get("name", "").lower()
+            ]
+            all_versions.sort(key=lambda x: x.get("stars", 1))
 
-            msg = (
-                f"**{name}**\n"
-                f"ID: `{cid}`\n"
-                f"Stars: {stars_val}\n"
-                f"Series: {series}\n"
-                f"Frame: {frame}\n"
-                f"Claims: {claims}\n"
-            )
-            return await message.channel.send(msg)
+            if len(all_versions) == 1:
+                # Only one version, show it without navigation buttons
+                view = FindcardVersionView(all_versions, message.author, user_id)
+                return await message.channel.send(embed=view.get_embed(), view=view)
+            else:
+                # Multiple versions, show with navigation buttons
+                view = FindcardVersionView(all_versions, message.author, user_id)
+                return await message.channel.send(embed=view.get_embed(), view=view)
 
 # --- Run Bot Connection ---
 import os
