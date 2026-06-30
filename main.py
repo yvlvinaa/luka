@@ -23,50 +23,6 @@ from data import (
     card_prints
 )
 
-# =========================
-# CARD RENDERING SETTINGS
-# =========================
-
-PRINT_SETTINGS = {
-    "common": {
-        "print_x": 1000,
-        "print_y": 355,
-        "font_size": 100,
-        "stroke": 4
-    },
-    "rare": {
-        "print_x": 355,
-        "print_y": 300,
-        "font_size": 100,
-        "stroke": 4
-    }
-}
-
-# Text positioning for card name and series (1536x2048)
-TEXT_SETTINGS = {
-    "common": {
-        "name_x": 732,
-        "name_y": 1505,
-        "name_size": 130,
-        "series_x": 731,
-        "series_y": 1580,
-        "series_size": 115,
-    },
-    "rare": {
-        "name_x": 766,
-        "name_y": 1512,
-        "name_size": 130,
-        "series_x": 778,
-        "series_y": 1674,
-        "series_size": 115,
-    }
-}
-
-PRINT_FONT = "Fredoka-Bold.ttf"
-TEXT_FONT = "Fredoka-Bold.ttf"
-TEXT_COLOR = (255, 255, 255)
-TEXT_STROKE_WIDTH = 2
-TEXT_STROKE_COLOR = (0, 0, 0)
 
 # Initialize intents
 intents = discord.Intents.all()
@@ -153,38 +109,6 @@ def get_weighted_card():
     return random.choice(weighted)
 
 
-def clean_url(url):
-    """Cleans GitHub URLs to point to raw image assets."""
-    if "github.com" in url and "/blob/" in url:
-        url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
-    return url.split("?")[0]
-
-
-def get_image(url):
-    """Downloads an image over HTTP and returns a PIL Image object."""
-    try:
-        # If it's a local file path, load from disk
-        if url.startswith("card_art/"):
-            if os.path.exists(url):
-                return Image.open(url).convert("RGBA")
-            else:
-                print(f"LOCAL IMAGE ERROR: {url} not found")
-                return Image.new("RGBA", (1536, 2048), (80, 80, 80, 255))
-
-        # Otherwise download from URL
-        url = clean_url(url)
-        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        if response.status_code != 200:
-            raise Exception(f"HTTP {response.status_code}")
-        img = Image.open(BytesIO(response.content)).convert("RGBA")
-        # Resize to standard size and use high quality
-        img = img.resize((1536, 2048), Image.Resampling.LANCZOS)
-        return img
-    except Exception as e:
-        print("IMAGE ERROR:", url, e)
-        return Image.new("RGBA", (1536, 2048), (80, 80, 80, 255))
-
-
 def format_print(print_num):
     """Formats print number for display."""
     if print_num < 100:
@@ -193,32 +117,6 @@ def format_print(print_num):
         return "#100"
     if print_num > 100:
         return "L"
-
-
-def create_vertical_gradient(width, height, color=(0,0,0), start_alpha=0, end_alpha=150):
-    """
-    Create a vertical gradient image (transparent -> color with alpha).
-    color is an (r,g,b) tuple. Alpha range 0..255.
-    """
-    base = Image.new('RGBA', (width, height), (0,0,0,0))
-    draw = ImageDraw.Draw(base)
-    for y in range(height):
-        alpha = int(start_alpha + (end_alpha - start_alpha) * (y / max(1, height-1)))
-        draw.line([(0,y),(width,y)], fill=(color[0], color[1], color[2], alpha))
-    return base
-
-
-def average_color_of_image(img):
-    """Return the average color (r,g,b) of non-transparent pixels in img (PIL RGBA)."""
-    try:
-        if img.mode != "RGBA":
-            img = img.convert("RGBA")
-        arr = img.copy().convert("RGB")
-        stat = ImageStat.Stat(arr)
-        r, g, b = [int(x) for x in stat.mean]
-        return (r, g, b)
-    except Exception:
-        return (0,0,0)
 
 
 def save_cards_json():
@@ -243,148 +141,389 @@ def generate_card_id(character_name, frame_type):
         return f"{base_id}_{count + 1}"
 
 
-# =========================
-# RENDERING
-# =========================
 
-def render_card_final(card, print_num):
+"""
+=========================
+RENDERING
+=========================
+Completely rewritten card renderer for Luka (Discord card game bot).
+Lives directly inside main.py -- not a separate module.
+
+render_card_final() and render_drop() are called the same way they
+always were elsewhere in this file; only their internals changed.
+
+Expected directory layout:
+    frames/
+        common.png
+        blue.png
+        red.png
+        yellow.png
+        pink.png
+        ...
+    stars/
+        star_1.png
+        star_2.png
+        star_3.png
+
+Card dict fields used (matching cards.json):
+    "name"   : str
+    "series" : str
+    "frame"  : str  -> "common" or any other value (treated as rare)
+    "image"  : str  -> local path under card_art/ OR a remote URL
+    "stars"  : int  -> 1-3, picks stars/star_<n>.png
+
+Frame rule:
+    "common"      -> print number drawn TOP-RIGHT
+    anything else -> "rare", print number drawn TOP-LEFT
+
+Stars rule:
+    Only the "common" frame draws stars. Any rare frame (anything that
+    isn't "common") never gets a star overlay.
+"""
+
+# ---------------------------------------------------------------------------
+# CONFIG -- tweak freely, nothing else needs to change
+# ---------------------------------------------------------------------------
+
+CARD_WIDTH = 1536
+CARD_HEIGHT = 2048
+
+FRAME_DIR = "frames"
+STAR_DIR = "stars"
+
+# Original font paths/names -- unchanged
+PRINT_FONT = "Fredoka-SemiBold.ttf"
+TEXT_FONT = "Fredoka-SemiBold.ttf"
+FONT_PATH = "Fredoka-SemiBold.ttf"
+
+# Text sizes -- name a little smaller, series a touch smaller (still readable)
+NAME_FONT_SIZE = 125
+SERIES_FONT_SIZE = 78
+PRINT_FONT_SIZE = 100
+
+TEXT_COLOR = (255, 255, 255)
+TEXT_STROKE_WIDTH = 5
+TEXT_STROKE_COLOR = (0, 0, 0)
+
+CENTER_X = CARD_WIDTH // 2
+NAME_Y = 1510      # moved significantly higher, closer to the artwork
+SERIES_Y = 1620    # raised with the name, +5px extra gap for spacing
+
+# If the series name is longer than 4 words, the remaining words wrap onto
+# a second centered line beneath the first, spaced this far below it.
+SERIES_MAX_WORDS_PER_LINE = 4
+SERIES_LINE_SPACING = 90
+
+# Print number position -- moved ~5px lower and slightly further right to
+# match the original renderer's placement more closely.
+PRINT_POS_COMMON = (1030, 325)
+PRINT_POS_RARE = (380, 295)
+
+# Gradient (Kita/Gachapon style: dark gray, not pure black) -- shorter now
+# so it covers less of the artwork and the card reads brighter overall.
+GRADIENT_COLOR = (25, 25, 28)
+GRADIENT_HEIGHT_RATIO = 0.40   # portion of the card (from the bottom) the gradient covers
+GRADIENT_START_ALPHA = 0
+GRADIENT_END_ALPHA = 140
+
+# Drop image (two cards combined) -- spacing matches the original renderer
+DROP_SPACING = 70
+DROP_UPSCALE = 2.0   # higher output resolution so Discord shows it bigger/sharper
+
+_font_cache = {}
+
+
+# ---------------------------------------------------------------------------
+# HELPERS
+# ---------------------------------------------------------------------------
+
+# Font loader with fallbacks so we don't fall back to tiny default font
+# (restored exactly from the original main.py)
+def load_font(preferred_name, size):
+    candidates = [preferred_name, "DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "Arial.ttf"]
+    for cand in candidates:
+        try:
+            return ImageFont.truetype(cand, size)
+        except Exception:
+            continue
+    return ImageFont.load_default()
+
+
+def get_font(size: int) -> ImageFont.FreeTypeFont:
+    """Load Fredoka-SemiBold at the given size via the original fallback chain, cached per size."""
+    if size not in _font_cache:
+        _font_cache[size] = load_font(FONT_PATH, size)
+    return _font_cache[size]
+
+
+def is_rare(frame_name: str) -> bool:
+    """Everything that isn't literally 'common' counts as rare."""
+    return frame_name.lower() != "common"
+
+
+def clean_url(url: str) -> str:
+    """Cleans GitHub URLs to point to raw image assets."""
+    if "github.com" in url and "/blob/" in url:
+        url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+    return url.split("?")[0]
+
+
+def load_artwork_source(image_field: str) -> Image.Image:
     """
-    Renders the final card image with high quality art and clean text overlay.
-    Always returns a temp PNG path.
+    Loads raw artwork from either a local card_art/ path or a remote URL.
+    Mirrors the old get_image() behavior so existing cards.json entries
+    keep working unchanged.
     """
     try:
-        frame_name = card.get("frame", "common")
-        frame_path = f"frames/{frame_name}.png"
+        if image_field and image_field.startswith("card_art/"):
+            if os.path.exists(image_field):
+                return Image.open(image_field).convert("RGBA")
+            print(f"LOCAL IMAGE ERROR: {image_field} not found")
+            return Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (80, 80, 80, 255))
 
-        if os.path.exists(frame_path):
-            frame = Image.open(frame_path).convert("RGBA")
-        else:
-            print(f"FRAME NOT FOUND: {frame_path} - using placeholder")
-            frame = Image.new("RGBA", (1536, 2048), (40, 40, 40, 255))
-            draw_f = ImageDraw.Draw(frame)
-            draw_f.rounded_rectangle([30,30,1506,2018], radius=24, outline=(180,180,180,255), width=10)
+        if not image_field:
+            return Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (80, 80, 80, 255))
 
-        try:
-            resample_filter = Image.Resampling.LANCZOS
-        except AttributeError:
-            resample_filter = Image.LANCZOS if hasattr(Image, "LANCZOS") else Image.ANTIALIAS
+        url = clean_url(image_field)
+        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        if response.status_code != 200:
+            raise Exception(f"HTTP {response.status_code}")
+        return Image.open(BytesIO(response.content)).convert("RGBA")
 
-        # Get and resize art image to full card size
-        char_image = get_image(card.get("image", ""))
-        char_image = char_image.resize((1536, 2048), resample_filter)
+    except Exception as e:
+        print("IMAGE ERROR:", image_field, e)
+        return Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (80, 80, 80, 255))
 
-        # Create base with art underneath frame
-        base = Image.new("RGBA", frame.size, (0,0,0,0))
-        base.paste(char_image, (0, 0), char_image)
 
-        # Resize frame if needed and composite
-        if frame.size != base.size:
-            frame = frame.resize(base.size, resample_filter)
-        final = Image.alpha_composite(base, frame)
+def center_crop_to_fill(image: Image.Image, target_size=(CARD_WIDTH, CARD_HEIGHT)) -> Image.Image:
+    """
+    Resize + center-crop so the artwork completely fills target_size
+    with no empty space and no stretching/distortion (cover-fit).
+    """
+    target_w, target_h = target_size
+    src_w, src_h = image.size
 
-        draw = ImageDraw.Draw(final)
-        print_settings = PRINT_SETTINGS.get(frame_name if frame_name in PRINT_SETTINGS else "common")
+    scale = max(target_w / src_w, target_h / src_h)
+    new_w = round(src_w * scale)
+    new_h = round(src_h * scale)
+    image = image.resize((new_w, new_h), Image.LANCZOS)
 
-        # Draw print number
-        try:
-            print_font = ImageFont.truetype(PRINT_FONT, print_settings["font_size"])
-        except:
-            print_font = ImageFont.load_default()
+    left = (new_w - target_w) // 2
+    top = (new_h - target_h) // 2
+    return image.crop((left, top, left + target_w, top + target_h))
 
-        draw.text(
-            (print_settings["print_x"], print_settings["print_y"]),
-            format_print(print_num),
-            font=print_font,
-            fill=(255,255,255),
-            stroke_width=print_settings["stroke"],
-            stroke_fill=TEXT_STROKE_COLOR
+
+def load_frame(frame_name: str) -> Image.Image:
+    """Load the frame PNG by name, with a visible fallback if it's missing."""
+    path = os.path.join(FRAME_DIR, f"{frame_name}.png")
+
+    if os.path.exists(path):
+        frame = Image.open(path).convert("RGBA")
+    else:
+        print(f"FRAME NOT FOUND: {path} - using placeholder")
+        frame = Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (40, 40, 40, 255))
+        d = ImageDraw.Draw(frame)
+        d.rounded_rectangle(
+            [30, 30, CARD_WIDTH - 30, CARD_HEIGHT - 30],
+            radius=24, outline=(180, 180, 180, 255), width=10
         )
 
-        # Draw name and series text
-        text_settings = TEXT_SETTINGS.get(frame_name if frame_name in TEXT_SETTINGS else "common")
-        try:
-            name_font = ImageFont.truetype(TEXT_FONT, text_settings["name_size"])
-            series_font = ImageFont.truetype(TEXT_FONT, text_settings["series_size"])
-        except:
-            name_font = ImageFont.load_default()
-            series_font = ImageFont.load_default()
+    if frame.size != (CARD_WIDTH, CARD_HEIGHT):
+        frame = frame.resize((CARD_WIDTH, CARD_HEIGHT), Image.LANCZOS)
+    return frame
 
-        name = card.get("name", "Unknown")
-        draw.text(
-            (text_settings["name_x"], text_settings["name_y"]),
-            name,
-            font=name_font,
-            fill=TEXT_COLOR,
-            stroke_width=TEXT_STROKE_WIDTH,
-            stroke_fill=TEXT_STROKE_COLOR,
-            anchor="mm"
-        )
 
-        series = card.get("series", "Unknown Series")
-        draw.text(
-            (text_settings["series_x"], text_settings["series_y"]),
-            series,
-            font=series_font,
-            fill=TEXT_COLOR,
-            stroke_width=TEXT_STROKE_WIDTH,
-            stroke_fill=TEXT_STROKE_COLOR,
-            anchor="mm"
-        )
+def load_star_overlay(card: dict):
+    """
+    Loads the star overlay for this card's star tier (1-3). Star assets
+    are full 1536x2048 transparent overlays. Only called for common-frame
+    cards -- rare frames never get a star overlay.
+    """
+    tier = int(card.get("stars", 1))
+    tier = min(max(tier, 1), 3)
+    path = os.path.join(STAR_DIR, f"star_{tier}.png")
 
-        # Add star overlay for common cards
-        if frame_name == "common" and card.get("stars", 1) < 4:
-            star_count = card.get("stars", 1)
-            star_path = f"stars/star_{star_count}.png"
-            if os.path.exists(star_path):
-                star_overlay = Image.open(star_path).convert("RGBA")
-                final.paste(star_overlay, (0, 0), star_overlay)
+    if not os.path.exists(path):
+        print(f"STAR NOT FOUND: {path}")
+        return None
 
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        final.save(temp_file.name, quality=95)
-        return temp_file.name
+    star = Image.open(path).convert("RGBA")
+    if star.size != (CARD_WIDTH, CARD_HEIGHT):
+        star = star.resize((CARD_WIDTH, CARD_HEIGHT), Image.LANCZOS)
+    return star
+
+
+def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT)) -> Image.Image:
+    """
+    Vertical gradient overlay, transparent at the top and linearly fading
+    into a dark gray toward the bottom. Only covers the bottom portion of
+    the card (GRADIENT_HEIGHT_RATIO) so more of the artwork stays visible.
+    """
+    width, height = size
+    gradient = Image.new("RGBA", size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(gradient)
+
+    fade_start = int(height * (1 - GRADIENT_HEIGHT_RATIO))
+
+    for y in range(fade_start, height):
+        progress = (y - fade_start) / max(1, (height - fade_start))
+        alpha = int(GRADIENT_START_ALPHA + (GRADIENT_END_ALPHA - GRADIENT_START_ALPHA) * progress)
+        draw.line([(0, y), (width, y)], fill=(*GRADIENT_COLOR, alpha))
+
+    return gradient
+
+
+def draw_text_with_outline(draw: ImageDraw.ImageDraw, position, text, font, anchor="la"):
+    """White fill text with a black outline, using Pillow's native stroke support."""
+    draw.text(
+        position, text, font=font,
+        fill=TEXT_COLOR, stroke_width=TEXT_STROKE_WIDTH, stroke_fill=TEXT_STROKE_COLOR,
+        anchor=anchor,
+    )
+
+
+def draw_series_text(draw: ImageDraw.ImageDraw, series_text: str, font, center_x: int, base_y: int):
+    """
+    Draws the series name centered under the character name. If the series
+    name is longer than SERIES_MAX_WORDS_PER_LINE words, the remaining
+    words wrap onto a second centered line beneath the first instead of
+    overflowing or shrinking to fit on one line.
+    """
+    words = series_text.split()
+
+    if len(words) <= SERIES_MAX_WORDS_PER_LINE:
+        draw_text_with_outline(draw, (center_x, base_y), series_text, font, anchor="mm")
+        return
+
+    line1 = " ".join(words[:SERIES_MAX_WORDS_PER_LINE])
+    line2 = " ".join(words[SERIES_MAX_WORDS_PER_LINE:])
+
+    draw_text_with_outline(draw, (center_x, base_y), line1, font, anchor="mm")
+    draw_text_with_outline(draw, (center_x, base_y + SERIES_LINE_SPACING), line2, font, anchor="mm")
+
+
+# ---------------------------------------------------------------------------
+# CARD RENDERING
+# ---------------------------------------------------------------------------
+
+def render_card(card: dict, print_num) -> Image.Image:
+    """
+    Renders a single full card and returns a PIL Image (in memory).
+
+    Rendering order:
+        1. Load + center-crop artwork
+        2. Bottom gradient
+        3. Frame
+        4. Stars
+        5. Print number
+        6. Character name
+        7. Series
+    """
+    frame_name = card.get("frame", "common")
+    rare = is_rare(frame_name)
+
+    # 1. Artwork
+    art_source = load_artwork_source(card.get("image", ""))
+    canvas = center_crop_to_fill(art_source).convert("RGBA")
+
+    # 2. Gradient
+    canvas = Image.alpha_composite(canvas, create_bottom_gradient())
+
+    # 3. Frame
+    canvas = Image.alpha_composite(canvas, load_frame(frame_name))
+
+    # 4. Stars (common frame only -- rare frames never get stars)
+    if not rare:
+        star = load_star_overlay(card)
+        if star is not None:
+            canvas = Image.alpha_composite(canvas, star)
+
+    draw = ImageDraw.Draw(canvas)
+
+    # 5. Print number -- common: top-right area, rare: top-left area
+    # (coordinates + anchor restored to match the original renderer's placement)
+    # Card art shows just the number (no "#"); format_print() itself is left
+    # untouched since it's still used with the "#" elsewhere in the bot.
+    print_text = format_print(print_num).lstrip("#")
+    print_font = get_font(PRINT_FONT_SIZE)
+    print_pos = PRINT_POS_RARE if rare else PRINT_POS_COMMON
+    draw_text_with_outline(draw, print_pos, print_text, print_font, anchor="la")
+
+    # 6. Character name (large)
+    name_font = get_font(NAME_FONT_SIZE)
+    draw_text_with_outline(draw, (CENTER_X, NAME_Y), card.get("name", "Unknown"), name_font, anchor="mm")
+
+    # 7. Series (smaller, wraps to a second centered line past 4 words)
+    series_font = get_font(SERIES_FONT_SIZE)
+    draw_series_text(draw, card.get("series", "Unknown Series"), series_font, CENTER_X, SERIES_Y)
+
+    return canvas
+
+
+def render_card_final(card: dict, print_num) -> str:
+    """
+    Drop-in replacement for the old render_card_final().
+    Same contract: renders one card, saves it to a temp PNG, and returns
+    the file path. Callers in main.py don't need to change at all.
+    """
+    try:
+        final = render_card(card, print_num)
     except Exception as e:
         print("RENDER ERROR:", e)
-        fallback = Image.new("RGBA", (1536,2048), (30,30,30,255))
-        d = ImageDraw.Draw(fallback)
-        try:
-            fnt = ImageFont.truetype(TEXT_FONT, 40)
-        except:
-            fnt = ImageFont.load_default()
-        d.text((50,50), f"Render Error: {str(e)[:200]}", font=fnt, fill=(255,255,255))
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-        fallback.save(temp_file.name)
-        return temp_file.name
+        final = Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (30, 30, 30, 255))
+        d = ImageDraw.Draw(final)
+        d.text((50, 50), f"Render Error: {str(e)[:200]}", font=get_font(40), fill=(255, 255, 255))
+
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    final.save(temp_file.name)
+    return temp_file.name
 
 
-def render_drop_cards(card1, card2, print_num1, print_num2):
+# ---------------------------------------------------------------------------
+# DROP IMAGE (combine two rendered cards side by side)
+# ---------------------------------------------------------------------------
+
+def combine_cards(images: list, spacing: int = DROP_SPACING, upscale: float = DROP_UPSCALE) -> Image.Image:
     """
-    Renders two cards side by side (both 1536x2048 = 3072x2048 total).
-    Returns a temp PNG path.
+    Combine rendered card images side by side with spacing, then upscale
+    the final image so it displays larger and sharper in Discord.
+    """
+    count = len(images)
+    total_w = (CARD_WIDTH * count) + (spacing * (count - 1))
+    total_h = CARD_HEIGHT
+
+    canvas = Image.new("RGBA", (total_w, total_h), (0, 0, 0, 0))
+
+    x = 0
+    for img in images:
+        canvas.alpha_composite(img, (x, 0))
+        x += CARD_WIDTH + spacing
+
+    if upscale and upscale != 1.0:
+        new_size = (round(total_w * upscale), round(total_h * upscale))
+        canvas = canvas.resize(new_size, Image.LANCZOS)
+
+    return canvas
+
+
+def render_drop(card1: dict, print1, card2: dict, print2) -> str:
+    """
+    Drop-in replacement for the old render_drop().
+    Same contract: renders both cards, combines them side by side,
+    saves to a temp PNG, and returns the file path.
     """
     try:
-        resample_filter = Image.Resampling.LANCZOS
-    except AttributeError:
-        resample_filter = Image.LANCZOS if hasattr(Image, "LANCZOS") else Image.ANTIALIAS
+        img1 = render_card(card1, print1)
+        img2 = render_card(card2, print2)
+        combined = combine_cards([img1, img2])
+    except Exception as e:
+        print("RENDER ERROR:", e)
+        combined = Image.new("RGBA", (CARD_WIDTH * 2 + DROP_SPACING, CARD_HEIGHT), (30, 30, 30, 255))
+        d = ImageDraw.Draw(combined)
+        d.text((50, 50), f"Render Error: {str(e)[:200]}", font=get_font(40), fill=(255, 255, 255))
 
-    # Render both cards individually
-    card1_path = render_card_final(card1, print_num1)
-    card2_path = render_card_final(card2, print_num2)
-
-    card1_img = Image.open(card1_path).convert("RGBA")
-    card2_img = Image.open(card2_path).convert("RGBA")
-
-    # Create combined image (side by side)
-    combined = Image.new("RGBA", (3072, 2048), (0, 0, 0, 0))
-    combined.paste(card1_img, (0, 0), card1_img)
-    combined.paste(card2_img, (1536, 0), card2_img)
-
-    # Clean up temp files
-    os.remove(card1_path)
-    os.remove(card2_path)
-
-    # Save combined
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    combined.save(temp_file.name, quality=95)
+    combined.save(temp_file.name)
     return temp_file.name
 
 
@@ -590,8 +729,10 @@ class CharacterVersionView(discord.ui.View):
         self.user_id = user_id
         self.index = 0
 
-    def get_embed(self):
+    def build_embed(self):
         card = self.versions[self.index]
+
+        claims = card_prints.get(card["id"], 0)
 
         embed = discord.Embed(color=THEME_COLOR)
         embed.set_author(
@@ -599,26 +740,54 @@ class CharacterVersionView(discord.ui.View):
             icon_url=self.user.display_avatar.url
         )
 
-        claims = card_prints.get(card.get("id"), 0)
-
         embed.description = (
-            f"## **{card.get('name', 'Unknown')}**\n"
-            f"✦ **Series:** **{card.get('series', 'Unknown')}**\n"
+            f"## **{card['name']}**\n"
+            f"✦ **Series:** **{card['series']}**\n"
+            f"────────────────────\n"
             f"✦ **Claims:** **{claims}**\n"
-            f"───\n"
-            f"✦ **Level:** **{stars(card.get('stars', 1))}**\n"
+            f"✦ **Level:** **{stars(card['stars'])}**\n"
         )
 
-        image_url = clean_url(card.get("image", ""))
-        if image_url and (image_url.startswith("http") or image_url.startswith("card_art/")):
-            embed.set_image(url=image_url)
-        
-        embed.set_footer(text=f"Version {self.index + 1}/{len(self.versions)}")
+        embed.set_footer(
+            text=f"Version {self.index+1}/{len(self.versions)}"
+        )
 
         return embed
 
-    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
-    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def update_message(self, interaction):
+        card = self.versions[self.index]
+
+        image_path = render_card_final(
+            card,
+            peek_next_print(card["id"])
+        )
+
+        file = discord.File(image_path, filename="card.png")
+
+        embed = self.build_embed()
+        embed.set_image(url="attachment://card.png")
+
+        # For interaction edits we must supply attachments when embed references attachment://
+        await interaction.response.edit_message(
+            embed=embed,
+            attachments=[file],
+            view=self
+        )
+
+        try:
+            os.remove(image_path)
+        except:
+            pass
+
+    @discord.ui.button(
+        emoji="⬅️",
+        style=discord.ButtonStyle.secondary
+    )
+    async def previous(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message(
                 "This isn't your search!",
@@ -628,13 +797,17 @@ class CharacterVersionView(discord.ui.View):
         if self.index > 0:
             self.index -= 1
 
-        await interaction.response.edit_message(
-            embed=self.get_embed(),
-            view=self
-        )
+        await self.update_message(interaction)
 
-    @discord.ui.button(emoji="🔍", style=discord.ButtonStyle.secondary)
-    async def owners(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(
+        emoji="🔍",
+        style=discord.ButtonStyle.secondary
+    )
+    async def owners(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message(
                 "This isn't your search!",
@@ -642,62 +815,64 @@ class CharacterVersionView(discord.ui.View):
             )
 
         card = self.versions[self.index]
-        owners_list = []
+
+        owners = []
 
         for owner_id, inventory in inventories.items():
-            for owned_card in inventory:
-                if owned_card["card"]["id"] == card["id"]:
-                    owners_list.append((owned_card["print"], owner_id))
+            for owned in inventory:
+                if owned["card"]["id"] == card["id"]:
+                    owners.append((owned["print"], owner_id))
 
-        owners_list.sort(key=lambda x: x[0])
+        owners.sort()
 
         embed = discord.Embed(color=THEME_COLOR)
-        embed.title = f"{card['name']} - Owners"
+        embed.title = f"{card['name']} Owners"
 
-        if not owners_list:
+        if not owners:
             embed.description = "Nobody owns this card yet."
+
         else:
             lines = []
-            guild = interaction.guild
 
-            for print_num, owner_id in owners_list:
-                member = guild.get_member(owner_id)
+            for print_num, owner_id in owners:
+
+                member = interaction.guild.get_member(owner_id)
 
                 if member is None:
                     try:
-                        member = await guild.fetch_member(owner_id)
+                        member = await interaction.guild.fetch_member(owner_id)
                     except:
                         continue
 
                 lines.append(
-                    f"`{format_print(print_num)}.` {member.mention}"
+                    f"`{format_print(print_num)}` • {member.mention}"
                 )
 
-            if lines:
-                embed.description = "\n".join(lines)
-            else:
-                embed.description = "Nobody owns this card yet."
+            embed.description = "\n".join(lines)
 
         await interaction.response.send_message(
-            embed=embed,
-            ephemeral=False
+            embed=embed
         )
 
-    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
-    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(
+        emoji="➡️",
+        style=discord.ButtonStyle.secondary
+    )
+    async def next(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message(
                 "This isn't your search!",
                 ephemeral=True
             )
 
-        if self.index < len(self.versions) - 1:
+        if self.index < len(self.versions)-1:
             self.index += 1
 
-        await interaction.response.edit_message(
-            embed=self.get_embed(),
-            view=self
-        )
+        await self.update_message(interaction)
 
 # =========================
 # 5. FINDCARD VERSION VIEW
@@ -711,55 +886,99 @@ class FindcardVersionView(discord.ui.View):
         self.user_id = user_id
         self.index = 0
 
-    def get_embed(self):
+    def build_embed(self):
         card = self.versions[self.index]
-        cid = card.get("id", "unknown")
-        name = card.get("name", "Unknown")
-        series = card.get("series", "Unknown Series")
-        stars_val = card.get("stars", 1)
-        frame = card.get("frame", "common")
-        claims = card_prints.get(cid, 0)
+
+        claims = card_prints.get(card["id"], 0)
 
         embed = discord.Embed(color=THEME_COLOR)
-        embed.set_author(name="Card Information", icon_url=self.user.display_avatar.url)
-
-        embed.description = (
-            f"## **{name}**\n"
-            f"✦ **Series:** **{series}**\n"
-            f"✦ **ID:** `{cid}`\n"
-            f"✦ **Stars:** {stars(stars_val)}\n"
-            f"✦ **Frame:** **{frame}**\n"
-            f"✦ **Claims:** **{claims}**\n"
+        embed.set_author(
+            name="Card Information",
+            icon_url=self.user.display_avatar.url
         )
 
-        # Only set thumbnail if URL is valid
-        image_url = clean_url(card.get("image", ""))
-        if image_url and (image_url.startswith("http") or image_url.startswith("card_art/")):
-            embed.set_thumbnail(url=image_url)
-        
-        embed.set_footer(text=f"Version {self.index + 1}/{len(self.versions)}")
+        embed.description = (
+            f"## **{card['name']}**\n"
+            f"✦ **Series:** **{card['series']}**\n"
+            f"────────────────────────\n"
+            f"✦ **Card ID:** `{card['id']}`\n"
+            f"✦ **Frame:** **{card.get('frame','common')}**\n"
+            f"✦ **Level:** **{stars(card.get('stars',1))}**\n"
+            f"✦ **Claims:** **{claims}**"
+        )
+
+        embed.set_footer(
+            text=f"Version {self.index+1}/{len(self.versions)}"
+        )
 
         return embed
 
-    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
-    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def update_message(self, interaction: discord.Interaction):
+        card = self.versions[self.index]
+
+        image_path = render_card_final(
+            card,
+            peek_next_print(card["id"])
+        )
+
+        file = discord.File(
+            image_path,
+            filename="card.png"
+        )
+
+        embed = self.build_embed()
+        embed.set_image(url="attachment://card.png")
+
+        await interaction.response.edit_message(
+            embed=embed,
+            attachments=[file],
+            view=self
+        )
+
+        try:
+            os.remove(image_path)
+        except:
+            pass
+
+    @discord.ui.button(
+        emoji="⬅️",
+        style=discord.ButtonStyle.secondary
+    )
+    async def previous(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message(
+                "This isn't your search!",
+                ephemeral=True
+            )
+
         if self.index > 0:
             self.index -= 1
 
-        await interaction.response.edit_message(
-            embed=self.get_embed(),
-            view=self
-        )
+        await self.update_message(interaction)
 
-    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
-    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(
+        emoji="➡️",
+        style=discord.ButtonStyle.secondary
+    )
+    async def next(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button
+    ):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message(
+                "This isn't your search!",
+                ephemeral=True
+            )
+
         if self.index < len(self.versions) - 1:
             self.index += 1
 
-        await interaction.response.edit_message(
-            embed=self.get_embed(),
-            view=self
-        )
+        await self.update_message(interaction)
 
 # =========================
 # 6. GIFT VIEW
@@ -809,7 +1028,7 @@ class GiftView(discord.ui.View):
         if image_path:
             file = discord.File(image_path, filename="card.png")
             embed.set_image(url="attachment://card.png")
-            os.remove(image_path)
+            # leave file removal to caller (we'll remove after send)
             return embed, file
         return embed, None
 
@@ -825,7 +1044,7 @@ class GiftView(discord.ui.View):
 
         if self.card_index >= len(giver_inv):
             return await interaction.response.send_message(
-                "This card is no longer available to gift.",
+                "This card is no longer available to trade.",
                 ephemeral=True
             )
 
@@ -836,7 +1055,7 @@ class GiftView(discord.ui.View):
             or current_owned_card["print"] != self.print_num
         ):
             return await interaction.response.send_message(
-                "This card is no longer available to gift.",
+                "This card is no longer available to trade.",
                 ephemeral=True
             )
 
@@ -852,12 +1071,19 @@ class GiftView(discord.ui.View):
         if self.gift_id in active_gifts:
             del active_gifts[self.gift_id]
 
+        # When editing with embed referencing attachment:// we must attach the file
         await interaction.response.edit_message(
             content=None,
             embed=accepted_embed,
             view=None,
             attachments=[] if not file else [file]
         )
+
+        if file:
+            try:
+                os.remove(file.fp.name)
+            except Exception:
+                pass
 
     @discord.ui.button(emoji="❌", style=discord.ButtonStyle.danger)
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -881,6 +1107,12 @@ class GiftView(discord.ui.View):
             view=None,
             attachments=[] if not file else [file]
         )
+
+        if file:
+            try:
+                os.remove(file.fp.name)
+            except Exception:
+                pass
 
 
 # =========================
@@ -1207,23 +1439,20 @@ class Client(discord.Client):
                 if requested_frame == "common":
                     frame_name = "common"
                 elif requested_frame == "rare":
-                    return await message.channel.send("For rare frames, please specify the color (e.g., `blue`, `red`, `purple`, `yellow`, `orange`, `green`, `pink`)")
+                    try:
+                        files = [f for f in os.listdir(frames_dir) if f.lower().startswith("rare")]
+                        if not files:
+                            return await message.channel.send("No rare frames found on disk.")
+                        chosen = random.choice(files)
+                        frame_name = os.path.splitext(chosen)[0]
+                    except Exception:
+                        return await message.channel.send("Error listing frames directory.")
                 else:
-                    # Try to match as a rare color or exact frame name
-                    rare_colors = ["blue", "red", "purple", "yellow", "orange", "green", "pink"]
-                    if requested_frame in rare_colors:
-                        candidate_path = os.path.join(frames_dir, f"{requested_frame}.png")
-                        if os.path.exists(candidate_path):
-                            frame_name = requested_frame
-                        else:
-                            return await message.channel.send(f"Rare frame `{requested_frame}` not found. Available colors: {', '.join(rare_colors)}")
-                    else:
-                        # Try as direct frame name
-                        candidate_path = os.path.join(frames_dir, f"{requested_frame}.png")
-                        if os.path.exists(candidate_path):
-                            frame_name = requested_frame
-                        else:
-                            return await message.channel.send(f"Frame `{requested_frame}` not found. Use `common`, a rare color ({', '.join(rare_colors)}), or an exact frame name.")
+                    candidate = requested_frame
+                    candidate_path = os.path.join(frames_dir, f"{candidate}.png")
+                    if not os.path.exists(candidate_path):
+                        return await message.channel.send(f"Frame `{candidate}` not found. Use `common`, `rare`, or an exact frame filename without extension.")
+                    frame_name = candidate
 
                 if stars_val not in [1, 2, 3, 4]:
                     return await message.channel.send("Stars must be 1, 2, 3, or 4.")
@@ -1281,28 +1510,39 @@ class Client(discord.Client):
         # =========================
         if content_lower == "lcd":
             now = time.time()
-            drop_text = "✨ You can drop your card now!"
-            claim_text = "✨ You can claim a card now!"
 
+            # Drop status
             if user_id in drop_cooldowns:
                 remaining = int(DROP_COOLDOWN - (now - drop_cooldowns[user_id]))
                 if remaining > 0:
-                    drop_text = f"⏳ `{format_time(remaining)}` before you can drop"
+                    drop_text = f"{format_time(remaining)} left"
+                else:
+                    drop_text = "Ready"
+            else:
+                drop_text = "Ready"
 
+            # Claim status
             if user_id in claim_cooldowns:
                 remaining = int(CLAIM_COOLDOWN - (now - claim_cooldowns[user_id]))
                 if remaining > 0:
-                    claim_text = f"⏳ `{format_time(remaining)}` before you can claim"
+                    claim_text = f"{format_time(remaining)} left"
+                else:
+                    claim_text = "Ready"
+            else:
+                claim_text = "Ready"
 
-            embed = discord.Embed(color=THEME_COLOR)
-            embed.set_author(name=f"{message.author.name}'s Cooldowns", icon_url=message.author.display_avatar.url)
-            embed.description = (
-                f"## Drop\n"
-                f"{drop_text}\n\n"
-                f"## Claim\n"
-                f"{claim_text}"
+            embed = discord.Embed(color=THEME_COLOR, title=f"{message.author.display_name}'s Cooldowns")
+            embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
+            embed.add_field(name="Drop Cooldown", value=f"Status: **{drop_text}**\nCooldown: `{DROP_COOLDOWN//60} minutes`", inline=True)
+            embed.add_field(name="Claim Cooldown", value=f"Status: **{claim_text}**\nCooldown: `{CLAIM_COOLDOWN//60} minutes`", inline=True)
+            embed.add_field(name="Notes", value="Cooldowns are per-user and prevent drop/claim floods.", inline=False)
+            embed.set_thumbnail(
+                url="https://media.discordapp.net/attachments/1505599262120087633/1520906874927452252/IMG_9566.jpg"
             )
-            return await message.channel.send(embed=embed)
+            embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(now))} UTC")
+
+            await message.channel.send(embed=embed)
+            return
 
         # =========================
         # INVENTORY COMMAND (lc)
@@ -1357,7 +1597,6 @@ class Client(discord.Client):
             )
             return
 
-
         # =========================
         # GIFT COMMAND (lg / lgift)
         # =========================
@@ -1406,12 +1645,24 @@ class Client(discord.Client):
 
             gift_embed, file = view.build_embed(message.author)
 
-            await message.channel.send(
-                content=f"{message.author.mention} is gifting {target_user.mention} a card!",
-                embed=gift_embed,
-                file=file if file else None,
-                view=view
-            )
+            # If there's an image, attach it when sending
+            if file:
+                await message.channel.send(
+                    content=f"{message.author.mention} is gifting {target_user.mention} a card!",
+                    embed=gift_embed,
+                    file=file,
+                    view=view
+                )
+                try:
+                    os.remove(file.fp.name)
+                except:
+                    pass
+            else:
+                await message.channel.send(
+                    content=f"{message.author.mention} is gifting {target_user.mention} a card!",
+                    embed=gift_embed,
+                    view=view
+                )
 
             return
 
@@ -1565,7 +1816,10 @@ class Client(discord.Client):
                 file = discord.File(image_path, filename="card.png")
                 embed.set_image(url="attachment://card.png")
                 await message.channel.send(embed=embed, file=file)
-                os.remove(image_path)
+                try:
+                    os.remove(image_path)
+                except:
+                    pass
             else:
                 await message.channel.send(embed=embed)
 
@@ -1581,6 +1835,7 @@ class Client(discord.Client):
                     "Please provide a name or a number to search."
                 )
 
+            # If user sent a number selection after a previous search
             if query.isdigit():
                 if user_id not in user_last_lookup:
                     return await message.channel.send(
@@ -1608,11 +1863,28 @@ class Client(discord.Client):
                     message.author,
                     user_id
                 )
-                return await message.channel.send(
-                    embed=view.get_embed(),
-                    view=view
+
+                image_path = render_card_final(
+                    all_versions[0],
+                    peek_next_print(all_versions[0]["id"])
                 )
 
+                file = discord.File(image_path, filename="card.png")
+                embed = view.build_embed()
+                embed.set_image(url="attachment://card.png")
+
+                await message.channel.send(
+                    embed=embed,
+                    file=file,
+                    view=view
+                )
+                try:
+                    os.remove(image_path)
+                except:
+                    pass
+                return
+
+            # search by string (either name or series)
             matched_cards = [
                 card for card in cards
                 if (
@@ -1624,6 +1896,7 @@ class Client(discord.Client):
             if not matched_cards:
                 return await message.channel.send("No cards found.")
 
+            # collapse to unique names for list view
             unique_results = []
             seen_names = set()
 
@@ -1635,6 +1908,7 @@ class Client(discord.Client):
 
             user_last_lookup[user_id] = unique_results
 
+            # If only one unique result, show the card directly
             if len(unique_results) == 1:
                 all_versions = [
                     c for c in cards
@@ -1647,10 +1921,26 @@ class Client(discord.Client):
                     message.author,
                     user_id
                 )
-                return await message.channel.send(
-                    embed=view.get_embed(),
+
+                image_path = render_card_final(
+                    all_versions[0],
+                    peek_next_print(all_versions[0]["id"])
+                )
+
+                file = discord.File(image_path, filename="card.png")
+                embed = view.build_embed()
+                embed.set_image(url="attachment://card.png")
+
+                await message.channel.send(
+                    embed=embed,
+                    file=file,
                     view=view
                 )
+                try:
+                    os.remove(image_path)
+                except:
+                    pass
+                return
 
             view = LookupListView(unique_results, message.author, user_id)
             return await message.channel.send(
@@ -1666,39 +1956,54 @@ class Client(discord.Client):
 
             if user_id in drop_cooldowns:
                 remaining = int(DROP_COOLDOWN - (now - drop_cooldowns[user_id]))
+
                 if remaining > 0:
-                    return await message.channel.send(f"Wait {format_time(remaining)} before dropping again.")
+                    return await message.channel.send(
+                        f"⏳ You must wait **{format_time(remaining)}** before dropping again."
+                    )
 
             card1 = get_weighted_card()
             card2 = get_weighted_card()
 
-            while card1 == card2:
+            while card2["id"] == card1["id"]:
                 card2 = get_weighted_card()
 
             drop_cooldowns[user_id] = now
 
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
+
             image_path = await loop.run_in_executor(
                 None,
-                render_drop_cards,
+                render_drop,
                 card1,
-                card2,
                 peek_next_print(card1["id"]),
+                card2,
                 peek_next_print(card2["id"])
             )
 
-            if image_path:
-                file = discord.File(image_path, filename="drop.png")
-                view = CardView(card1, card2)
-
-                await message.channel.send(
-                    content=f"{message.author.mention} is dropping 2 cards!",
-                    file=file,
-                    view=view
+            if image_path is None:
+                return await message.channel.send(
+                    "❌ Failed to render the drop."
                 )
+
+            file = discord.File(
+                image_path,
+                filename="drop.png"
+            )
+
+            view = CardView(card1, card2)
+
+            await message.channel.send(
+                content=f"{message.author.mention} is dropping 2 cards!",
+                file=file,
+                view=view
+            )
+
+            try:
                 os.remove(image_path)
-            else:
-                await message.channel.send(f"{message.author.mention} Error rendering cards.")
+            except:
+                pass
+
             return
 
         # =========================
@@ -1724,12 +2029,58 @@ class Client(discord.Client):
             ]
             all_versions.sort(key=lambda x: x.get("stars", 1))
 
-            view = FindcardVersionView(all_versions, message.author, user_id)
-            return await message.channel.send(embed=view.get_embed(), view=view)
+            if len(all_versions) == 1:
+                # Only one version, show it without navigation buttons
+                view = FindcardVersionView(all_versions, message.author, user_id)
+                # render and attach image so embed image works
+                image_path = render_card_final(
+                    all_versions[0],
+                    peek_next_print(all_versions[0]["id"])
+                )
+                file = discord.File(image_path, filename="card.png")
+                embed = view.build_embed()
+                embed.set_image(url="attachment://card.png")
+                await message.channel.send(embed=embed, file=file, view=view)
+                try:
+                    os.remove(image_path)
+                except:
+                    pass
+                return
+            else:
+                # Multiple versions, show with navigation buttons
+                view = FindcardVersionView(
+                    all_versions,
+                    message.author,
+                    user_id
+                )
+
+                image_path = render_card_final(
+                    all_versions[0],
+                    peek_next_print(all_versions[0]["id"])
+                )
+
+                file = discord.File(
+                    image_path,
+                    filename="card.png"
+                )
+
+                embed = view.build_embed()
+                embed.set_image(url="attachment://card.png")
+
+                await message.channel.send(
+                    embed=embed,
+                    file=file,
+                    view=view
+                )
+
+                try:
+                    os.remove(image_path)
+                except:
+                    pass
+                return
+
 
 # --- Run Bot Connection ---
-import os
-
 client = Client(intents=intents)
 
 TOKEN = os.getenv("TOKEN")
