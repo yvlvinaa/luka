@@ -511,12 +511,10 @@ ARTWORK_INNER_MARGIN_X = 190
 ARTWORK_INNER_MARGIN_TOP = 50
 ARTWORK_INNER_MARGIN_BOTTOM = 105
 
-# Subtle rounded background box drawn behind the COMMON frame's gradient
-# only (rare frames are untouched). Sized as a fraction of the rare
-# frame's visible clipped-gradient height, so common echoes that same
-# rounded/positioned look but stays noticeably smaller and quieter.
-COMMON_GRADIENT_BOX_COLOR = (20, 20, 20)
-COMMON_GRADIENT_BOX_ALPHA = 90
+# Rounded clip box the COMMON frame's gradient fades into (see
+# _common_gradient_box). Sized as a fraction of the rare frame's visible
+# clipped-gradient height, so common echoes that same rounded/positioned
+# look but stays noticeably smaller.
 COMMON_GRADIENT_BOX_HEIGHT_RATIO = 0.72   # ~70-75% of the rare box's height
 COMMON_GRADIENT_BOX_RADIUS = 60
 
@@ -671,17 +669,20 @@ def load_star_overlay(card: dict):
     return star
 
 
-def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR, clip_to_inner=False) -> Image.Image:
+def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR, clip_box=None, clip_radius=0) -> Image.Image:
     """
     Vertical gradient overlay, transparent at the top and linearly fading
     into `color` toward the bottom. Only covers the bottom portion of
     the card (GRADIENT_HEIGHT_RATIO) so more of the artwork stays visible.
     Same opacity/fade curve regardless of color -- only the tint changes.
 
-    If clip_to_inner is True, the gradient is clipped to the inner artwork
-    area (inset by the ARTWORK_INNER_MARGIN_* constants) so it never bleeds
-    onto the frame's decorative border or corners. Left False (default) it
-    covers the full card width/height exactly like the original renderer.
+    If clip_box (left, top, right, bottom) is given, the gradient is
+    clipped to that rectangle -- pixels outside it are dropped entirely
+    (fully transparent), regardless of their computed alpha. Pass
+    clip_radius > 0 to round that box's corners (used for the smaller
+    common-frame box); rare frames keep clip_radius=0 for sharp corners,
+    matching the original renderer. Leave clip_box as None (default) for
+    a full card-width/height gradient with no clipping.
     """
     width, height = size
     gradient = Image.new("RGBA", size, (0, 0, 0, 0))
@@ -694,20 +695,15 @@ def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR,
         alpha = int(GRADIENT_START_ALPHA + (GRADIENT_END_ALPHA - GRADIENT_START_ALPHA) * progress)
         draw.line([(0, y), (width, y)], fill=(*color, alpha))
 
-    if not clip_to_inner:
+    if clip_box is None:
         return gradient
 
-    # Clip to the inner artwork area -- pixels outside this rect are
-    # dropped entirely (fully transparent), regardless of their computed
-    # alpha, so the frame border/corners are never tinted.
-    inner_box = (
-        ARTWORK_INNER_MARGIN_X,
-        ARTWORK_INNER_MARGIN_TOP,
-        width - ARTWORK_INNER_MARGIN_X,
-        height - ARTWORK_INNER_MARGIN_BOTTOM,
-    )
     clip_mask = Image.new("L", size, 0)
-    ImageDraw.Draw(clip_mask).rectangle(inner_box, fill=255)
+    mask_draw = ImageDraw.Draw(clip_mask)
+    if clip_radius > 0:
+        mask_draw.rounded_rectangle(clip_box, radius=clip_radius, fill=255)
+    else:
+        mask_draw.rectangle(clip_box, fill=255)
 
     clipped = Image.new("RGBA", size, (0, 0, 0, 0))
     clipped.paste(gradient, (0, 0), clip_mask)
@@ -715,14 +711,25 @@ def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR,
     return clipped
 
 
-def create_common_gradient_box(size=(CARD_WIDTH, CARD_HEIGHT)) -> Image.Image:
+def _inner_artwork_box(size=(CARD_WIDTH, CARD_HEIGHT)):
+    """The rare-frame clip box: full inner artwork area inset by the
+    ARTWORK_INNER_MARGIN_* constants."""
+    width, height = size
+    return (
+        ARTWORK_INNER_MARGIN_X,
+        ARTWORK_INNER_MARGIN_TOP,
+        width - ARTWORK_INNER_MARGIN_X,
+        height - ARTWORK_INNER_MARGIN_BOTTOM,
+    )
+
+
+def _common_gradient_box(size=(CARD_WIDTH, CARD_HEIGHT)):
     """
-    Subtle dark rounded-rectangle background box drawn behind the COMMON
-    frame's gradient only. Rare frames never call this -- their rendering
-    is untouched. Sized as a fraction (COMMON_GRADIENT_BOX_HEIGHT_RATIO) of
-    the rare frame's visible clipped-gradient height, positioned with the
-    same inner margins/rounding style, so common echoes that look while
-    staying noticeably smaller and lower-opacity/quieter.
+    Smaller rounded box the COMMON frame's gradient is clipped into --
+    same left/right margins and bottom edge as the rare frame's inner
+    artwork box, but shorter (COMMON_GRADIENT_BOX_HEIGHT_RATIO of the
+    rare box's visible height), so common echoes that boxed look while
+    staying noticeably smaller.
     """
     width, height = size
 
@@ -735,14 +742,7 @@ def create_common_gradient_box(size=(CARD_WIDTH, CARD_HEIGHT)) -> Image.Image:
     box_bottom = height - ARTWORK_INNER_MARGIN_BOTTOM
     box_top = box_bottom - box_height
 
-    box_layer = Image.new("RGBA", size, (0, 0, 0, 0))
-    ImageDraw.Draw(box_layer).rounded_rectangle(
-        [box_left, box_top, box_right, box_bottom],
-        radius=COMMON_GRADIENT_BOX_RADIUS,
-        fill=(*COMMON_GRADIENT_BOX_COLOR, COMMON_GRADIENT_BOX_ALPHA)
-    )
-
-    return box_layer
+    return (box_left, box_top, box_right, box_bottom)
 
 
 def draw_text_with_outline(draw: ImageDraw.ImageDraw, position, text, font, anchor="la"):
@@ -890,18 +890,24 @@ def render_card(card: dict, print_num, hide_print: bool = False) -> Image.Image:
 
     # 2. Gradient (color depends on frame -- common stays gray, rare
     # frames get their own subtle tint via FRAME_GRADIENT_COLORS).
-    # Only rare frames clip the gradient to the inner artwork area --
-    # common's gradient is left full-bleed exactly as it was before.
-    # Common also gets a small, subtle rounded background box drawn first,
-    # so the gray gradient still renders on top of it exactly as before.
-    # Rare frames are completely untouched by this.
-    if not rare:
-        canvas = Image.alpha_composite(canvas, create_common_gradient_box())
+    # Both rare and common now clip the fading gradient into a box so it
+    # never bleeds onto the frame's decorative border/corners: rare uses
+    # the full inner-artwork box with sharp corners (unchanged), common
+    # uses a smaller, rounded box so it echoes that boxed look while
+    # staying noticeably smaller/quieter.
+    if rare:
+        gradient_layer = create_bottom_gradient(
+            color=get_gradient_color(frame_name),
+            clip_box=_inner_artwork_box(),
+        )
+    else:
+        gradient_layer = create_bottom_gradient(
+            color=get_gradient_color(frame_name),
+            clip_box=_common_gradient_box(),
+            clip_radius=COMMON_GRADIENT_BOX_RADIUS,
+        )
 
-    canvas = Image.alpha_composite(
-        canvas,
-        create_bottom_gradient(color=get_gradient_color(frame_name), clip_to_inner=rare)
-    )
+    canvas = Image.alpha_composite(canvas, gradient_layer)
 
     # 3. Frame
     canvas = Image.alpha_composite(canvas, load_frame(frame_name))
@@ -3146,7 +3152,6 @@ class Client(discord.Client):
 
 
 # --- Run Bot Connection ---
-
 client = Client(intents=intents)
 
 TOKEN = os.getenv("TOKEN")
