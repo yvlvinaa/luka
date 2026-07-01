@@ -330,10 +330,13 @@ def _github_commit_changes_sync(write_files, delete_paths, commit_message):
         })
 
     for path in (delete_paths or []):
+        # GitHub's Git Data API deletes a path by setting sha to null.
+        # Deletion entries must contain ONLY path + sha -- including
+        # mode/type here (as if describing a real blob) causes the API to
+        # try validating a blob object against a null sha, which is what
+        # produces "422 GitRPC::BadObjectState".
         tree_entries.append({
             "path": path,
-            "mode": "100644",
-            "type": "blob",
             "sha": None,
         })
 
@@ -507,6 +510,15 @@ GRADIENT_END_ALPHA = 140
 ARTWORK_INNER_MARGIN_X = 190
 ARTWORK_INNER_MARGIN_TOP = 50
 ARTWORK_INNER_MARGIN_BOTTOM = 105
+
+# Subtle rounded background box drawn behind the COMMON frame's gradient
+# only (rare frames are untouched). Sized as a fraction of the rare
+# frame's visible clipped-gradient height, so common echoes that same
+# rounded/positioned look but stays noticeably smaller and quieter.
+COMMON_GRADIENT_BOX_COLOR = (20, 20, 20)
+COMMON_GRADIENT_BOX_ALPHA = 90
+COMMON_GRADIENT_BOX_HEIGHT_RATIO = 0.72   # ~70-75% of the rare box's height
+COMMON_GRADIENT_BOX_RADIUS = 60
 
 # Per-frame gradient colors. "common" is intentionally absent -- it always
 # uses GRADIENT_COLOR (the gray) above. Any frame name not listed here also
@@ -703,6 +715,36 @@ def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR,
     return clipped
 
 
+def create_common_gradient_box(size=(CARD_WIDTH, CARD_HEIGHT)) -> Image.Image:
+    """
+    Subtle dark rounded-rectangle background box drawn behind the COMMON
+    frame's gradient only. Rare frames never call this -- their rendering
+    is untouched. Sized as a fraction (COMMON_GRADIENT_BOX_HEIGHT_RATIO) of
+    the rare frame's visible clipped-gradient height, positioned with the
+    same inner margins/rounding style, so common echoes that look while
+    staying noticeably smaller and lower-opacity/quieter.
+    """
+    width, height = size
+
+    fade_start = int(height * (1 - GRADIENT_HEIGHT_RATIO))
+    rare_visible_height = height - fade_start - ARTWORK_INNER_MARGIN_BOTTOM
+    box_height = int(rare_visible_height * COMMON_GRADIENT_BOX_HEIGHT_RATIO)
+
+    box_left = ARTWORK_INNER_MARGIN_X
+    box_right = width - ARTWORK_INNER_MARGIN_X
+    box_bottom = height - ARTWORK_INNER_MARGIN_BOTTOM
+    box_top = box_bottom - box_height
+
+    box_layer = Image.new("RGBA", size, (0, 0, 0, 0))
+    ImageDraw.Draw(box_layer).rounded_rectangle(
+        [box_left, box_top, box_right, box_bottom],
+        radius=COMMON_GRADIENT_BOX_RADIUS,
+        fill=(*COMMON_GRADIENT_BOX_COLOR, COMMON_GRADIENT_BOX_ALPHA)
+    )
+
+    return box_layer
+
+
 def draw_text_with_outline(draw: ImageDraw.ImageDraw, position, text, font, anchor="la"):
     """White fill text with a black outline, using Pillow's native stroke support."""
     draw.text(
@@ -850,6 +892,12 @@ def render_card(card: dict, print_num, hide_print: bool = False) -> Image.Image:
     # frames get their own subtle tint via FRAME_GRADIENT_COLORS).
     # Only rare frames clip the gradient to the inner artwork area --
     # common's gradient is left full-bleed exactly as it was before.
+    # Common also gets a small, subtle rounded background box drawn first,
+    # so the gray gradient still renders on top of it exactly as before.
+    # Rare frames are completely untouched by this.
+    if not rare:
+        canvas = Image.alpha_composite(canvas, create_common_gradient_box())
+
     canvas = Image.alpha_composite(
         canvas,
         create_bottom_gradient(color=get_gradient_color(frame_name), clip_to_inner=rare)
@@ -1629,7 +1677,7 @@ class TradeRequestView(discord.ui.View):
         embed.description = f"{self.user2.mention}, you've received a trade request from {self.user1.mention}!"
         return embed
 
-    @discord.ui.button(emoji="✅", style=discord.ButtonStyle.success, label="Trade")
+    @discord.ui.button(emoji="<:accept:1515633292605657088>", style=discord.ButtonStyle.success, label="Trade")
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user2_id:
             return await interaction.response.send_message(
@@ -1657,7 +1705,7 @@ class TradeRequestView(discord.ui.View):
         except Exception:
             pass
 
-    @discord.ui.button(emoji="❌", style=discord.ButtonStyle.danger, label="Cancel")
+    @discord.ui.button(emoji="<:decline:1515633309953163344>", style=discord.ButtonStyle.danger, label="Cancel")
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user2_id:
             return await interaction.response.send_message(
@@ -1704,7 +1752,9 @@ class TradeView(discord.ui.View):
 
     def build_embed(self):
         embed = discord.Embed(color=THEME_COLOR)
-        embed.title = "## Trade In Progress"
+        embed.title = "Trade In Progress"
+
+        trade_emoji = "<:Bluka:1511044685781663866>"
 
         if self.stage == "selecting":
             user1_status = "Waiting for selection"
@@ -1716,31 +1766,30 @@ class TradeView(discord.ui.View):
             user1_status = "Completed!" if self.user1_confirmed else "Completing"
             user2_status = "Completed!" if self.user2_confirmed else "Completing"
 
-        user1_text = f"**<:Bluka:1511044685781663866> {self.user1.mention} is offering.. - {user1_status}**\n"
-        if self.user1_card:
-            card = self.user1_card["card"]
-            name = card.get("name", "Unknown")
-            series = card.get("series", "Unknown Series")
-            print_num = self.user1_card["print"]
-            card_num = (self.user1_card_index + 1) if self.user1_card_index is not None else "?"
-            user1_text += f"`({card_num})` • **{name}** • *{series}* • `{format_print(print_num)}`\n"
+        def format_offer(user, owned_card, card_index, status):
+            block = f"> {trade_emoji} {user.mention} is offering... - {status}\n"
+            if owned_card:
+                card = owned_card["card"]
+                name = card.get("name", "Unknown")
+                series = card.get("series", "Unknown Series")
+                print_num = owned_card["print"]
+                star_val = card.get("stars", 1)
+                inv_num = (card_index + 1) if card_index is not None else "?"
+                block += f"`{inv_num} • {format_print(print_num)} • ☆{star_val} • **{name}** • *{series}*`\n"
+            else:
+                block += "`No cards selected yet.`\n"
+            return block
 
-        user2_text = f"**<:Bluka:1511044685781663866> {self.user2.mention} is offering.. - {user2_status}**\n"
-        if self.user2_card:
-            card = self.user2_card["card"]
-            name = card.get("name", "Unknown")
-            series = card.get("series", "Unknown Series")
-            print_num = self.user2_card["print"]
-            card_num = (self.user2_card_index + 1) if self.user2_card_index is not None else "?"
-            user2_text += f"`({card_num})` • **{name}** • *{series}* • `{format_print(print_num)}`\n"
+        user1_text = format_offer(self.user1, self.user1_card, self.user1_card_index, user1_status)
+        user2_text = format_offer(self.user2, self.user2_card, self.user2_card_index, user2_status)
 
-        embed.description = user1_text + "\n────────────────────────\n" + user2_text
+        embed.description = user1_text + "────────────────────────\n" + user2_text
 
         embed.description += "\n-# 💡 **Reminder:** There are no official values for cards in LukaNet right now. Trade based on what you and the other user think is fair."
 
         return embed
 
-    @discord.ui.button(emoji="❌", style=discord.ButtonStyle.danger)
+    @discord.ui.button(emoji="<:decline:1515633309953163344>", style=discord.ButtonStyle.danger)
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.trade_id in active_trades:
             del active_trades[self.trade_id]
@@ -1751,7 +1800,7 @@ class TradeView(discord.ui.View):
             view=None
         )
 
-    @discord.ui.button(emoji="🔒", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(emoji="<:lock:1522002571496128553>", style=discord.ButtonStyle.secondary)
     async def lock(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.stage == "selecting":
             return await interaction.response.send_message(
@@ -1772,7 +1821,7 @@ class TradeView(discord.ui.View):
         if self.user1_locked and self.user2_locked:
             self.stage = "confirming"
             try:
-                self.lock.emoji = "✅"
+                self.lock.emoji = "<:accept:1515633292605657088>"
             except Exception:
                 pass
 
@@ -1781,7 +1830,7 @@ class TradeView(discord.ui.View):
             view=self
         )
 
-    @discord.ui.button(emoji="✅", style=discord.ButtonStyle.success)
+    @discord.ui.button(emoji="<:accept:1515633292605657088>", style=discord.ButtonStyle.success)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.stage != "confirming":
             return await interaction.response.send_message(
@@ -3097,6 +3146,7 @@ class Client(discord.Client):
 
 
 # --- Run Bot Connection ---
+
 client = Client(intents=intents)
 
 TOKEN = os.getenv("TOKEN")
