@@ -1,11 +1,13 @@
 import os
 import discord
 import random
+import re
 import time
 import asyncio
 import requests
 import tempfile
 import json
+import base64
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont, ImageStat
 
@@ -125,20 +127,265 @@ def save_cards_json():
         json.dump(cards, f, indent=2)
 
 
-def generate_card_id(character_name, frame_type):
-    """
-    Generates a card ID automatically.
-    Format: name_frame or name_frame_2, name_frame_3, etc.
-    """
-    base_id = f"{character_name.lower().replace(' ', '_')}_{frame_type}"
+# Fields every card entry is expected to have (used by lsync / leditcard).
+REQUIRED_CARD_FIELDS = ["id", "name", "series", "stars", "frame", "image"]
 
-    # Count how many cards with this base ID already exist
-    count = sum(1 for card in cards if card["id"].startswith(base_id))
 
-    if count == 0:
+def has_uploader_role(member) -> bool:
+    """Shared permission check for card-management commands (Uploader role)."""
+    return any(role.name.lower() == "uploader" for role in member.roles)
+
+
+def resolve_frame_name(requested_frame: str):
+    """
+    Resolves a user-typed frame name against the frames/ folder, accepting
+    the name with or without a '.png' extension (same rule used by
+    laddcard). Returns the resolved frame name (without extension) if it
+    exists on disk, otherwise None.
+    """
+    requested_frame = (requested_frame or "").strip()
+    candidate = requested_frame[:-4] if requested_frame.lower().endswith(".png") else requested_frame
+    candidate_path = os.path.join(FRAME_DIR, f"{candidate}.png")
+    if candidate and os.path.exists(candidate_path):
+        return candidate
+    return None
+
+
+# =========================
+# GITHUB SYNC (used only by lupdateimage)
+# =========================
+# Credentials are read from environment variables, never hardcoded:
+#   GITHUB_TOKEN    -- Personal Access Token with Contents: Read and Write
+#   GITHUB_USERNAME -- repo owner
+#   GITHUB_REPO     -- repo name
+#   GITHUB_BRANCH   -- branch to commit to
+#
+# Uses the GitHub Git Data API (blobs -> tree -> commit -> ref update) so
+# that multiple files (image + cards.json) land in a single atomic commit.
+# If any step fails before the final ref update, the branch is never
+# touched, so the repository can never be left in a partially updated state.
+
+GITHUB_API_BASE = "https://api.github.com"
+
+
+def _github_headers(token):
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "Luka-Bot",
+    }
+
+
+def _github_get_branch_commit_sha(headers, owner, repo, branch):
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/ref/heads/{branch}"
+    resp = requests.get(url, headers=headers, timeout=15)
+    if resp.status_code != 200:
+        raise Exception(f"Failed to read branch ref ({resp.status_code}): {resp.text}")
+    return resp.json()["object"]["sha"]
+
+
+def _github_get_commit_tree_sha(headers, owner, repo, commit_sha):
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/commits/{commit_sha}"
+    resp = requests.get(url, headers=headers, timeout=15)
+    if resp.status_code != 200:
+        raise Exception(f"Failed to read base commit ({resp.status_code}): {resp.text}")
+    return resp.json()["tree"]["sha"]
+
+
+def _github_create_blob(headers, owner, repo, content_bytes):
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/blobs"
+    payload = {
+        "content": base64.b64encode(content_bytes).decode("utf-8"),
+        "encoding": "base64",
+    }
+    resp = requests.post(url, headers=headers, json=payload, timeout=30)
+    if resp.status_code not in (200, 201):
+        raise Exception(f"Failed to create blob ({resp.status_code}): {resp.text}")
+    return resp.json()["sha"]
+
+
+def _github_create_tree(headers, owner, repo, base_tree_sha, tree_entries):
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/trees"
+    payload = {"base_tree": base_tree_sha, "tree": tree_entries}
+    resp = requests.post(url, headers=headers, json=payload, timeout=30)
+    if resp.status_code not in (200, 201):
+        raise Exception(f"Failed to create tree ({resp.status_code}): {resp.text}")
+    return resp.json()["sha"]
+
+
+def _github_create_commit(headers, owner, repo, message, tree_sha, parent_sha):
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/commits"
+    payload = {"message": message, "tree": tree_sha, "parents": [parent_sha]}
+    resp = requests.post(url, headers=headers, json=payload, timeout=30)
+    if resp.status_code not in (200, 201):
+        raise Exception(f"Failed to create commit ({resp.status_code}): {resp.text}")
+    return resp.json()["sha"]
+
+
+def _github_update_branch_ref(headers, owner, repo, branch, commit_sha):
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/refs/heads/{branch}"
+    payload = {"sha": commit_sha, "force": False}
+    resp = requests.patch(url, headers=headers, json=payload, timeout=15)
+    if resp.status_code not in (200, 201):
+        raise Exception(f"Failed to update branch ref ({resp.status_code}): {resp.text}")
+    return resp.json()
+
+
+def _github_commit_files_sync(files, commit_message):
+    """
+    Uploads one or more files to the GitHub repo as a single atomic commit.
+    files: dict of {repo_relative_path: bytes_content}
+    Returns the new commit sha on success. Raises on any failure; if it
+    raises, the branch ref was never updated, so nothing was actually
+    pushed to the repository's history.
+    """
+    token = os.environ.get("GITHUB_TOKEN")
+    owner = os.environ.get("GITHUB_USERNAME")
+    repo = os.environ.get("GITHUB_REPO")
+    branch = os.environ.get("GITHUB_BRANCH")
+
+    missing = [
+        name for name, val in [
+            ("GITHUB_TOKEN", token),
+            ("GITHUB_USERNAME", owner),
+            ("GITHUB_REPO", repo),
+            ("GITHUB_BRANCH", branch),
+        ] if not val
+    ]
+    if missing:
+        raise Exception(f"Missing required environment variable(s): {', '.join(missing)}")
+
+    headers = _github_headers(token)
+
+    latest_commit_sha = _github_get_branch_commit_sha(headers, owner, repo, branch)
+    base_tree_sha = _github_get_commit_tree_sha(headers, owner, repo, latest_commit_sha)
+
+    tree_entries = []
+    for path, content_bytes in files.items():
+        blob_sha = _github_create_blob(headers, owner, repo, content_bytes)
+        tree_entries.append({
+            "path": path,
+            "mode": "100644",
+            "type": "blob",
+            "sha": blob_sha,
+        })
+
+    new_tree_sha = _github_create_tree(headers, owner, repo, base_tree_sha, tree_entries)
+    new_commit_sha = _github_create_commit(headers, owner, repo, commit_message, new_tree_sha, latest_commit_sha)
+    _github_update_branch_ref(headers, owner, repo, branch, new_commit_sha)
+
+    return new_commit_sha
+
+
+async def github_commit_files(files, commit_message):
+    """Async wrapper so the blocking GitHub API calls don't block the bot's event loop."""
+    return await asyncio.to_thread(_github_commit_files_sync, files, commit_message)
+
+
+def _github_commit_changes_sync(write_files, delete_paths, commit_message):
+    """
+    Same atomic commit machinery as _github_commit_files_sync, but also
+    supports deleting files in the same commit (used by lremovecard).
+    write_files: dict of {repo_relative_path: bytes_content} to add/update.
+    delete_paths: list of repo_relative_paths to remove from the tree.
+    A tree entry with sha=None tells the GitHub Git Data API to drop that
+    path from the resulting tree, so a write and a delete can land in the
+    exact same commit -- the branch ref is only moved once, at the very
+    end, so nothing is ever left half-applied.
+    """
+    token = os.environ.get("GITHUB_TOKEN")
+    owner = os.environ.get("GITHUB_USERNAME")
+    repo = os.environ.get("GITHUB_REPO")
+    branch = os.environ.get("GITHUB_BRANCH")
+
+    missing = [
+        name for name, val in [
+            ("GITHUB_TOKEN", token),
+            ("GITHUB_USERNAME", owner),
+            ("GITHUB_REPO", repo),
+            ("GITHUB_BRANCH", branch),
+        ] if not val
+    ]
+    if missing:
+        raise Exception(f"Missing required environment variable(s): {', '.join(missing)}")
+
+    headers = _github_headers(token)
+
+    latest_commit_sha = _github_get_branch_commit_sha(headers, owner, repo, branch)
+    base_tree_sha = _github_get_commit_tree_sha(headers, owner, repo, latest_commit_sha)
+
+    tree_entries = []
+
+    for path, content_bytes in (write_files or {}).items():
+        blob_sha = _github_create_blob(headers, owner, repo, content_bytes)
+        tree_entries.append({
+            "path": path,
+            "mode": "100644",
+            "type": "blob",
+            "sha": blob_sha,
+        })
+
+    for path in (delete_paths or []):
+        tree_entries.append({
+            "path": path,
+            "mode": "100644",
+            "type": "blob",
+            "sha": None,
+        })
+
+    new_tree_sha = _github_create_tree(headers, owner, repo, base_tree_sha, tree_entries)
+    new_commit_sha = _github_create_commit(headers, owner, repo, commit_message, new_tree_sha, latest_commit_sha)
+    _github_update_branch_ref(headers, owner, repo, branch, new_commit_sha)
+
+    return new_commit_sha
+
+
+async def github_commit_changes(write_files, delete_paths, commit_message):
+    """Async wrapper for _github_commit_changes_sync (write + delete in one atomic commit)."""
+    return await asyncio.to_thread(_github_commit_changes_sync, write_files, delete_paths, commit_message)
+
+
+def _convert_image_bytes_to_png_sync(raw_bytes):
+    """
+    Decodes raw uploaded image bytes (png, jpg, jpeg, webp, etc.) with
+    Pillow and re-encodes them as a genuine PNG, converting to RGBA to
+    preserve transparency where possible. Returns real PNG bytes -- not
+    just the original bytes with a renamed extension.
+    """
+    img = Image.open(BytesIO(raw_bytes))
+    img = img.convert("RGBA")
+
+    output = BytesIO()
+    img.save(output, format="PNG")
+    return output.getvalue()
+
+
+async def convert_image_bytes_to_png(raw_bytes):
+    """Async wrapper so Pillow decode/encode work doesn't block the event loop."""
+    return await asyncio.to_thread(_convert_image_bytes_to_png_sync, raw_bytes)
+
+
+def generate_card_id(character_name, is_rare):
+    """
+    Generates a card ID automatically, based on rarity rather than the
+    specific frame color.
+    Format: <first_word>_common / <first_word>_rare, or with a numeric
+    suffix (_2, _3, ...) if that base id + rarity combination already
+    exists.
+    """
+    first_word = character_name.strip().split()[0].lower()
+    rarity = "rare" if is_rare else "common"
+    base_id = f"{first_word}_{rarity}"
+
+    # Count existing cards that are exactly this base id, or this base id
+    # with a numeric suffix (e.g. mydei_rare, mydei_rare_2, mydei_rare_3).
+    pattern = re.compile(rf"^{re.escape(base_id)}(_\d+)?$")
+    existing_count = sum(1 for card in cards if pattern.match(card["id"]))
+
+    if existing_count == 0:
         return base_id
     else:
-        return f"{base_id}_{count + 1}"
+        return f"{base_id}_{existing_count + 1}"
 
 
 
@@ -198,21 +445,44 @@ FONT_PATH = "Fredoka-SemiBold.ttf"
 
 # Text sizes -- name a little smaller, series a touch smaller (still readable)
 NAME_FONT_SIZE = 125
-SERIES_FONT_SIZE = 78
-PRINT_FONT_SIZE = 100
+SERIES_FONT_SIZE = 65
+PRINT_FONT_SIZE = 98
 
 TEXT_COLOR = (255, 255, 255)
 TEXT_STROKE_WIDTH = 5
 TEXT_STROKE_COLOR = (0, 0, 0)
 
 CENTER_X = CARD_WIDTH // 2
-NAME_Y = 1510      # moved significantly higher, closer to the artwork
-SERIES_Y = 1620    # raised with the name, +5px extra gap for spacing
+NAME_Y = 1540      # moved significantly higher, closer to the artwork
+SERIES_Y = 1650    # raised with the name, +5px extra gap for spacing
 
-# If the series name is longer than 4 words, the remaining words wrap onto
-# a second centered line beneath the first, spaced this far below it.
-SERIES_MAX_WORDS_PER_LINE = 4
-SERIES_LINE_SPACING = 90
+# Maximum usable pixel width for the character name inside the decorative
+# inner frame, so long names never touch/clip into the inner border.
+# Not based on overall frame width -- adjust this directly if needed.
+MAX_NAME_WIDTH = 700
+
+# Amount to shrink the name font by (in px) when it's too wide at the
+# default size, before falling back to wrapping onto two lines.
+NAME_SHRINK_STEP = 30
+
+# Vertical gap between the two lines when a name wraps to two lines.
+NAME_LINE_SPACING = 95
+
+# If the name wraps to two lines, the series text is pushed down by this
+# much extra to keep spacing comfortable beneath the taller name block.
+SERIES_Y_SHIFT_FOR_WRAPPED_NAME = 30
+
+# Maximum usable pixel width for the series text -- reuses the same limit
+# as the character name so long series names never touch/clip into the
+# inner border.
+MAX_SERIES_WIDTH = MAX_NAME_WIDTH
+
+# Amount to shrink the series font by (in px) when it's too wide at the
+# default size, before falling back to wrapping onto two lines.
+SERIES_SHRINK_STEP = 15
+
+# Vertical gap between the two lines when a series name wraps to two lines.
+SERIES_LINE_SPACING = 80
 
 # Print number position -- moved ~5px lower and slightly further right to
 # match the original renderer's placement more closely.
@@ -225,6 +495,38 @@ GRADIENT_COLOR = (25, 25, 28)
 GRADIENT_HEIGHT_RATIO = 0.40   # portion of the card (from the bottom) the gradient covers
 GRADIENT_START_ALPHA = 0
 GRADIENT_END_ALPHA = 140
+
+# Inner artwork area the gradient is clipped to, so it never bleeds onto
+# the frame's decorative border/corners. This is the margin (in px) between
+# the outer canvas edge and the visible inner artwork region -- adjust if
+# the frame art's border thickness changes.
+ARTWORK_INNER_MARGIN_X = 190
+ARTWORK_INNER_MARGIN_TOP = 50
+ARTWORK_INNER_MARGIN_BOTTOM = 105
+
+# Per-frame gradient colors. "common" is intentionally absent -- it always
+# uses GRADIENT_COLOR (the gray) above. Any frame name not listed here also
+# falls back to GRADIENT_COLOR. To add a new rare frame's gradient color,
+# just add an entry here -- no rendering logic needs to change.
+FRAME_GRADIENT_COLORS = {
+    "blue": (55, 125, 195),
+    "red": (175, 55, 50),
+    "pink": (225, 125, 165),
+    "yellow": (210, 185, 85),
+    "orange": (215, 135, 65),
+    "green": (115, 175, 125),
+    "purple": (145, 105, 185),
+}
+
+
+def get_gradient_color(frame_name: str) -> tuple:
+    """
+    Returns the bottom-gradient color for a given frame name. Common (and
+    any unrecognized/future frame name not yet in FRAME_GRADIENT_COLORS)
+    falls back to the default gray gradient.
+    """
+    return FRAME_GRADIENT_COLORS.get((frame_name or "").lower(), GRADIENT_COLOR)
+
 
 # Drop image (two cards combined) -- spacing matches the original renderer
 DROP_SPACING = 70
@@ -353,11 +655,17 @@ def load_star_overlay(card: dict):
     return star
 
 
-def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT)) -> Image.Image:
+def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR, clip_to_inner=False) -> Image.Image:
     """
     Vertical gradient overlay, transparent at the top and linearly fading
-    into a dark gray toward the bottom. Only covers the bottom portion of
+    into `color` toward the bottom. Only covers the bottom portion of
     the card (GRADIENT_HEIGHT_RATIO) so more of the artwork stays visible.
+    Same opacity/fade curve regardless of color -- only the tint changes.
+
+    If clip_to_inner is True, the gradient is clipped to the inner artwork
+    area (inset by the ARTWORK_INNER_MARGIN_* constants) so it never bleeds
+    onto the frame's decorative border or corners. Left False (default) it
+    covers the full card width/height exactly like the original renderer.
     """
     width, height = size
     gradient = Image.new("RGBA", size, (0, 0, 0, 0))
@@ -368,9 +676,27 @@ def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT)) -> Image.Image:
     for y in range(fade_start, height):
         progress = (y - fade_start) / max(1, (height - fade_start))
         alpha = int(GRADIENT_START_ALPHA + (GRADIENT_END_ALPHA - GRADIENT_START_ALPHA) * progress)
-        draw.line([(0, y), (width, y)], fill=(*GRADIENT_COLOR, alpha))
+        draw.line([(0, y), (width, y)], fill=(*color, alpha))
 
-    return gradient
+    if not clip_to_inner:
+        return gradient
+
+    # Clip to the inner artwork area -- pixels outside this rect are
+    # dropped entirely (fully transparent), regardless of their computed
+    # alpha, so the frame border/corners are never tinted.
+    inner_box = (
+        ARTWORK_INNER_MARGIN_X,
+        ARTWORK_INNER_MARGIN_TOP,
+        width - ARTWORK_INNER_MARGIN_X,
+        height - ARTWORK_INNER_MARGIN_BOTTOM,
+    )
+    clip_mask = Image.new("L", size, 0)
+    ImageDraw.Draw(clip_mask).rectangle(inner_box, fill=255)
+
+    clipped = Image.new("RGBA", size, (0, 0, 0, 0))
+    clipped.paste(gradient, (0, 0), clip_mask)
+
+    return clipped
 
 
 def draw_text_with_outline(draw: ImageDraw.ImageDraw, position, text, font, anchor="la"):
@@ -382,31 +708,121 @@ def draw_text_with_outline(draw: ImageDraw.ImageDraw, position, text, font, anch
     )
 
 
+def _text_pixel_width(draw: ImageDraw.ImageDraw, text: str, font) -> int:
+    """Measures the actual rendered pixel width of text (including outline stroke) with Pillow."""
+    bbox = draw.textbbox((0, 0), text, font=font, stroke_width=TEXT_STROKE_WIDTH)
+    return bbox[2] - bbox[0]
+
+
+def _best_two_line_split(draw: ImageDraw.ImageDraw, words: list, font):
+    """
+    Finds the split point (breaking only at spaces, never mid-word) that
+    produces the most visually balanced two lines, by minimizing the
+    rendered pixel-width difference between the two resulting lines.
+    """
+    best_diff = None
+    best_split = (words[0], " ".join(words[1:]))
+
+    for i in range(1, len(words)):
+        line1 = " ".join(words[:i])
+        line2 = " ".join(words[i:])
+        diff = abs(_text_pixel_width(draw, line1, font) - _text_pixel_width(draw, line2, font))
+
+        if best_diff is None or diff < best_diff:
+            best_diff = diff
+            best_split = (line1, line2)
+
+    return best_split
+
+
+def draw_character_name(draw: ImageDraw.ImageDraw, name_text: str, center_x: int, base_y: int) -> bool:
+    """
+    Draws the character name centered at (center_x, base_y), using its
+    actual rendered pixel width (measured with Pillow, not character
+    count) to decide how to fit it within MAX_NAME_WIDTH:
+      1. Render at the normal size if it already fits.
+      2. Otherwise shrink the font by NAME_SHRINK_STEP px and re-measure.
+      3. If it still doesn't fit, wrap onto two balanced centered lines,
+         breaking only at spaces between words (never mid-word).
+
+    Returns True if the name was wrapped onto two lines (so the caller can
+    shift the series text down for spacing), False for a single line.
+    """
+    font = get_font(NAME_FONT_SIZE)
+    width = _text_pixel_width(draw, name_text, font)
+
+    if width <= MAX_NAME_WIDTH:
+        draw_text_with_outline(draw, (center_x, base_y), name_text, font, anchor="mm")
+        return False
+
+    shrunk_size = max(NAME_FONT_SIZE - NAME_SHRINK_STEP, 1)
+    shrunk_font = get_font(shrunk_size)
+    width = _text_pixel_width(draw, name_text, shrunk_font)
+
+    if width <= MAX_NAME_WIDTH:
+        draw_text_with_outline(draw, (center_x, base_y), name_text, shrunk_font, anchor="mm")
+        return False
+
+    words = name_text.split()
+
+    if len(words) <= 1:
+        # Nothing to break on -- render as a single (still shrunk) line.
+        draw_text_with_outline(draw, (center_x, base_y), name_text, shrunk_font, anchor="mm")
+        return False
+
+    line1, line2 = _best_two_line_split(draw, words, shrunk_font)
+
+    draw_text_with_outline(draw, (center_x, base_y - NAME_LINE_SPACING // 2), line1, shrunk_font, anchor="mm")
+    draw_text_with_outline(draw, (center_x, base_y + NAME_LINE_SPACING // 2), line2, shrunk_font, anchor="mm")
+    return True
+
+
 def draw_series_text(draw: ImageDraw.ImageDraw, series_text: str, font, center_x: int, base_y: int):
     """
-    Draws the series name centered under the character name. If the series
-    name is longer than SERIES_MAX_WORDS_PER_LINE words, the remaining
-    words wrap onto a second centered line beneath the first instead of
-    overflowing or shrinking to fit on one line.
-    """
-    words = series_text.split()
+    Draws the series name centered under the character name, using its
+    actual rendered pixel width (measured with Pillow, not character/word
+    count) to decide how to fit it within MAX_SERIES_WIDTH:
+      1. Render at the normal size if it already fits.
+      2. Otherwise shrink the font by SERIES_SHRINK_STEP px and re-measure.
+      3. If it still doesn't fit, wrap onto two balanced centered lines,
+         breaking only at spaces between words (never mid-word).
 
-    if len(words) <= SERIES_MAX_WORDS_PER_LINE:
+    Unlike the character name, the series text's vertical position never
+    shifts when it wraps: the first line stays anchored at base_y and the
+    second line is simply placed SERIES_LINE_SPACING below it.
+    """
+    width = _text_pixel_width(draw, series_text, font)
+
+    if width <= MAX_SERIES_WIDTH:
         draw_text_with_outline(draw, (center_x, base_y), series_text, font, anchor="mm")
         return
 
-    line1 = " ".join(words[:SERIES_MAX_WORDS_PER_LINE])
-    line2 = " ".join(words[SERIES_MAX_WORDS_PER_LINE:])
+    shrunk_size = max(SERIES_FONT_SIZE - SERIES_SHRINK_STEP, 1)
+    shrunk_font = get_font(shrunk_size)
+    width = _text_pixel_width(draw, series_text, shrunk_font)
 
-    draw_text_with_outline(draw, (center_x, base_y), line1, font, anchor="mm")
-    draw_text_with_outline(draw, (center_x, base_y + SERIES_LINE_SPACING), line2, font, anchor="mm")
+    if width <= MAX_SERIES_WIDTH:
+        draw_text_with_outline(draw, (center_x, base_y), series_text, shrunk_font, anchor="mm")
+        return
+
+    words = series_text.split()
+
+    if len(words) <= 1:
+        # Nothing to break on -- render as a single (still shrunk) line.
+        draw_text_with_outline(draw, (center_x, base_y), series_text, shrunk_font, anchor="mm")
+        return
+
+    line1, line2 = _best_two_line_split(draw, words, shrunk_font)
+
+    draw_text_with_outline(draw, (center_x, base_y), line1, shrunk_font, anchor="mm")
+    draw_text_with_outline(draw, (center_x, base_y + SERIES_LINE_SPACING), line2, shrunk_font, anchor="mm")
 
 
 # ---------------------------------------------------------------------------
 # CARD RENDERING
 # ---------------------------------------------------------------------------
 
-def render_card(card: dict, print_num) -> Image.Image:
+def render_card(card: dict, print_num, hide_print: bool = False) -> Image.Image:
     """
     Renders a single full card and returns a PIL Image (in memory).
 
@@ -415,7 +831,7 @@ def render_card(card: dict, print_num) -> Image.Image:
         2. Bottom gradient
         3. Frame
         4. Stars
-        5. Print number
+        5. Print number (skipped entirely if hide_print=True)
         6. Character name
         7. Series
     """
@@ -426,8 +842,14 @@ def render_card(card: dict, print_num) -> Image.Image:
     art_source = load_artwork_source(card.get("image", ""))
     canvas = center_crop_to_fill(art_source).convert("RGBA")
 
-    # 2. Gradient
-    canvas = Image.alpha_composite(canvas, create_bottom_gradient())
+    # 2. Gradient (color depends on frame -- common stays gray, rare
+    # frames get their own subtle tint via FRAME_GRADIENT_COLORS).
+    # Only rare frames clip the gradient to the inner artwork area --
+    # common's gradient is left full-bleed exactly as it was before.
+    canvas = Image.alpha_composite(
+        canvas,
+        create_bottom_gradient(color=get_gradient_color(frame_name), clip_to_inner=rare)
+    )
 
     # 3. Frame
     canvas = Image.alpha_composite(canvas, load_frame(frame_name))
@@ -444,30 +866,34 @@ def render_card(card: dict, print_num) -> Image.Image:
     # (coordinates + anchor restored to match the original renderer's placement)
     # Card art shows just the number (no "#"); format_print() itself is left
     # untouched since it's still used with the "#" elsewhere in the bot.
-    print_text = format_print(print_num).lstrip("#")
-    print_font = get_font(PRINT_FONT_SIZE)
-    print_pos = PRINT_POS_RARE if rare else PRINT_POS_COMMON
-    draw_text_with_outline(draw, print_pos, print_text, print_font, anchor="la")
+    if not hide_print:
+        print_text = format_print(print_num).lstrip("#")
+        print_font = get_font(PRINT_FONT_SIZE)
+        print_pos = PRINT_POS_RARE if rare else PRINT_POS_COMMON
+        draw_text_with_outline(draw, print_pos, print_text, print_font, anchor="la")
 
-    # 6. Character name (large)
-    name_font = get_font(NAME_FONT_SIZE)
-    draw_text_with_outline(draw, (CENTER_X, NAME_Y), card.get("name", "Unknown"), name_font, anchor="mm")
+    # 6. Character name (large) -- shrinks and/or wraps to two balanced
+    # lines if it would otherwise exceed MAX_NAME_WIDTH
+    name_wrapped = draw_character_name(draw, card.get("name", "Unknown"), CENTER_X, NAME_Y)
 
     # 7. Series (smaller, wraps to a second centered line past 4 words)
     series_font = get_font(SERIES_FONT_SIZE)
-    draw_series_text(draw, card.get("series", "Unknown Series"), series_font, CENTER_X, SERIES_Y)
+    series_y = SERIES_Y + SERIES_Y_SHIFT_FOR_WRAPPED_NAME if name_wrapped else SERIES_Y
+    draw_series_text(draw, card.get("series", "Unknown Series"), series_font, CENTER_X, series_y)
 
     return canvas
 
 
-def render_card_final(card: dict, print_num) -> str:
+def render_card_final(card: dict, print_num, hide_print: bool = False) -> str:
     """
     Drop-in replacement for the old render_card_final().
     Same contract: renders one card, saves it to a temp PNG, and returns
-    the file path. Callers in main.py don't need to change at all.
+    the file path. Existing callers don't need to change at all -- pass
+    hide_print=True to render the card without its print number (used only
+    by the lup command).
     """
     try:
-        final = render_card(card, print_num)
+        final = render_card(card, print_num, hide_print=hide_print)
     except Exception as e:
         print("RENDER ERROR:", e)
         final = Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (30, 30, 30, 255))
@@ -759,7 +1185,8 @@ class CharacterVersionView(discord.ui.View):
 
         image_path = render_card_final(
             card,
-            peek_next_print(card["id"])
+            peek_next_print(card["id"]),
+            hide_print=True
         )
 
         file = discord.File(image_path, filename="card.png")
@@ -886,6 +1313,11 @@ class FindcardVersionView(discord.ui.View):
         self.user_id = user_id
         self.index = 0
 
+        # No navigation needed when there's only one version -- keep the
+        # interface clean instead of showing buttons that do nothing.
+        if len(self.versions) <= 1:
+            self.clear_items()
+
     def build_embed(self):
         card = self.versions[self.index]
 
@@ -893,23 +1325,20 @@ class FindcardVersionView(discord.ui.View):
 
         embed = discord.Embed(color=THEME_COLOR)
         embed.set_author(
-            name="Card Information",
+            name="Card Lookup",
             icon_url=self.user.display_avatar.url
         )
 
-        embed.description = (
-            f"## **{card['name']}**\n"
-            f"✦ **Series:** **{card['series']}**\n"
-            f"────────────────────────\n"
-            f"✦ **Card ID:** `{card['id']}`\n"
-            f"✦ **Frame:** **{card.get('frame','common')}**\n"
-            f"✦ **Level:** **{stars(card.get('stars',1))}**\n"
-            f"✦ **Claims:** **{claims}**"
-        )
+        embed.title = card.get("name", "Unknown")
+        embed.description = f"*{card.get('series', 'Unknown Series')}*"
 
-        embed.set_footer(
-            text=f"Version {self.index+1}/{len(self.versions)}"
-        )
+        embed.add_field(name="Card ID", value=f"`{card['id']}`", inline=True)
+        embed.add_field(name="Frame", value=card.get("frame", "common").title(), inline=True)
+        embed.add_field(name="Stars", value=stars(card.get("stars", 1)), inline=True)
+        embed.add_field(name="Claims", value=f"**{claims}**", inline=True)
+
+        if len(self.versions) > 1:
+            embed.set_footer(text=f"Version {self.index + 1}/{len(self.versions)}")
 
         return embed
 
@@ -927,7 +1356,7 @@ class FindcardVersionView(discord.ui.View):
         )
 
         embed = self.build_embed()
-        embed.set_image(url="attachment://card.png")
+        embed.set_thumbnail(url="attachment://card.png")
 
         await interaction.response.edit_message(
             embed=embed,
@@ -941,7 +1370,7 @@ class FindcardVersionView(discord.ui.View):
             pass
 
     @discord.ui.button(
-        emoji="⬅️",
+        emoji="◀️",
         style=discord.ButtonStyle.secondary
     )
     async def previous(
@@ -961,7 +1390,7 @@ class FindcardVersionView(discord.ui.View):
         await self.update_message(interaction)
 
     @discord.ui.button(
-        emoji="➡️",
+        emoji="▶️",
         style=discord.ButtonStyle.secondary
     )
     async def next(
@@ -979,6 +1408,69 @@ class FindcardVersionView(discord.ui.View):
             self.index += 1
 
         await self.update_message(interaction)
+
+
+# =========================
+# 5b. FIND SERIES VIEW
+# =========================
+
+class FindSeriesView(discord.ui.View):
+    def __init__(self, series_name, results, user, user_id):
+        super().__init__(timeout=60)
+        self.series_name = series_name
+        self.results = results
+        self.user = user
+        self.user_id = user_id
+        self.page = 0
+
+        total_pages = (len(self.results) - 1) // CARDS_PER_PAGE + 1 if self.results else 1
+        if total_pages <= 1:
+            self.clear_items()
+
+    def get_embed(self):
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.set_author(
+            name=f"Series: {self.series_name}",
+            icon_url=self.user.display_avatar.url
+        )
+
+        start = self.page * CARDS_PER_PAGE
+        end = start + CARDS_PER_PAGE
+        page_cards = self.results[start:end]
+
+        lines = []
+        for card in page_cards:
+            claims = card_prints.get(card["id"], 0)
+            lines.append(
+                f"**{card.get('name', 'Unknown')}** • `{card['id']}`\n"
+                f"✦ Frame: **{card.get('frame', 'common').title()}** • "
+                f"Stars: {stars(card.get('stars', 1))} • Claims: **{claims}**"
+            )
+
+        embed.description = "\n\n".join(lines) if lines else "No cards found."
+
+        total_pages = (len(self.results) - 1) // CARDS_PER_PAGE + 1 if self.results else 1
+        embed.set_footer(text=f"Page {self.page + 1}/{total_pages} • {len(self.results)} card(s) found")
+
+        return embed
+
+    @discord.ui.button(emoji="◀️", style=discord.ButtonStyle.secondary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+        if self.page > 0:
+            self.page -= 1
+        await interaction.response.edit_message(embed=self.get_embed(), view=self)
+
+    @discord.ui.button(emoji="▶️", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+        max_page = (len(self.results) - 1) // CARDS_PER_PAGE
+        if self.page < max_page:
+            self.page += 1
+        await interaction.response.edit_message(embed=self.get_embed(), view=self)
+
 
 # =========================
 # 6. GIFT VIEW
@@ -1352,6 +1844,303 @@ class TradeView(discord.ui.View):
 
 
 # =========================
+# EDIT CARD VIEW (leditcard)
+# =========================
+class EditCardView(discord.ui.View):
+    """
+    Interactive edit panel for a single card. `card` is the actual dict
+    object living inside the global `cards` list, so mutating it here is
+    immediately reflected everywhere else in the bot -- the only extra
+    steps needed are persisting it (save_cards_json) and pushing it to
+    GitHub (github_commit_files / github_commit_changes), exactly like
+    the existing laddcard/lupdateimage commands do.
+    """
+
+    def __init__(self, bot, card, user, user_id):
+        super().__init__(timeout=180)
+        self.bot = bot
+        self.card = card
+        self.user = user
+        self.user_id = user_id
+        self.message = None  # set by the caller right after sending
+
+    def build_embed(self):
+        card = self.card
+        claims = card_prints.get(card.get("id", ""), 0)
+
+        embed = discord.Embed(color=THEME_COLOR, title=f"✏️ Editing: {card.get('name', 'Unknown')}")
+        embed.add_field(name="Card ID", value=f"`{card.get('id', 'unknown')}`", inline=True)
+        embed.add_field(name="Series", value=card.get("series", "Unknown Series"), inline=True)
+        embed.add_field(name="Frame", value=card.get("frame", "common"), inline=True)
+        embed.add_field(name="Stars", value=stars(card.get("stars", 1)), inline=True)
+        embed.add_field(name="Claims", value=f"**{claims}**", inline=True)
+        embed.add_field(name="Image Path", value=f"`{card.get('image', 'none')}`", inline=False)
+        embed.set_footer(text="Use the buttons below to edit a single property.")
+        return embed
+
+    def interaction_ok(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user_id
+
+    async def refresh_message(self):
+        """Re-renders the embed on the original message after a successful edit."""
+        if self.message is not None:
+            try:
+                await self.message.edit(embed=self.build_embed(), view=self)
+            except Exception:
+                pass
+
+    async def persist_and_sync(self, commit_message, extra_files=None):
+        """
+        Persists the current in-memory `cards` list: pushes to GitHub
+        first (atomically, reusing the existing sync helpers), and only
+        mirrors the change to local disk once that succeeds -- matching
+        the safety pattern used by lupdateimage/laddcard.
+        """
+        cards_json_bytes = json.dumps(cards, indent=2).encode("utf-8")
+        files = dict(extra_files or {})
+        files["cards.json"] = cards_json_bytes
+
+        await github_commit_files(files, commit_message)
+
+        for path, content in files.items():
+            if path == "cards.json":
+                continue
+            local_dir = os.path.dirname(path)
+            if local_dir:
+                os.makedirs(local_dir, exist_ok=True)
+            with open(path, "wb") as f:
+                f.write(content)
+
+        save_cards_json()
+
+    async def prompt_for_message(self, interaction: discord.Interaction, prompt_text, require_attachment=False):
+        """Sends a prompt and waits for the user's next reply in the same channel."""
+        await interaction.response.send_message(prompt_text, ephemeral=True)
+
+        def check(m):
+            if m.author.id != self.user_id or m.channel.id != interaction.channel.id:
+                return False
+            if require_attachment:
+                return len(m.attachments) > 0
+            return True
+
+        return await self.bot.wait_for("message", check=check, timeout=180)
+
+    @discord.ui.button(label="Rename", style=discord.ButtonStyle.primary, row=0)
+    async def rename_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.interaction_ok(interaction):
+            return await interaction.response.send_message("This isn't your edit session!", ephemeral=True)
+
+        try:
+            msg = await self.prompt_for_message(interaction, "Send the new **name** for this card.")
+        except asyncio.TimeoutError:
+            return await interaction.followup.send("❌ Timed out waiting for a response.", ephemeral=True)
+
+        new_name = msg.content.strip()
+        if not new_name:
+            return await interaction.followup.send("❌ Name cannot be empty.", ephemeral=True)
+
+        old_name = self.card.get("name")
+        self.card["name"] = new_name
+        try:
+            await self.persist_and_sync(f"Renamed {self.card.get('id')} to {new_name}")
+        except Exception as e:
+            self.card["name"] = old_name
+            return await interaction.followup.send(f"❌ Failed to update card: {e}", ephemeral=True)
+
+        await self.refresh_message()
+        await interaction.followup.send("✅ Card updated successfully.")
+
+    @discord.ui.button(label="Change Series", style=discord.ButtonStyle.primary, row=0)
+    async def series_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.interaction_ok(interaction):
+            return await interaction.response.send_message("This isn't your edit session!", ephemeral=True)
+
+        try:
+            msg = await self.prompt_for_message(interaction, "Send the new **series** for this card.")
+        except asyncio.TimeoutError:
+            return await interaction.followup.send("❌ Timed out waiting for a response.", ephemeral=True)
+
+        new_series = msg.content.strip()
+        if not new_series:
+            return await interaction.followup.send("❌ Series cannot be empty.", ephemeral=True)
+
+        old_series = self.card.get("series")
+        self.card["series"] = new_series
+        try:
+            await self.persist_and_sync(f"Changed series for {self.card.get('id')} to {new_series}")
+        except Exception as e:
+            self.card["series"] = old_series
+            return await interaction.followup.send(f"❌ Failed to update card: {e}", ephemeral=True)
+
+        await self.refresh_message()
+        await interaction.followup.send("✅ Card updated successfully.")
+
+    @discord.ui.button(label="Change Frame", style=discord.ButtonStyle.primary, row=1)
+    async def frame_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.interaction_ok(interaction):
+            return await interaction.response.send_message("This isn't your edit session!", ephemeral=True)
+
+        try:
+            msg = await self.prompt_for_message(
+                interaction,
+                "Send the new **frame** name (e.g. `common`, `blue`, or `blue.png`)."
+            )
+        except asyncio.TimeoutError:
+            return await interaction.followup.send("❌ Timed out waiting for a response.", ephemeral=True)
+
+        resolved = resolve_frame_name(msg.content)
+        if resolved is None:
+            return await interaction.followup.send(
+                f"❌ Frame `{msg.content.strip()}` not found in the `frames` folder.", ephemeral=True
+            )
+
+        old_frame = self.card.get("frame")
+        self.card["frame"] = resolved
+        try:
+            await self.persist_and_sync(f"Changed frame for {self.card.get('id')} to {resolved}")
+        except Exception as e:
+            self.card["frame"] = old_frame
+            return await interaction.followup.send(f"❌ Failed to update card: {e}", ephemeral=True)
+
+        await self.refresh_message()
+        await interaction.followup.send("✅ Card updated successfully.")
+
+    @discord.ui.button(label="Change Stars", style=discord.ButtonStyle.primary, row=1)
+    async def stars_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.interaction_ok(interaction):
+            return await interaction.response.send_message("This isn't your edit session!", ephemeral=True)
+
+        try:
+            msg = await self.prompt_for_message(interaction, "Send the new **star count** (a number from 1 to 4).")
+        except asyncio.TimeoutError:
+            return await interaction.followup.send("❌ Timed out waiting for a response.", ephemeral=True)
+
+        try:
+            new_stars = int(msg.content.strip())
+        except ValueError:
+            return await interaction.followup.send("❌ Stars must be a whole number between 1 and 4.", ephemeral=True)
+
+        if new_stars not in (1, 2, 3, 4):
+            return await interaction.followup.send("❌ Stars must be between 1 and 4.", ephemeral=True)
+
+        old_stars = self.card.get("stars")
+        self.card["stars"] = new_stars
+        try:
+            await self.persist_and_sync(f"Changed stars for {self.card.get('id')} to {new_stars}")
+        except Exception as e:
+            self.card["stars"] = old_stars
+            return await interaction.followup.send(f"❌ Failed to update card: {e}", ephemeral=True)
+
+        await self.refresh_message()
+        await interaction.followup.send("✅ Card updated successfully.")
+
+    @discord.ui.button(label="Change Image", style=discord.ButtonStyle.secondary, row=2)
+    async def image_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.interaction_ok(interaction):
+            return await interaction.response.send_message("This isn't your edit session!", ephemeral=True)
+
+        try:
+            msg = await self.prompt_for_message(
+                interaction, "Please upload the new **image** for this card.", require_attachment=True
+            )
+        except asyncio.TimeoutError:
+            return await interaction.followup.send("❌ Timed out waiting for an image upload.", ephemeral=True)
+
+        # Reuse the exact same image pipeline as lupdateimage: download,
+        # re-encode as a real PNG, then push it (plus cards.json) as a
+        # single atomic GitHub commit before touching local disk.
+        try:
+            attachment = msg.attachments[0]
+            raw_bytes = await attachment.read()
+            png_bytes = await convert_image_bytes_to_png(raw_bytes)
+
+            existing_path = self.card.get("image", "") or ""
+            save_path = existing_path if existing_path.startswith("card_art/") else f"card_art/{self.card.get('id')}.png"
+            old_image = self.card.get("image")
+            self.card["image"] = save_path
+
+            await self.persist_and_sync(
+                f"Updated {self.card.get('name', self.card.get('id'))} image via leditcard",
+                extra_files={save_path: png_bytes}
+            )
+        except Exception as e:
+            self.card["image"] = old_image
+            return await interaction.followup.send(f"❌ Failed to update image: {e}", ephemeral=True)
+
+        await self.refresh_message()
+        await interaction.followup.send("✅ Card updated successfully.")
+
+
+# =========================
+# REMOVE CARD VIEW (lremovecard)
+# =========================
+class RemoveCardView(discord.ui.View):
+    def __init__(self, card, user_id):
+        super().__init__(timeout=60)
+        self.card = card
+        self.user_id = user_id
+
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.danger)
+    async def delete_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your confirmation prompt!", ephemeral=True)
+
+        card_id = self.card.get("id")
+        image_path = self.card.get("image", "") or ""
+
+        try:
+            # Build the post-removal cards.json contents without mutating
+            # the live `cards` list yet, so nothing changes locally if the
+            # GitHub commit below fails partway through.
+            remaining_cards = [c for c in cards if c.get("id") != card_id]
+            cards_json_bytes = json.dumps(remaining_cards, indent=2).encode("utf-8")
+
+            delete_paths = [image_path] if image_path.startswith("card_art/") else []
+
+            # Push the removal to GitHub FIRST, as a single atomic commit
+            # (cards.json update + image deletion together). If this
+            # fails, nothing below runs and nothing local changes.
+            await github_commit_changes(
+                write_files={"cards.json": cards_json_bytes},
+                delete_paths=delete_paths,
+                commit_message=f"Removed card {card_id}"
+            )
+
+            # GitHub succeeded -- now mirror the removal locally.
+            cards[:] = remaining_cards
+            save_cards_json()
+
+            if image_path.startswith("card_art/") and os.path.exists(image_path):
+                try:
+                    os.remove(image_path)
+                except Exception:
+                    pass
+
+            card_prints.pop(card_id, None)
+
+        except Exception as e:
+            self.clear_items()
+            await interaction.response.edit_message(
+                content=f"❌ Failed to remove card `{card_id}`: {e}", embed=None, view=self
+            )
+            return
+
+        self.clear_items()
+        await interaction.response.edit_message(
+            content=f"✅ Successfully removed `{card_id}`.", embed=None, attachments=[], view=self
+        )
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your confirmation prompt!", ephemeral=True)
+
+        self.clear_items()
+        await interaction.response.edit_message(content="Cancelled. No changes were made.", view=self)
+
+
+# =========================
 # BOT CORE CONTROLLER
 # =========================
 class Client(discord.Client):
@@ -1394,20 +2183,55 @@ class Client(discord.Client):
 
             attachment = message.attachments[0]
 
-            # Download and save the image
+            # The image field in cards.json is the single source of truth
+            # for this card's filename/path. Never invent or fall back to
+            # a generated path -- if it's missing or invalid, stop here.
+            existing_path = card.get("image", "") or ""
+            if not existing_path.startswith("card_art/"):
+                return await message.channel.send(
+                    "❌ This card does not have a valid image path in `cards.json`. "
+                    "Please fix the `image` field before using `lupdateimage`."
+                )
+
+            save_path = existing_path
+
+            # Download and save the image, then sync to GitHub
             try:
                 image_data = await attachment.read()
-                file_ext = attachment.filename.split('.')[-1]
-                save_path = f"card_art/{card_id}.{file_ext}"
+
+                # Decode the uploaded image with Pillow and re-encode it as
+                # a genuine PNG (not just a renamed file extension).
+                image_data = await convert_image_bytes_to_png(image_data)
+
+                # The image field itself is never rewritten -- save_path
+                # came directly from cards.json above. cards.json is still
+                # included in the commit (as its current, unchanged
+                # contents) so the image and cards.json always land in the
+                # same atomic commit together.
+                cards_json_bytes = json.dumps(cards, indent=2).encode("utf-8")
+                github_files = {
+                    save_path: image_data,
+                    "cards.json": cards_json_bytes,
+                }
+
+                commit_message = f"Updated {card.get('name', card_id)} image"
+
+                # Push to GitHub FIRST, as a single atomic commit. If this
+                # fails, nothing below runs, so local disk stays in sync
+                # with the remote repo.
+                await github_commit_files(github_files, commit_message)
+
+                # GitHub commit succeeded -- now mirror the change locally.
+                local_dir = os.path.dirname(save_path)
+                if local_dir:
+                    os.makedirs(local_dir, exist_ok=True)
 
                 with open(save_path, 'wb') as f:
                     f.write(image_data)
 
-                # Update the card's image field
-                card["image"] = save_path
-                save_cards_json()
-
-                await message.channel.send(f"✅ Card `{card_id}` image updated successfully!\nNew path: `{save_path}`")
+                await message.channel.send(
+                    f"✅ Card `{card_id}` image updated successfully and pushed to GitHub!\nNew path: `{save_path}`"
+                )
             except Exception as e:
                 await message.channel.send(f"❌ Error updating image: {e}")
             return
@@ -1430,35 +2254,34 @@ class Client(discord.Client):
 
                 char_name = parts[0]
                 series = parts[1]
-                requested_frame = parts[2].lower()
+                requested_frame = parts[2].strip()
                 stars_val = int(parts[3])
 
-                # Frame resolution logic
-                frame_name = None
+                # Frame resolution logic -- accepts any exact frame that
+                # exists in the frames folder, with or without ".png".
+                # There is no generic "rare" option anymore: the user must
+                # always specify the exact frame they want (blue, red,
+                # pink, gold, etc.). Nothing is chosen randomly.
                 frames_dir = "frames"
-                if requested_frame == "common":
-                    frame_name = "common"
-                elif requested_frame == "rare":
-                    try:
-                        files = [f for f in os.listdir(frames_dir) if f.lower().startswith("rare")]
-                        if not files:
-                            return await message.channel.send("No rare frames found on disk.")
-                        chosen = random.choice(files)
-                        frame_name = os.path.splitext(chosen)[0]
-                    except Exception:
-                        return await message.channel.send("Error listing frames directory.")
-                else:
-                    candidate = requested_frame
-                    candidate_path = os.path.join(frames_dir, f"{candidate}.png")
-                    if not os.path.exists(candidate_path):
-                        return await message.channel.send(f"Frame `{candidate}` not found. Use `common`, `rare`, or an exact frame filename without extension.")
-                    frame_name = candidate
+                candidate = requested_frame[:-4] if requested_frame.lower().endswith(".png") else requested_frame
+                candidate_path = os.path.join(frames_dir, f"{candidate}.png")
+
+                if not os.path.exists(candidate_path):
+                    return await message.channel.send(
+                        f"❌ Frame `{requested_frame}` not found in the `frames` folder. "
+                        "Use `common` or the exact name of an existing frame file (with or without `.png`)."
+                    )
+
+                frame_name = candidate
+                is_rare = (frame_name.lower() != "common")
 
                 if stars_val not in [1, 2, 3, 4]:
                     return await message.channel.send("Stars must be 1, 2, 3, or 4.")
 
-                # Generate card ID using the exact frame_name for uniqueness
-                card_id = generate_card_id(char_name, frame_name)
+                # Generate card ID based on rarity (common/rare), not the
+                # specific frame color -- e.g. mydei_common / mydei_rare,
+                # regardless of whether the rare frame is blue, red, gold, etc.
+                card_id = generate_card_id(char_name, is_rare)
 
                 # Ask for image
                 await message.channel.send(f"Card ID: `{card_id}`\nNow send the art image for **{char_name}**.")
@@ -1476,8 +2299,12 @@ class Client(discord.Client):
                 try:
                     attachment = img_msg.attachments[0]
                     image_data = await attachment.read()
-                    file_ext = attachment.filename.split('.')[-1]
-                    save_path = f"card_art/{card_id}.{file_ext}"
+
+                    # Decode the uploaded image with Pillow and re-encode it
+                    # as a genuine PNG (not just a renamed file extension).
+                    image_data = await convert_image_bytes_to_png(image_data)
+
+                    save_path = f"card_art/{card_id}.png"
 
                     with open(save_path, 'wb') as f:
                         f.write(image_data)
@@ -1506,38 +2333,225 @@ class Client(discord.Client):
             return
 
         # =========================
+        # LSYNC COMMAND (health/status check)
+        # =========================
+        if content_lower == "lsync":
+            total_cards = len(cards)
+            unique_characters = len({c.get("name", "").strip().lower() for c in cards if c.get("name")})
+
+            # Duplicate card IDs
+            id_counts = {}
+            for c in cards:
+                cid = c.get("id")
+                if cid:
+                    id_counts[cid] = id_counts.get(cid, 0) + 1
+            duplicate_ids = sorted([cid for cid, count in id_counts.items() if count > 1])
+
+            # Duplicate image paths
+            image_counts = {}
+            for c in cards:
+                img = c.get("image")
+                if img:
+                    image_counts[img] = image_counts.get(img, 0) + 1
+            duplicate_images = sorted([img for img, count in image_counts.items() if count > 1])
+
+            # Missing required fields
+            missing_fields = []
+            for c in cards:
+                missing = [
+                    field for field in REQUIRED_CARD_FIELDS
+                    if c.get(field) is None or c.get(field) == ""
+                ]
+                if missing:
+                    identifier = c.get("id") or c.get("name") or "unknown card"
+                    missing_fields.append(f"`{identifier}` missing: {', '.join(missing)}")
+
+            # Broken local image paths
+            broken_images = []
+            for c in cards:
+                img = c.get("image", "") or ""
+                if img.startswith("card_art/") and not os.path.exists(img):
+                    broken_images.append(f"`{c.get('id', 'unknown')}` -> `{img}`")
+
+            # GitHub configuration
+            github_missing = [
+                name for name in ("GITHUB_TOKEN", "GITHUB_USERNAME", "GITHUB_REPO", "GITHUB_BRANCH")
+                if not os.environ.get(name)
+            ]
+            github_ok = len(github_missing) == 0
+
+            database_healthy = not (duplicate_ids or duplicate_images or missing_fields or broken_images)
+
+            def format_list(items, limit=10):
+                if not items:
+                    return "✅ None found"
+                shown = items[:limit]
+                text = "\n".join(f"• {item}" for item in shown)
+                if len(items) > limit:
+                    text += f"\n...and {len(items) - limit} more"
+                return text
+
+            embed = discord.Embed(
+                color=discord.Color.green() if database_healthy and github_ok else discord.Color.orange(),
+                title="🔄 Luka Sync Status",
+                description="Read-only diagnostic report of `cards.json`. Nothing is modified automatically."
+            )
+            embed.add_field(name="📦 Total Cards", value=str(total_cards), inline=True)
+            embed.add_field(name="🎭 Unique Characters", value=str(unique_characters), inline=True)
+            embed.add_field(
+                name="🔑 GitHub Config",
+                value="✅ Configured" if github_ok else f"❌ Missing: {', '.join(github_missing)}",
+                inline=True
+            )
+            embed.add_field(name="🆔 Duplicate Card IDs", value=format_list(duplicate_ids), inline=False)
+            embed.add_field(name="🖼️ Duplicate Image Paths", value=format_list(duplicate_images), inline=False)
+            embed.add_field(name="⚠️ Missing Required Fields", value=format_list(missing_fields), inline=False)
+            embed.add_field(name="📁 Broken/Missing Image Files", value=format_list(broken_images), inline=False)
+            embed.add_field(
+                name="Overall Status",
+                value="✅ Database appears healthy." if database_healthy else "⚠️ Issues found -- see above. Please fix manually.",
+                inline=False
+            )
+            embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))} UTC")
+
+            await message.channel.send(embed=embed)
+            return
+
+        # =========================
+        # LEDITCARD COMMAND
+        # =========================
+        if content_lower.startswith("leditcard "):
+            if not has_uploader_role(message.author):
+                return await message.channel.send("You need the **Uploader** role to use this command.")
+
+            parts = content.split()
+            if len(parts) < 2:
+                return await message.channel.send("Usage: `leditcard <card_id>`")
+
+            card_id = parts[1]
+            card = next((c for c in cards if c.get("id") == card_id), None)
+            if not card:
+                return await message.channel.send(f"Card with ID `{card_id}` not found.")
+
+            view = EditCardView(self, card, message.author, user_id)
+            sent = await message.channel.send(embed=view.build_embed(), view=view)
+            view.message = sent
+            return
+
+        # =========================
+        # LREMOVECARD COMMAND
+        # =========================
+        if content_lower.startswith("lremovecard "):
+            if not has_uploader_role(message.author):
+                return await message.channel.send("You need the **Uploader** role to use this command.")
+
+            parts = content.split()
+            if len(parts) < 2:
+                return await message.channel.send("Usage: `lremovecard <card_id>`")
+
+            card_id = parts[1]
+            card = next((c for c in cards if c.get("id") == card_id), None)
+            if not card:
+                return await message.channel.send(f"Card with ID `{card_id}` not found.")
+
+            embed = discord.Embed(
+                color=discord.Color.red(),
+                title="⚠️ Confirm Card Removal",
+                description="This will permanently delete this card from `cards.json` and GitHub."
+            )
+            embed.add_field(name="Character", value=card.get("name", "Unknown"), inline=True)
+            embed.add_field(name="Series", value=card.get("series", "Unknown Series"), inline=True)
+            embed.add_field(name="Card ID", value=f"`{card_id}`", inline=True)
+            embed.add_field(name="Frame", value=card.get("frame", "common"), inline=True)
+            embed.add_field(name="Stars", value=stars(card.get("stars", 1)), inline=True)
+
+            view = RemoveCardView(card, user_id)
+
+            image_path = None
+            try:
+                image_path = render_card_final(card, peek_next_print(card_id), hide_print=True)
+                file = discord.File(image_path, filename="card.png")
+                embed.set_thumbnail(url="attachment://card.png")
+                await message.channel.send(embed=embed, file=file, view=view)
+            except Exception:
+                await message.channel.send(embed=embed, view=view)
+            finally:
+                if image_path:
+                    try:
+                        os.remove(image_path)
+                    except Exception:
+                        pass
+            return
+
+        # =========================
+        # HELP COMMAND (lhelp)
+        # =========================
+        if content_lower == "lhelp":
+            embed = discord.Embed(
+                color=THEME_COLOR,
+                title="📖 Luka Commands Helper",
+                description=(
+                    "### 𝗖𝗮𝗿𝗱𝘀\n"
+                    "`ld` ─ Drop 2 random cards.\n"
+                    "`lv <number>` ─ View a card.\n"
+                    "`lc` ─ Look through your collection.\n"
+                    "`lup <name/series>` ─ Search a character or series.\n\n"
+                    "### 𝗧𝗿𝗮𝗱𝗶𝗻𝗴\n"
+                    "`lg` / `lgift` ─ Gift one of your cards to another player.\n"
+                    "`lt` / `ltrade` ─ Trade cards with another player.\n\n"
+                    "### 𝗢𝘁𝗵𝗲𝗿\n"
+                    "`lcd` ─ Check your current cooldowns."
+                )
+            )
+
+            await message.channel.send(embed=embed)
+            return
+
+        # =========================
         # COOLDOWNS COMMAND (lcd)
         # =========================
         if content_lower == "lcd":
             now = time.time()
 
+            def _cooldown_status(seconds_remaining, ready_text):
+                if seconds_remaining <= 0:
+                    return f"**{ready_text}**"
+                minutes = seconds_remaining // 60
+                secs = seconds_remaining % 60
+                if minutes > 0:
+                    return f"**{minutes}m {secs}s remaining**"
+                else:
+                    return f"**{secs}s remaining**"
+
             # Drop status
             if user_id in drop_cooldowns:
                 remaining = int(DROP_COOLDOWN - (now - drop_cooldowns[user_id]))
-                if remaining > 0:
-                    drop_text = f"{format_time(remaining)} left"
-                else:
-                    drop_text = "Ready"
             else:
-                drop_text = "Ready"
+                remaining = 0
+            drop_status = _cooldown_status(remaining, "Ready to drop!")
 
             # Claim status
             if user_id in claim_cooldowns:
                 remaining = int(CLAIM_COOLDOWN - (now - claim_cooldowns[user_id]))
-                if remaining > 0:
-                    claim_text = f"{format_time(remaining)} left"
-                else:
-                    claim_text = "Ready"
             else:
-                claim_text = "Ready"
+                remaining = 0
+            claim_status = _cooldown_status(remaining, "Ready to claim!")
 
-            embed = discord.Embed(color=THEME_COLOR, title=f"{message.author.display_name}'s Cooldowns")
+            embed = discord.Embed(
+                color=THEME_COLOR,
+                title=f"{message.author.display_name}'s Cooldowns",
+                description=(
+                    f"> ### Drop Cooldown\n"
+                    f"Status: {drop_status}\n"
+                    f"Cooldown: `{DROP_COOLDOWN//60} minutes`\n\n"
+                    f"> ### Claim Cooldown\n"
+                    f"Status: {claim_status}\n"
+                    f"Cooldown: `{CLAIM_COOLDOWN//60} minutes`"
+                )
+            )
             embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
-            embed.add_field(name="Drop Cooldown", value=f"Status: **{drop_text}**\nCooldown: `{DROP_COOLDOWN//60} minutes`", inline=True)
-            embed.add_field(name="Claim Cooldown", value=f"Status: **{claim_text}**\nCooldown: `{CLAIM_COOLDOWN//60} minutes`", inline=True)
-            embed.add_field(name="Notes", value="Cooldowns are per-user and prevent drop/claim floods.", inline=False)
             embed.set_thumbnail(
-                url="https://media.discordapp.net/attachments/1505599262120087633/1520906874927452252/IMG_9566.jpg"
+                url="https://media.discordapp.net/attachments/1505599262120087633/1521878802123198634/IMG_9608.jpg?ex=6a466f95&is=6a451e15&hm=cd768ebbfc75ea69ea3a4940c1a57b709bd32b4d9aeaac0ffebb4df475e6ec93&=&format=webp&width=1148&height=666"
             )
             embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(now))} UTC")
 
@@ -1866,7 +2880,8 @@ class Client(discord.Client):
 
                 image_path = render_card_final(
                     all_versions[0],
-                    peek_next_print(all_versions[0]["id"])
+                    peek_next_print(all_versions[0]["id"]),
+                    hide_print=True
                 )
 
                 file = discord.File(image_path, filename="card.png")
@@ -1924,7 +2939,8 @@ class Client(discord.Client):
 
                 image_path = render_card_final(
                     all_versions[0],
-                    peek_next_print(all_versions[0]["id"])
+                    peek_next_print(all_versions[0]["id"]),
+                    hide_print=True
                 )
 
                 file = discord.File(image_path, filename="card.png")
@@ -2022,62 +3038,58 @@ class Client(discord.Client):
             if not card:
                 return await message.channel.send("Card not found.")
 
-            # Find all versions of this card
+            # Find all versions of this character
             all_versions = [
                 c for c in cards
                 if c.get("name", "").lower() == card.get("name", "").lower()
             ]
             all_versions.sort(key=lambda x: x.get("stars", 1))
 
-            if len(all_versions) == 1:
-                # Only one version, show it without navigation buttons
-                view = FindcardVersionView(all_versions, message.author, user_id)
-                # render and attach image so embed image works
-                image_path = render_card_final(
-                    all_versions[0],
-                    peek_next_print(all_versions[0]["id"])
-                )
-                file = discord.File(image_path, filename="card.png")
-                embed = view.build_embed()
-                embed.set_image(url="attachment://card.png")
-                await message.channel.send(embed=embed, file=file, view=view)
-                try:
-                    os.remove(image_path)
-                except:
-                    pass
-                return
-            else:
-                # Multiple versions, show with navigation buttons
-                view = FindcardVersionView(
-                    all_versions,
-                    message.author,
-                    user_id
-                )
+            view = FindcardVersionView(all_versions, message.author, user_id)
 
-                image_path = render_card_final(
-                    all_versions[0],
-                    peek_next_print(all_versions[0]["id"])
-                )
+            image_path = render_card_final(
+                all_versions[0],
+                peek_next_print(all_versions[0]["id"])
+            )
 
-                file = discord.File(
-                    image_path,
-                    filename="card.png"
-                )
+            file = discord.File(image_path, filename="card.png")
+            embed = view.build_embed()
+            embed.set_thumbnail(url="attachment://card.png")
 
-                embed = view.build_embed()
-                embed.set_image(url="attachment://card.png")
+            await message.channel.send(embed=embed, file=file, view=view)
 
-                await message.channel.send(
-                    embed=embed,
-                    file=file,
-                    view=view
-                )
+            try:
+                os.remove(image_path)
+            except:
+                pass
+            return
 
-                try:
-                    os.remove(image_path)
-                except:
-                    pass
-                return
+        # =========================
+        # LFINDSERIES COMMAND
+        # =========================
+        if content_lower.startswith("lfindseries "):
+            query = content[12:].strip().lower()
+            if not query:
+                return await message.channel.send("Usage: lfindseries <series name>")
+
+            # try exact match then substring
+            matched_cards = [c for c in cards if c.get("series", "").lower() == query]
+            if not matched_cards:
+                matched_cards = [c for c in cards if query in c.get("series", "").lower()]
+
+            if not matched_cards:
+                return await message.channel.send("No cards found for that series.")
+
+            matched_cards.sort(key=lambda c: (c.get("name", "").lower(), c.get("stars", 1)))
+
+            series_display = matched_cards[0].get("series", query)
+
+            view = FindSeriesView(series_display, matched_cards, message.author, user_id)
+
+            return await message.channel.send(
+                embed=view.get_embed(),
+                view=view
+            )
 
 
 # --- Run Bot Connection ---
