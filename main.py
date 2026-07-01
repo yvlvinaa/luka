@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import discord
 import random
 import re
@@ -155,10 +159,10 @@ def resolve_frame_name(requested_frame: str):
 # GITHUB SYNC (used only by lupdateimage)
 # =========================
 # Credentials are read from environment variables, never hardcoded:
-#   GITHUB_TOKEN    -- Personal Access Token with Contents: Read and Write
-#   GITHUB_USERNAME -- repo owner
-#   GITHUB_REPO     -- repo name
-#   GITHUB_BRANCH   -- branch to commit to
+#   GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+#   GITHUB_USERNAME = os.getenv("GITHUB_USERNAME")
+#   GITHUB_REPO = os.getenv("GITHUB_REPO")
+#   GITHUB_BRANCH = os.getenv("GITHUB_BRANCH")
 #
 # Uses the GitHub Git Data API (blobs -> tree -> commit -> ref update) so
 # that multiple files (image + cards.json) land in a single atomic commit.
