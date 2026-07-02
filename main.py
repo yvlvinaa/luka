@@ -501,7 +501,7 @@ PRINT_POS_RARE = (380, 295)
 GRADIENT_COLOR = (25, 25, 28)
 GRADIENT_HEIGHT_RATIO = 0.40   # portion of the card (from the bottom) the gradient covers
 GRADIENT_START_ALPHA = 0
-GRADIENT_END_ALPHA = 140
+GRADIENT_END_ALPHA = 170
 
 # Inner artwork area the gradient is clipped to, so it never bleeds onto
 # the frame's decorative border/corners. This is the margin (in px) between
@@ -512,11 +512,13 @@ ARTWORK_INNER_MARGIN_TOP = 50
 ARTWORK_INNER_MARGIN_BOTTOM = 105
 
 # Rounded clip box the COMMON frame's gradient fades into (see
-# _common_gradient_box). Sized as a fraction of the rare frame's visible
-# clipped-gradient height, so common echoes that same rounded/positioned
-# look but stays noticeably smaller.
-COMMON_GRADIENT_BOX_HEIGHT_RATIO = 0.72   # ~70-75% of the rare box's height
+# _common_gradient_box). Sized tightly around the name/series text area
+# (plus a little padding) instead of a large fraction of the card, so it
+# never extends far up into the artwork.
 COMMON_GRADIENT_BOX_RADIUS = 60
+COMMON_GRADIENT_BOX_TOP_PADDING = 50
+COMMON_GRADIENT_BOX_BOTTOM_PADDING = 50
+
 
 # Per-frame gradient colors. "common" is intentionally absent -- it always
 # uses GRADIENT_COLOR (the gray) above. Any frame name not listed here also
@@ -669,12 +671,22 @@ def load_star_overlay(card: dict):
     return star
 
 
-def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR, clip_box=None, clip_radius=0) -> Image.Image:
+def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR, clip_box=None, clip_radius=0, relative_fade=False) -> Image.Image:
     """
     Vertical gradient overlay, transparent at the top and linearly fading
-    into `color` toward the bottom. Only covers the bottom portion of
-    the card (GRADIENT_HEIGHT_RATIO) so more of the artwork stays visible.
-    Same opacity/fade curve regardless of color -- only the tint changes.
+    into `color` toward the bottom.
+
+    By default (relative_fade=False), the fade spans GRADIENT_HEIGHT_RATIO
+    of the full card height, exactly as before -- this is the path rare
+    frames use, and its math is unchanged.
+
+    If relative_fade=True, the fade is computed relative to clip_box's own
+    top/bottom instead: 0% opacity right at the top of the box, ramping up
+    to full opacity at the box's bottom. This is what the smaller common
+    box uses, so it reads as a true smooth fade contained inside that box
+    instead of a mostly-opaque block (which is what happens if a small
+    clipped region only samples the middle of a much taller canvas-wide
+    fade).
 
     If clip_box (left, top, right, bottom) is given, the gradient is
     clipped to that rectangle -- pixels outside it are dropped entirely
@@ -688,10 +700,15 @@ def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR,
     gradient = Image.new("RGBA", size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(gradient)
 
-    fade_start = int(height * (1 - GRADIENT_HEIGHT_RATIO))
+    if relative_fade and clip_box is not None:
+        fade_top = clip_box[1]
+        fade_bottom = clip_box[3]
+    else:
+        fade_top = int(height * (1 - GRADIENT_HEIGHT_RATIO))
+        fade_bottom = height
 
-    for y in range(fade_start, height):
-        progress = (y - fade_start) / max(1, (height - fade_start))
+    for y in range(fade_top, min(fade_bottom, height)):
+        progress = (y - fade_top) / max(1, (fade_bottom - fade_top))
         alpha = int(GRADIENT_START_ALPHA + (GRADIENT_END_ALPHA - GRADIENT_START_ALPHA) * progress)
         draw.line([(0, y), (width, y)], fill=(*color, alpha))
 
@@ -726,21 +743,25 @@ def _inner_artwork_box(size=(CARD_WIDTH, CARD_HEIGHT)):
 def _common_gradient_box(size=(CARD_WIDTH, CARD_HEIGHT)):
     """
     Smaller rounded box the COMMON frame's gradient is clipped into --
-    same left/right margins and bottom edge as the rare frame's inner
-    artwork box, but shorter (COMMON_GRADIENT_BOX_HEIGHT_RATIO of the
-    rare box's visible height), so common echoes that boxed look while
-    staying noticeably smaller.
+    same left/right margins as the rare frame's inner artwork box, but
+    sized tightly around the name/series text area (plus a little
+    padding) instead of extending far up into the artwork. Accounts for
+    the name and/or series each possibly wrapping to two lines.
     """
     width, height = size
 
-    fade_start = int(height * (1 - GRADIENT_HEIGHT_RATIO))
-    rare_visible_height = height - fade_start - ARTWORK_INNER_MARGIN_BOTTOM
-    box_height = int(rare_visible_height * COMMON_GRADIENT_BOX_HEIGHT_RATIO)
+    # Topmost point the (possibly two-line) name can reach.
+    text_top = NAME_Y - (NAME_LINE_SPACING // 2) - (NAME_FONT_SIZE // 2)
+    # Bottommost point the (possibly two-line, shifted) series can reach.
+    text_bottom = SERIES_Y + SERIES_Y_SHIFT_FOR_WRAPPED_NAME + SERIES_LINE_SPACING + (SERIES_FONT_SIZE // 2)
 
     box_left = ARTWORK_INNER_MARGIN_X
     box_right = width - ARTWORK_INNER_MARGIN_X
-    box_bottom = height - ARTWORK_INNER_MARGIN_BOTTOM
-    box_top = box_bottom - box_height
+    box_top = text_top - COMMON_GRADIENT_BOX_TOP_PADDING
+    box_bottom = min(
+        height - ARTWORK_INNER_MARGIN_BOTTOM,
+        text_bottom + COMMON_GRADIENT_BOX_BOTTOM_PADDING
+    )
 
     return (box_left, box_top, box_right, box_bottom)
 
@@ -905,6 +926,7 @@ def render_card(card: dict, print_num, hide_print: bool = False) -> Image.Image:
             color=get_gradient_color(frame_name),
             clip_box=_common_gradient_box(),
             clip_radius=COMMON_GRADIENT_BOX_RADIUS,
+            relative_fade=True,
         )
 
     canvas = Image.alpha_composite(canvas, gradient_layer)
