@@ -1977,7 +1977,7 @@ class TradeView(discord.ui.View):
             user2_status = "Completed!" if self.user2_confirmed else "Completing"
 
         def format_offer(user, owned_card, card_index, status):
-            block = f"> # {trade_emoji} {user.mention} is offering... - {status}\n"
+            block = f"> ## {trade_emoji} {user.mention} is offering... - {status}\n"
             if owned_card:
                 card = owned_card["card"]
                 name = card.get("name", "Unknown")
