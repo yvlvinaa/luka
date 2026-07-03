@@ -561,7 +561,7 @@ MAX_SERIES_WIDTH = MAX_NAME_WIDTH
 SERIES_SHRINK_STEP = 15
 
 # Vertical gap between the two lines when a series name wraps to two lines.
-SERIES_LINE_SPACING = 30
+SERIES_LINE_SPACING = 50
 
 # Print number position -- moved ~5px lower and slightly further right to
 # match the original renderer's placement more closely.
