@@ -580,7 +580,7 @@ GRADIENT_END_ALPHA = 170
 # the outer canvas edge and the visible inner artwork region -- adjust if
 # the frame art's border thickness changes.
 ARTWORK_INNER_MARGIN_X = 190
-ARTWORK_INNER_MARGIN_TOP = 55
+ARTWORK_INNER_MARGIN_TOP = 50
 ARTWORK_INNER_MARGIN_BOTTOM = 105
 
 # Rounded clip box the COMMON frame's gradient fades into (see
