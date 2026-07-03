@@ -12,7 +12,10 @@ import requests
 import tempfile
 import json
 import base64
+import functools
+import traceback
 from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw, ImageFont, ImageStat
 
 # =========================
@@ -36,6 +39,7 @@ intents = discord.Intents.all()
 # Global Configurations
 DROP_COOLDOWN = 600
 CLAIM_COOLDOWN = 300
+CLAIM_TIME_LIMIT = 90  # seconds a dropped card stays claimable before its buttons expire
 CARDS_PER_PAGE = 10
 THEME_COLOR = discord.Color.from_rgb(255, 227, 102)
 
@@ -131,6 +135,41 @@ def save_cards_json():
         json.dump(cards, f, indent=2)
 
 
+def _atomic_write_bytes(path: str, data: bytes) -> None:
+    """
+    Writes `data` to `path` atomically: to a temp file in the same
+    directory first, then moved into place with os.replace() (an atomic
+    rename on both POSIX and Windows).
+
+    This matters specifically for card_art/*.png files: opening the
+    destination path directly in 'wb' mode truncates it to zero bytes
+    immediately, before any new bytes are written. If a card render
+    happens to load that exact file during that window (e.g.
+    lupdateimage/leditcard updating a card's art while it's also being
+    rendered for a drop/lookup elsewhere), Pillow reads a zero-byte or
+    partial PNG, fails to decode it, and the renderer silently falls back
+    to a blank placeholder for that one render -- even though cards.json
+    and the file on disk are both completely correct a moment later. Using
+    a temp file + atomic rename means a concurrent reader always sees
+    either the complete old file or the complete new file, never a
+    partial one.
+    """
+    directory = os.path.dirname(path) or "."
+    os.makedirs(directory, exist_ok=True)
+
+    fd, tmp_path = tempfile.mkstemp(dir=directory, prefix=".tmp-", suffix=".png")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 # Fields every card entry is expected to have (used by lsync / leditcard).
 REQUIRED_CARD_FIELDS = ["id", "name", "series", "stars", "frame", "image"]
 
@@ -215,6 +254,22 @@ def _github_create_tree(headers, owner, repo, base_tree_sha, tree_entries):
     if resp.status_code not in (200, 201):
         raise Exception(f"Failed to create tree ({resp.status_code}): {resp.text}")
     return resp.json()["sha"]
+
+
+def _github_tree_contains_path(headers, owner, repo, tree_sha, path):
+    """
+    Checks whether `path` exists as a blob in the given tree (recursive).
+    GitHub's Git Data API returns an error if you try to delete a path
+    that doesn't exist, so this lets a delete be safely skipped instead of
+    failing the whole atomic commit when the file is already missing/the
+    stored path doesn't exactly match what's actually in the repo.
+    """
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/trees/{tree_sha}?recursive=1"
+    resp = requests.get(url, headers=headers, timeout=15)
+    if resp.status_code != 200:
+        raise Exception(f"Failed to read tree contents ({resp.status_code}): {resp.text}")
+    entries = resp.json().get("tree", [])
+    return any(entry.get("path") == path and entry.get("type") == "blob" for entry in entries)
 
 
 def _github_create_commit(headers, owner, repo, message, tree_sha, parent_sha):
@@ -330,13 +385,30 @@ def _github_commit_changes_sync(write_files, delete_paths, commit_message):
         })
 
     for path in (delete_paths or []):
-        # GitHub's Git Data API deletes a path by setting sha to null.
-        # Deletion entries must contain ONLY path + sha -- including
-        # mode/type here (as if describing a real blob) causes the API to
-        # try validating a blob object against a null sha, which is what
-        # produces "422 GitRPC::BadObjectState".
+        # DEBUG: log the exact repo-relative path being checked/deleted so
+        # it's easy to verify the stored image path in cards.json matches
+        # what's actually committed in the GitHub repo.
+        print(f"[github_commit_changes] checking delete path: {path!r}")
+
+        # GitHub returns an error if you try to delete a path that isn't
+        # actually present in the tree. Rather than silently skipping it
+        # (which would hide a real mismatch between cards.json and the
+        # repo), fail loudly with the exact path so the root cause is
+        # obvious instead of guessed at.
+        if not _github_tree_contains_path(headers, owner, repo, base_tree_sha, path):
+            raise Exception(f"Image '{path}' does not exist in the GitHub repository.")
+
+        # Per GitHub's official Git Data API docs ("Create a tree"), every
+        # tree entry -- including deletions -- requires path, mode, and
+        # type. Setting sha to null is what marks the path for removal;
+        # mode/type are NOT optional for deletions (omitting them causes
+        # "422 Must supply a valid tree.mode", confirmed against GitHub's
+        # documented examples and multiple independent client-library bug
+        # reports). Regular files (like images) use mode 100644, type blob.
         tree_entries.append({
             "path": path,
+            "mode": "100644",
+            "type": "blob",
             "sha": None,
         })
 
@@ -489,7 +561,7 @@ MAX_SERIES_WIDTH = MAX_NAME_WIDTH
 SERIES_SHRINK_STEP = 15
 
 # Vertical gap between the two lines when a series name wraps to two lines.
-SERIES_LINE_SPACING = 80
+SERIES_LINE_SPACING = 30
 
 # Print number position -- moved ~5px lower and slightly further right to
 # match the original renderer's placement more closely.
@@ -507,8 +579,8 @@ GRADIENT_END_ALPHA = 170
 # the frame's decorative border/corners. This is the margin (in px) between
 # the outer canvas edge and the visible inner artwork region -- adjust if
 # the frame art's border thickness changes.
-ARTWORK_INNER_MARGIN_X = 190
-ARTWORK_INNER_MARGIN_TOP = 50
+ARTWORK_INNER_MARGIN_X = 185
+ARTWORK_INNER_MARGIN_TOP = 55
 ARTWORK_INNER_MARGIN_BOTTOM = 105
 
 # Rounded clip box the COMMON frame's gradient fades into (see
@@ -550,6 +622,23 @@ DROP_UPSCALE = 2.0   # higher output resolution so Discord shows it bigger/sharp
 
 _font_cache = {}
 
+# Static-asset caches. Frames, star overlays, and rendered gradient layers
+# are fully deterministic (same input -> same output, no per-card
+# variation), so each is loaded/rendered from disk exactly once and reused
+# for every subsequent card instead of re-reading files or re-running the
+# pixel-by-pixel gradient loop on every single render. Safe under
+# concurrent access (see render_drop): every cache here is idempotent --
+# two threads racing to fill the same key just compute the same
+# deterministic value twice at worst, never a wrong or partial one.
+_frame_cache = {}
+_star_cache = {}
+_gradient_cache = {}
+
+# Persistent thread pool for rendering the two cards in a drop concurrently.
+# Created once at import time and reused for every drop, instead of
+# spinning up (and tearing down) a new pool on every single call.
+_render_executor = ThreadPoolExecutor(max_workers=2)
+
 
 # ---------------------------------------------------------------------------
 # HELPERS
@@ -586,30 +675,71 @@ def clean_url(url: str) -> str:
     return url.split("?")[0]
 
 
-def load_artwork_source(image_field: str) -> Image.Image:
+def load_artwork_source(image_field: str, card_id=None) -> Image.Image:
     """
     Loads raw artwork from either a local card_art/ path or a remote URL.
     Mirrors the old get_image() behavior so existing cards.json entries
     keep working unchanged.
+
+    TEMPORARY DEBUG LOGGING: every load attempt logs the card id, the
+    resolved local path or URL, and the outcome -- success + dimensions,
+    or the exact exception type/message (with traceback) and which
+    fallback was used. This is here so that if a card ever renders
+    without artwork again, the cause is visible in the logs instead of a
+    single terse "IMAGE ERROR" line with no context. Safe to trim back to
+    just the error-path logging once the pipeline has been observed to be
+    stable.
     """
+    log_prefix = f"[artwork] card={card_id!r} image_field={image_field!r}"
+
     try:
         if image_field and image_field.startswith("card_art/"):
+            print(f"{log_prefix} source=local path={image_field!r}")
             if os.path.exists(image_field):
-                return Image.open(image_field).convert("RGBA")
-            print(f"LOCAL IMAGE ERROR: {image_field} not found")
+                img = Image.open(image_field).convert("RGBA")
+                print(f"{log_prefix} OK (local) size={img.size}")
+                return img
+            print(f"{log_prefix} LOCAL IMAGE ERROR: path does not exist on disk -- using blank fallback")
             return Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (80, 80, 80, 255))
 
         if not image_field:
+            print(f"{log_prefix} EMPTY image field -- using blank fallback")
             return Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (80, 80, 80, 255))
 
         url = clean_url(image_field)
+        print(f"{log_prefix} source=remote url={url!r}")
         response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         if response.status_code != 200:
             raise Exception(f"HTTP {response.status_code}")
-        return Image.open(BytesIO(response.content)).convert("RGBA")
+        img = Image.open(BytesIO(response.content)).convert("RGBA")
+        print(f"{log_prefix} OK (remote) size={img.size}")
+        return img
 
     except Exception as e:
-        print("IMAGE ERROR:", image_field, e)
+        # Never swallow this silently: log the exact exception type/message,
+        # a full traceback, and enough filesystem context (does the path
+        # exist? what size is it?) to immediately tell apart a missing
+        # file, a zero-byte/truncated file, and a corrupt-but-present
+        # image, instead of having to guess.
+        exists = os.path.exists(image_field) if image_field else False
+        size_line = ""
+        if exists:
+            try:
+                size_line = f"File size: {os.path.getsize(image_field)} bytes\n"
+            except OSError as size_err:
+                size_line = f"File size: <error reading size: {size_err}>\n"
+
+        print(
+            "========== ARTWORK LOAD ERROR ==========\n"
+            f"Card ID: {card_id}\n"
+            f"Image: {image_field}\n"
+            f"Exists: {exists}\n"
+            f"{size_line}"
+            f"Exception: {type(e).__name__}: {e}\n"
+            "Traceback:\n"
+            f"{traceback.format_exc()}"
+            "=======================================",
+        )
         return Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (80, 80, 80, 255))
 
 
@@ -632,7 +762,10 @@ def center_crop_to_fill(image: Image.Image, target_size=(CARD_WIDTH, CARD_HEIGHT
 
 
 def load_frame(frame_name: str) -> Image.Image:
-    """Load the frame PNG by name, with a visible fallback if it's missing."""
+    """Load the frame PNG by name, with a visible fallback if it's missing. Cached after first load."""
+    if frame_name in _frame_cache:
+        return _frame_cache[frame_name]
+
     path = os.path.join(FRAME_DIR, f"{frame_name}.png")
 
     if os.path.exists(path):
@@ -648,6 +781,8 @@ def load_frame(frame_name: str) -> Image.Image:
 
     if frame.size != (CARD_WIDTH, CARD_HEIGHT):
         frame = frame.resize((CARD_WIDTH, CARD_HEIGHT), Image.LANCZOS)
+
+    _frame_cache[frame_name] = frame
     return frame
 
 
@@ -655,19 +790,26 @@ def load_star_overlay(card: dict):
     """
     Loads the star overlay for this card's star tier (1-3). Star assets
     are full 1536x2048 transparent overlays. Only called for common-frame
-    cards -- rare frames never get a star overlay.
+    cards -- rare frames never get a star overlay. Cached after first load.
     """
     tier = int(card.get("stars", 1))
     tier = min(max(tier, 1), 3)
+
+    if tier in _star_cache:
+        return _star_cache[tier]
+
     path = os.path.join(STAR_DIR, f"star_{tier}.png")
 
     if not os.path.exists(path):
         print(f"STAR NOT FOUND: {path}")
+        _star_cache[tier] = None
         return None
 
     star = Image.open(path).convert("RGBA")
     if star.size != (CARD_WIDTH, CARD_HEIGHT):
         star = star.resize((CARD_WIDTH, CARD_HEIGHT), Image.LANCZOS)
+
+    _star_cache[tier] = star
     return star
 
 
@@ -695,7 +837,17 @@ def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR,
     common-frame box); rare frames keep clip_radius=0 for sharp corners,
     matching the original renderer. Leave clip_box as None (default) for
     a full card-width/height gradient with no clipping.
+
+    The result is fully determined by (size, color, clip_box, clip_radius,
+    relative_fade) -- there's no per-card variation -- so it's rendered
+    once per distinct parameter combination and cached; every later call
+    with the same parameters gets the exact same cached image back
+    instead of re-running the pixel-row draw loop.
     """
+    cache_key = (size, tuple(color), clip_box, clip_radius, relative_fade)
+    if cache_key in _gradient_cache:
+        return _gradient_cache[cache_key]
+
     width, height = size
     gradient = Image.new("RGBA", size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(gradient)
@@ -713,6 +865,7 @@ def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR,
         draw.line([(0, y), (width, y)], fill=(*color, alpha))
 
     if clip_box is None:
+        _gradient_cache[cache_key] = gradient
         return gradient
 
     clip_mask = Image.new("L", size, 0)
@@ -725,12 +878,15 @@ def create_bottom_gradient(size=(CARD_WIDTH, CARD_HEIGHT), color=GRADIENT_COLOR,
     clipped = Image.new("RGBA", size, (0, 0, 0, 0))
     clipped.paste(gradient, (0, 0), clip_mask)
 
+    _gradient_cache[cache_key] = clipped
     return clipped
 
 
+@functools.lru_cache(maxsize=None)
 def _inner_artwork_box(size=(CARD_WIDTH, CARD_HEIGHT)):
     """The rare-frame clip box: full inner artwork area inset by the
-    ARTWORK_INNER_MARGIN_* constants."""
+    ARTWORK_INNER_MARGIN_* constants. Pure function of constants only, so
+    it's memoized instead of recomputed on every render."""
     width, height = size
     return (
         ARTWORK_INNER_MARGIN_X,
@@ -740,13 +896,16 @@ def _inner_artwork_box(size=(CARD_WIDTH, CARD_HEIGHT)):
     )
 
 
+@functools.lru_cache(maxsize=None)
 def _common_gradient_box(size=(CARD_WIDTH, CARD_HEIGHT)):
     """
     Smaller rounded box the COMMON frame's gradient is clipped into --
     same left/right margins as the rare frame's inner artwork box, but
     sized tightly around the name/series text area (plus a little
     padding) instead of extending far up into the artwork. Accounts for
-    the name and/or series each possibly wrapping to two lines.
+    the name and/or series each possibly wrapping to two lines. Pure
+    function of constants only, so it's memoized instead of recomputed
+    on every render.
     """
     width, height = size
 
@@ -906,7 +1065,7 @@ def render_card(card: dict, print_num, hide_print: bool = False) -> Image.Image:
     rare = is_rare(frame_name)
 
     # 1. Artwork
-    art_source = load_artwork_source(card.get("image", ""))
+    art_source = load_artwork_source(card.get("image", ""), card_id=card.get("id"))
     canvas = center_crop_to_fill(art_source).convert("RGBA")
 
     # 2. Gradient (color depends on frame -- common stays gray, rare
@@ -981,7 +1140,10 @@ def render_card_final(card: dict, print_num, hide_print: bool = False) -> str:
         d.text((50, 50), f"Render Error: {str(e)[:200]}", font=get_font(40), fill=(255, 255, 255))
 
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    final.save(temp_file.name)
+    # compress_level=1: PNG compression is lossless, so this has zero effect
+    # on the decoded pixel data -- it only trades a bit of file size for
+    # meaningfully faster encoding than Pillow's default (6).
+    final.save(temp_file.name, compress_level=1)
     return temp_file.name
 
 
@@ -1017,10 +1179,23 @@ def render_drop(card1: dict, print1, card2: dict, print2) -> str:
     Drop-in replacement for the old render_drop().
     Same contract: renders both cards, combines them side by side,
     saves to a temp PNG, and returns the file path.
+
+    The two cards are rendered concurrently (one worker thread each) using
+    a persistent, module-level thread pool (avoids the overhead of
+    spawning/tearing down threads on every single drop) instead of one
+    after another. render_card()'s only shared state is the module-level
+    asset caches (fonts/frames/stars/gradients), and those are only ever
+    populated with the same deterministic value no matter which thread
+    gets there first (see the cache comments above), so this is safe and
+    produces pixel-identical output to rendering sequentially -- just
+    faster, since most of PIL's underlying image work releases the GIL
+    while it runs.
     """
     try:
-        img1 = render_card(card1, print1)
-        img2 = render_card(card2, print2)
+        future1 = _render_executor.submit(render_card, card1, print1)
+        future2 = _render_executor.submit(render_card, card2, print2)
+        img1 = future1.result()
+        img2 = future2.result()
         combined = combine_cards([img1, img2])
     except Exception as e:
         print("RENDER ERROR:", e)
@@ -1029,7 +1204,10 @@ def render_drop(card1: dict, print1, card2: dict, print2) -> str:
         d.text((50, 50), f"Render Error: {str(e)[:200]}", font=get_font(40), fill=(255, 255, 255))
 
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    combined.save(temp_file.name)
+    # compress_level=1: same lossless tradeoff as render_card_final -- no
+    # effect on decoded pixels, just faster encoding of the large combined
+    # (2x-upscaled) drop image.
+    combined.save(temp_file.name, compress_level=1)
     return temp_file.name
 
 
@@ -1038,7 +1216,7 @@ def render_drop(card1: dict, print1, card2: dict, print2) -> str:
 # =========================
 class CardView(discord.ui.View):
     def __init__(self, card1, card2):
-        super().__init__(timeout=30)
+        super().__init__(timeout=CLAIM_TIME_LIMIT)
         self.card1 = card1
         self.card2 = card2
         self.card1_claimed = False
@@ -1096,6 +1274,10 @@ class InventoryView(discord.ui.View):
     def __init__(self, user, inventory, viewer_id=None):
         super().__init__(timeout=60)
         self.user = user
+        # self.inventory is a list of (display_number, owned_card) tuples.
+        # display_number is each card's TRUE position-based number in the
+        # user's full, unfiltered inventory (see the lc command) -- so
+        # filtering/searching never changes what number a card shows.
         self.inventory = inventory
         self.viewer_id = viewer_id
         self.page = 0
@@ -1119,7 +1301,7 @@ class InventoryView(discord.ui.View):
             return embed
 
         text = ""
-        for idx, owned_card in enumerate(cards_page, start=start + 1):
+        for display_number, owned_card in cards_page:
             card = owned_card["card"]
             name = card.get("name", "Unknown")
             series = card.get("series", "Unknown Series")
@@ -1127,7 +1309,7 @@ class InventoryView(discord.ui.View):
             print_num = owned_card["print"]
 
             text += (
-                f"`{idx:02d}` ✦ "
+                f"`{display_number:02d}` ✦ "
                 f"• `{format_print(print_num)}` "
                 f"• `⭐ {star_val}` "
                 f"• **{name}** • *{series}*\n"
@@ -1333,7 +1515,7 @@ class CharacterVersionView(discord.ui.View):
         owners.sort()
 
         embed = discord.Embed(color=THEME_COLOR)
-        embed.title = f"{card['name']} Owners"
+        embed.title = f"**{card['name']} Owners**"
 
         if not owners:
             embed.description = "Nobody owns this card yet."
@@ -1352,7 +1534,7 @@ class CharacterVersionView(discord.ui.View):
                         continue
 
                 lines.append(
-                    f"`{format_print(print_num)}` • {member.mention}"
+                    f"`{format_print(print_num)}.` • {member.mention}"
                 )
 
             embed.description = "\n".join(lines)
@@ -1780,7 +1962,7 @@ class TradeView(discord.ui.View):
 
     def build_embed(self):
         embed = discord.Embed(color=THEME_COLOR)
-        embed.title = "Trade In Progress"
+        embed.title = "**Trade In Progress**"
 
         trade_emoji = "<:Bluka:1511044685781663866>"
 
@@ -1795,14 +1977,20 @@ class TradeView(discord.ui.View):
             user2_status = "Completed!" if self.user2_confirmed else "Completing"
 
         def format_offer(user, owned_card, card_index, status):
-            block = f"> {trade_emoji} {user.mention} is offering... - {status}\n"
+            block = f"> # {trade_emoji} {user.mention} is offering... - {status}\n"
             if owned_card:
                 card = owned_card["card"]
                 name = card.get("name", "Unknown")
                 series = card.get("series", "Unknown Series")
                 print_num = owned_card["print"]
                 star_val = card.get("stars", 1)
-                inv_num = (card_index + 1) if card_index is not None else "?"
+                if card_index is not None:
+                    # Same descending scheme as the inventory display:
+                    # highest number = newest/top of the owner's inventory.
+                    owner_inv_len = len(get_inventory(user.id))
+                    inv_num = owner_inv_len - card_index
+                else:
+                    inv_num = "?"
                 block += f"`{inv_num} • {format_print(print_num)} • ☆{star_val} • **{name}** • *{series}*`\n"
             else:
                 block += "`No cards selected yet.`\n"
@@ -1909,8 +2097,8 @@ class TradeView(discord.ui.View):
                 del active_trades[self.trade_id]
 
             embed.description = (
-                f"{self.user1.mention} received **{user2_name}**\n"
-                f"{self.user2.mention} received **{user1_name}**"
+                f"{self.user1.mention} received **{user2_name}**\n!"
+                f"{self.user2.mention} received **{user1_name}**!"
             )
 
             await interaction.response.edit_message(
@@ -1986,11 +2174,7 @@ class EditCardView(discord.ui.View):
         for path, content in files.items():
             if path == "cards.json":
                 continue
-            local_dir = os.path.dirname(path)
-            if local_dir:
-                os.makedirs(local_dir, exist_ok=True)
-            with open(path, "wb") as f:
-                f.write(content)
+            _atomic_write_bytes(path, content)
 
         save_cards_json()
 
@@ -2303,12 +2487,7 @@ class Client(discord.Client):
                 await github_commit_files(github_files, commit_message)
 
                 # GitHub commit succeeded -- now mirror the change locally.
-                local_dir = os.path.dirname(save_path)
-                if local_dir:
-                    os.makedirs(local_dir, exist_ok=True)
-
-                with open(save_path, 'wb') as f:
-                    f.write(image_data)
+                _atomic_write_bytes(save_path, image_data)
 
                 await message.channel.send(
                     f"✅ Card `{card_id}` image updated successfully and pushed to GitHub!\nNew path: `{save_path}`"
@@ -2387,8 +2566,7 @@ class Client(discord.Client):
 
                     save_path = f"card_art/{card_id}.png"
 
-                    with open(save_path, 'wb') as f:
-                        f.write(image_data)
+                    _atomic_write_bytes(save_path, image_data)
 
                     # Create the card object
                     new_card = {
@@ -2660,21 +2838,33 @@ class Client(discord.Client):
                         args = args[len(first_part):].strip()
 
             target_inv = get_inventory(target_user.id)
-            filtered_inventory = target_inv[:]
+
+            # Attach each card's TRUE display number (its position in the
+            # full, unfiltered inventory, counted from highest/newest at
+            # the top down to 1/oldest at the bottom) BEFORE filtering, so
+            # a card's number never changes depending on what filter is
+            # applied -- only which cards are shown changes.
+            full_total = len(target_inv)
+            numbered_inventory = [
+                (full_total - i, owned_card)
+                for i, owned_card in enumerate(target_inv)
+            ]
+
+            filtered_inventory = numbered_inventory[:]
 
             args_lower = args.lower()
 
             if "s:" in args_lower:
                 series_query = args_lower.split("s:", 1)[1].strip()
                 filtered_inventory = [
-                    owned_card for owned_card in filtered_inventory
+                    (num, owned_card) for num, owned_card in filtered_inventory
                     if series_query in owned_card["card"].get("series", "").lower()
                 ]
 
             elif "c:" in args_lower:
                 char_query = args_lower.split("c:", 1)[1].strip()
                 filtered_inventory = [
-                    owned_card for owned_card in filtered_inventory
+                    (num, owned_card) for num, owned_card in filtered_inventory
                     if char_query in owned_card["card"].get("name", "").lower()
                 ]
 
@@ -2716,11 +2906,15 @@ class Client(discord.Client):
             parts = message.content.split()
 
             try:
-                card_index = int(parts[-1]) - 1
+                requested_num = int(parts[-1])
             except:
                 return await message.channel.send(
                     "Please provide a valid inventory number."
                 )
+
+            # Displayed numbers count down from newest (highest) to oldest
+            # (1), so convert back to a list index accordingly.
+            card_index = len(inv) - requested_num
 
             if card_index < 0 or card_index >= len(inv):
                 return await message.channel.send(
@@ -2841,7 +3035,9 @@ class Client(discord.Client):
                     return await message.channel.send("You're not in an active trade.")
 
                 inv_list = get_inventory(user_id)
-                pos_idx = requested_num - 1
+                # Displayed numbers count down from newest (highest) to
+                # oldest (1), so convert back to a list index accordingly.
+                pos_idx = len(inv_list) - requested_num
                 if pos_idx < 0 or pos_idx >= len(inv_list):
                     return await message.channel.send("Invalid card number.")
 
@@ -2878,10 +3074,14 @@ class Client(discord.Client):
         # =========================
         if content_lower.startswith("lv "):
             try:
-                index = int(content_lower.split()[1]) - 1
+                requested_num = int(content_lower.split()[1])
 
                 viewing_user_id = user_viewing_inventory.get(user_id, user_id)
                 target_inv = get_inventory(viewing_user_id)
+
+                # Displayed numbers count down from newest (highest) to
+                # oldest (1), so convert back to a list index accordingly.
+                index = len(target_inv) - requested_num
 
                 if index < 0 or index >= len(target_inv):
                     raise IndexError
