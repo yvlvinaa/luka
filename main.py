@@ -588,9 +588,9 @@ GRADIENT_END_ALPHA = 170
 # the frame's decorative border/corners. This is the margin (in px) between
 # the outer canvas edge and the visible inner artwork region -- adjust if
 # the frame art's border thickness changes.
-ARTWORK_INNER_MARGIN_X = 185
+ARTWORK_INNER_MARGIN_X = 190
 ARTWORK_INNER_MARGIN_TOP = 50
-ARTWORK_INNER_MARGIN_BOTTOM = 105
+ARTWORK_INNER_MARGIN_BOTTOM = 100
 
 # Rounded clip box the COMMON frame's gradient fades into (see
 # _common_gradient_box). Sized tightly around the name/series text area
