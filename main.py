@@ -588,7 +588,7 @@ GRADIENT_END_ALPHA = 170
 # the frame's decorative border/corners. This is the margin (in px) between
 # the outer canvas edge and the visible inner artwork region -- adjust if
 # the frame art's border thickness changes.
-ARTWORK_INNER_MARGIN_X = 195
+ARTWORK_INNER_MARGIN_X = 200
 ARTWORK_INNER_MARGIN_TOP = 50
 ARTWORK_INNER_MARGIN_BOTTOM = 100
 
@@ -597,8 +597,8 @@ ARTWORK_INNER_MARGIN_BOTTOM = 100
 # (plus a little padding) instead of a large fraction of the card, so it
 # never extends far up into the artwork.
 COMMON_GRADIENT_BOX_RADIUS = 60
-COMMON_GRADIENT_BOX_TOP_PADDING = 55
-COMMON_GRADIENT_BOX_BOTTOM_PADDING = 55
+COMMON_GRADIENT_BOX_TOP_PADDING = 60
+COMMON_GRADIENT_BOX_BOTTOM_PADDING = 60
 
 
 # Per-frame gradient colors. "common" is intentionally absent -- it always
