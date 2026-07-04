@@ -597,8 +597,8 @@ ARTWORK_INNER_MARGIN_BOTTOM = 100
 # (plus a little padding) instead of a large fraction of the card, so it
 # never extends far up into the artwork.
 COMMON_GRADIENT_BOX_RADIUS = 60
-COMMON_GRADIENT_BOX_TOP_PADDING = 55
-COMMON_GRADIENT_BOX_BOTTOM_PADDING = 60
+COMMON_GRADIENT_BOX_TOP_PADDING = 45
+COMMON_GRADIENT_BOX_BOTTOM_PADDING = 65
 
 
 # Per-frame gradient colors. "common" is intentionally absent -- it always
