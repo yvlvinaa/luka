@@ -51,6 +51,15 @@ active_trades = {}
 active_gifts = {}
 user_viewing_inventory = {}
 
+# Guards every write transaction that touches the card database: the
+# in-memory `cards` list, cards.json, GitHub sync, and card_art/ files.
+# Held for the full transaction (mutate -> GitHub commit -> local
+# mirror/save) so two admin commands can never interleave a
+# read-modify-write against the same data and silently overwrite each
+# other's changes. Never used by read-only paths (ld, lookups, inventory,
+# claiming, trading, gifting, rendering).
+cards_lock = asyncio.Lock()
+
 # Create card_art directory if it doesn't exist
 if not os.path.exists('card_art'):
     os.makedirs('card_art')
@@ -561,7 +570,7 @@ MAX_SERIES_WIDTH = MAX_NAME_WIDTH
 SERIES_SHRINK_STEP = 15
 
 # Vertical gap between the two lines when a series name wraps to two lines.
-SERIES_LINE_SPACING = 50
+SERIES_LINE_SPACING = 30
 
 # Print number position -- moved ~5px lower and slightly further right to
 # match the original renderer's placement more closely.
@@ -579,8 +588,8 @@ GRADIENT_END_ALPHA = 170
 # the frame's decorative border/corners. This is the margin (in px) between
 # the outer canvas edge and the visible inner artwork region -- adjust if
 # the frame art's border thickness changes.
-ARTWORK_INNER_MARGIN_X = 190
-ARTWORK_INNER_MARGIN_TOP = 50
+ARTWORK_INNER_MARGIN_X = 185
+ARTWORK_INNER_MARGIN_TOP = 55
 ARTWORK_INNER_MARGIN_BOTTOM = 105
 
 # Rounded clip box the COMMON frame's gradient fades into (see
@@ -1977,7 +1986,7 @@ class TradeView(discord.ui.View):
             user2_status = "Completed!" if self.user2_confirmed else "Completing"
 
         def format_offer(user, owned_card, card_index, status):
-            block = f"> ## {trade_emoji} {user.mention} is offering... - {status}\n"
+            block = f"> # {trade_emoji} {user.mention} is offering... - {status}\n"
             if owned_card:
                 card = owned_card["card"]
                 name = card.get("name", "Unknown")
@@ -2206,9 +2215,10 @@ class EditCardView(discord.ui.View):
             return await interaction.followup.send("❌ Name cannot be empty.", ephemeral=True)
 
         old_name = self.card.get("name")
-        self.card["name"] = new_name
         try:
-            await self.persist_and_sync(f"Renamed {self.card.get('id')} to {new_name}")
+            async with cards_lock:
+                self.card["name"] = new_name
+                await self.persist_and_sync(f"Renamed {self.card.get('id')} to {new_name}")
         except Exception as e:
             self.card["name"] = old_name
             return await interaction.followup.send(f"❌ Failed to update card: {e}", ephemeral=True)
@@ -2231,9 +2241,10 @@ class EditCardView(discord.ui.View):
             return await interaction.followup.send("❌ Series cannot be empty.", ephemeral=True)
 
         old_series = self.card.get("series")
-        self.card["series"] = new_series
         try:
-            await self.persist_and_sync(f"Changed series for {self.card.get('id')} to {new_series}")
+            async with cards_lock:
+                self.card["series"] = new_series
+                await self.persist_and_sync(f"Changed series for {self.card.get('id')} to {new_series}")
         except Exception as e:
             self.card["series"] = old_series
             return await interaction.followup.send(f"❌ Failed to update card: {e}", ephemeral=True)
@@ -2261,9 +2272,10 @@ class EditCardView(discord.ui.View):
             )
 
         old_frame = self.card.get("frame")
-        self.card["frame"] = resolved
         try:
-            await self.persist_and_sync(f"Changed frame for {self.card.get('id')} to {resolved}")
+            async with cards_lock:
+                self.card["frame"] = resolved
+                await self.persist_and_sync(f"Changed frame for {self.card.get('id')} to {resolved}")
         except Exception as e:
             self.card["frame"] = old_frame
             return await interaction.followup.send(f"❌ Failed to update card: {e}", ephemeral=True)
@@ -2290,9 +2302,10 @@ class EditCardView(discord.ui.View):
             return await interaction.followup.send("❌ Stars must be between 1 and 4.", ephemeral=True)
 
         old_stars = self.card.get("stars")
-        self.card["stars"] = new_stars
         try:
-            await self.persist_and_sync(f"Changed stars for {self.card.get('id')} to {new_stars}")
+            async with cards_lock:
+                self.card["stars"] = new_stars
+                await self.persist_and_sync(f"Changed stars for {self.card.get('id')} to {new_stars}")
         except Exception as e:
             self.card["stars"] = old_stars
             return await interaction.followup.send(f"❌ Failed to update card: {e}", ephemeral=True)
@@ -2323,12 +2336,14 @@ class EditCardView(discord.ui.View):
             existing_path = self.card.get("image", "") or ""
             save_path = existing_path if existing_path.startswith("card_art/") else f"card_art/{self.card.get('id')}.png"
             old_image = self.card.get("image")
-            self.card["image"] = save_path
 
-            await self.persist_and_sync(
-                f"Updated {self.card.get('name', self.card.get('id'))} image via leditcard",
-                extra_files={save_path: png_bytes}
-            )
+            async with cards_lock:
+                self.card["image"] = save_path
+
+                await self.persist_and_sync(
+                    f"Updated {self.card.get('name', self.card.get('id'))} image via leditcard",
+                    extra_files={save_path: png_bytes}
+                )
         except Exception as e:
             self.card["image"] = old_image
             return await interaction.followup.send(f"❌ Failed to update image: {e}", ephemeral=True)
@@ -2355,34 +2370,40 @@ class RemoveCardView(discord.ui.View):
         image_path = self.card.get("image", "") or ""
 
         try:
-            # Build the post-removal cards.json contents without mutating
-            # the live `cards` list yet, so nothing changes locally if the
-            # GitHub commit below fails partway through.
-            remaining_cards = [c for c in cards if c.get("id") != card_id]
-            cards_json_bytes = json.dumps(remaining_cards, indent=2).encode("utf-8")
+            async with cards_lock:
+                # Build the post-removal cards.json contents without mutating
+                # the live `cards` list yet, so nothing changes locally if the
+                # GitHub commit below fails partway through. Held under
+                # cards_lock for the whole transaction so no other
+                # card-management command can append/remove an entry on
+                # `cards` while this snapshot is in flight -- otherwise that
+                # concurrent change would be silently wiped out the moment
+                # `cards[:] = remaining_cards` below runs.
+                remaining_cards = [c for c in cards if c.get("id") != card_id]
+                cards_json_bytes = json.dumps(remaining_cards, indent=2).encode("utf-8")
 
-            delete_paths = [image_path] if image_path.startswith("card_art/") else []
+                delete_paths = [image_path] if image_path.startswith("card_art/") else []
 
-            # Push the removal to GitHub FIRST, as a single atomic commit
-            # (cards.json update + image deletion together). If this
-            # fails, nothing below runs and nothing local changes.
-            await github_commit_changes(
-                write_files={"cards.json": cards_json_bytes},
-                delete_paths=delete_paths,
-                commit_message=f"Removed card {card_id}"
-            )
+                # Push the removal to GitHub FIRST, as a single atomic commit
+                # (cards.json update + image deletion together). If this
+                # fails, nothing below runs and nothing local changes.
+                await github_commit_changes(
+                    write_files={"cards.json": cards_json_bytes},
+                    delete_paths=delete_paths,
+                    commit_message=f"Removed card {card_id}"
+                )
 
-            # GitHub succeeded -- now mirror the removal locally.
-            cards[:] = remaining_cards
-            save_cards_json()
+                # GitHub succeeded -- now mirror the removal locally.
+                cards[:] = remaining_cards
+                save_cards_json()
 
-            if image_path.startswith("card_art/") and os.path.exists(image_path):
-                try:
-                    os.remove(image_path)
-                except Exception:
-                    pass
+                if image_path.startswith("card_art/") and os.path.exists(image_path):
+                    try:
+                        os.remove(image_path)
+                    except Exception:
+                        pass
 
-            card_prints.pop(card_id, None)
+                card_prints.pop(card_id, None)
 
         except Exception as e:
             self.clear_items()
@@ -2468,26 +2489,27 @@ class Client(discord.Client):
                 # a genuine PNG (not just a renamed file extension).
                 image_data = await convert_image_bytes_to_png(image_data)
 
-                # The image field itself is never rewritten -- save_path
-                # came directly from cards.json above. cards.json is still
-                # included in the commit (as its current, unchanged
-                # contents) so the image and cards.json always land in the
-                # same atomic commit together.
-                cards_json_bytes = json.dumps(cards, indent=2).encode("utf-8")
-                github_files = {
-                    save_path: image_data,
-                    "cards.json": cards_json_bytes,
-                }
+                async with cards_lock:
+                    # The image field itself is never rewritten -- save_path
+                    # came directly from cards.json above. cards.json is still
+                    # included in the commit (as its current, unchanged
+                    # contents) so the image and cards.json always land in the
+                    # same atomic commit together.
+                    cards_json_bytes = json.dumps(cards, indent=2).encode("utf-8")
+                    github_files = {
+                        save_path: image_data,
+                        "cards.json": cards_json_bytes,
+                    }
 
-                commit_message = f"Updated {card.get('name', card_id)} image"
+                    commit_message = f"Updated {card.get('name', card_id)} image"
 
-                # Push to GitHub FIRST, as a single atomic commit. If this
-                # fails, nothing below runs, so local disk stays in sync
-                # with the remote repo.
-                await github_commit_files(github_files, commit_message)
+                    # Push to GitHub FIRST, as a single atomic commit. If this
+                    # fails, nothing below runs, so local disk stays in sync
+                    # with the remote repo.
+                    await github_commit_files(github_files, commit_message)
 
-                # GitHub commit succeeded -- now mirror the change locally.
-                _atomic_write_bytes(save_path, image_data)
+                    # GitHub commit succeeded -- now mirror the change locally.
+                    _atomic_write_bytes(save_path, image_data)
 
                 await message.channel.send(
                     f"✅ Card `{card_id}` image updated successfully and pushed to GitHub!\nNew path: `{save_path}`"
@@ -2566,22 +2588,36 @@ class Client(discord.Client):
 
                     save_path = f"card_art/{card_id}.png"
 
-                    _atomic_write_bytes(save_path, image_data)
+                    async with cards_lock:
+                        # `card_id` was computed before the (possibly
+                        # multi-minute) image-upload wait above, entirely
+                        # outside this lock. If another laddcard for the
+                        # same character/rarity completed in the meantime,
+                        # it could have already claimed this exact id --
+                        # writing to the same card_art/<id>.png path would
+                        # silently overwrite that other card's artwork.
+                        # Re-check now, inside the lock, and regenerate a
+                        # fresh unique id if that happened.
+                        if any(c.get("id") == card_id for c in cards):
+                            card_id = generate_card_id(char_name, is_rare)
+                            save_path = f"card_art/{card_id}.png"
 
-                    # Create the card object
-                    new_card = {
-                        "id": card_id,
-                        "name": char_name,
-                        "series": series,
-                        "stars": stars_val,
-                        "weight": 10,
-                        "image": save_path,
-                        "frame": frame_name
-                    }
+                        _atomic_write_bytes(save_path, image_data)
 
-                    # Add to cards list and save
-                    cards.append(new_card)
-                    save_cards_json()
+                        # Create the card object
+                        new_card = {
+                            "id": card_id,
+                            "name": char_name,
+                            "series": series,
+                            "stars": stars_val,
+                            "weight": 10,
+                            "image": save_path,
+                            "frame": frame_name
+                        }
+
+                        # Add to cards list and save
+                        cards.append(new_card)
+                        save_cards_json()
 
                     await message.channel.send(f"✅ Card created successfully!\n**ID:** `{card_id}`\n**Name:** {char_name}\n**Series:** {series}\n**Stars:** {stars_val}\n**Frame:** {frame_name}")
                 except Exception as e:
