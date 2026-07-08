@@ -1986,7 +1986,7 @@ class TradeView(discord.ui.View):
             user2_status = "Completed!" if self.user2_confirmed else "Completing"
 
         def format_offer(user, owned_card, card_index, status):
-            block = f"> # {trade_emoji} {user.mention} is offering... - {status}\n"
+            block = f"> ## {trade_emoji} {user.mention} is offering... - {status}\n"
             if owned_card:
                 card = owned_card["card"]
                 name = card.get("name", "Unknown")
@@ -2000,9 +2000,9 @@ class TradeView(discord.ui.View):
                     inv_num = owner_inv_len - card_index
                 else:
                     inv_num = "?"
-                block += f"`{inv_num} • {format_print(print_num)} • ☆{star_val} • **{name}** • *{series}*`\n"
+                block += f"### `{inv_num} • {format_print(print_num)} • ☆{star_val} • {name} • {series}`\n"
             else:
-                block += "`No cards selected yet.`\n"
+                block += "### `No cards selected yet.`\n"
             return block
 
         user1_text = format_offer(self.user1, self.user1_card, self.user1_card_index, user1_status)
