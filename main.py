@@ -1274,6 +1274,18 @@ class CardView(discord.ui.View):
     async def pick2(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.claim(interaction, 2, button)
 
+    async def on_timeout(self):
+        # CLAIM_TIME_LIMIT reached: disable both claim buttons (still
+        # visible, just inactive) so nobody can claim after the window
+        # closes. The message content/embed is left untouched.
+        for item in self.children:
+            item.disabled = True
+        if getattr(self, "message", None):
+            try:
+                await self.message.edit(view=self)
+            except Exception:
+                pass
+
 
 # =========================
 # 2. INVENTORY VIEW
@@ -1749,7 +1761,7 @@ class FindSeriesView(discord.ui.View):
 
 class GiftView(discord.ui.View):
     def __init__(self, from_user, to_user, owned_card, from_id, to_id, card_index):
-        super().__init__(timeout=120)
+        super().__init__(timeout=90)
         self.from_user = from_user
         self.to_user = to_user
         self.owned_card = owned_card
@@ -1760,6 +1772,7 @@ class GiftView(discord.ui.View):
         self.card_index = card_index
         self.gift_id = f"{from_id}_{to_id}_{int(time.time())}"
         active_gifts[self.gift_id] = {"time": time.time()}
+        self.message = None
 
     def build_embed(self, owner_user, status_text=None):
         card = self.card
@@ -1877,6 +1890,76 @@ class GiftView(discord.ui.View):
             except Exception:
                 pass
 
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.from_id:
+            return await interaction.response.send_message(
+                "Only the sender can cancel this gift.",
+                ephemeral=True
+            )
+
+        if self.gift_id not in active_gifts:
+            # Already accepted, declined, expired, or cancelled -- do nothing.
+            return await interaction.response.send_message(
+                "This gift is no longer active.",
+                ephemeral=True
+            )
+
+        del active_gifts[self.gift_id]
+
+        for item in self.children:
+            item.disabled = True
+
+        cancelled_embed, file = self.build_embed(
+            self.from_user,
+            status_text="Gift cancelled."
+        )
+
+        await interaction.response.edit_message(
+            content=None,
+            embed=cancelled_embed,
+            view=self,
+            attachments=[] if not file else [file]
+        )
+
+        if file:
+            try:
+                os.remove(file.fp.name)
+            except Exception:
+                pass
+
+    async def on_timeout(self):
+        if self.gift_id not in active_gifts:
+            # Already accepted, declined, or cancelled -- nothing to do.
+            return
+
+        del active_gifts[self.gift_id]
+
+        for item in self.children:
+            item.disabled = True
+
+        expired_embed, file = self.build_embed(
+            self.from_user,
+            status_text="Gift has expired."
+        )
+
+        if self.message:
+            try:
+                await self.message.edit(
+                    content=None,
+                    embed=expired_embed,
+                    view=self,
+                    attachments=[] if not file else [file]
+                )
+            except Exception:
+                pass
+
+            if file:
+                try:
+                    os.remove(file.fp.name)
+                except Exception:
+                    pass
+
 
 # =========================
 # 7. TRADE REQUEST VIEW
@@ -1884,12 +1967,14 @@ class GiftView(discord.ui.View):
 
 class TradeRequestView(discord.ui.View):
     def __init__(self, user1, user2, user1_id, user2_id):
-        super().__init__(timeout=60)
+        super().__init__(timeout=90)
         self.user1 = user1
         self.user2 = user2
         self.user1_id = user1_id
         self.user2_id = user2_id
         self.request_id = f"{user1_id}_{user2_id}_{int(time.time())}"
+        self.message = None
+        self.responded = False
 
     def get_embed(self):
         embed = discord.Embed(color=THEME_COLOR)
@@ -1910,6 +1995,9 @@ class TradeRequestView(discord.ui.View):
             self.user1_id,
             self.user2_id
         )
+
+        self.responded = True
+        self.stop()
 
         await interaction.response.edit_message(
             embed=view.build_embed(),
@@ -1935,10 +2023,30 @@ class TradeRequestView(discord.ui.View):
         embed = discord.Embed(color=THEME_COLOR)
         embed.description = "Trade request has been denied."
 
+        self.responded = True
+        self.stop()
+
         await interaction.response.edit_message(
             embed=embed,
             view=None
         )
+
+    async def on_timeout(self):
+        if self.responded:
+            # Already accepted or declined -- nothing to do.
+            return
+
+        for item in self.children:
+            item.disabled = True
+
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.description = "Trade has expired."
+
+        if self.message:
+            try:
+                await self.message.edit(embed=embed, view=self)
+            except Exception:
+                pass
 
 
 # =========================
@@ -1947,7 +2055,7 @@ class TradeRequestView(discord.ui.View):
 
 class TradeView(discord.ui.View):
     def __init__(self, user1, user2, user1_id, user2_id):
-        super().__init__(timeout=180)
+        super().__init__(timeout=None)
         self.user1 = user1
         self.user2 = user2
         self.user1_id = user1_id
@@ -2972,7 +3080,7 @@ class Client(discord.Client):
 
             # If there's an image, attach it when sending
             if file:
-                await message.channel.send(
+                gift_message = await message.channel.send(
                     content=f"{message.author.mention} is gifting {target_user.mention} a card!",
                     embed=gift_embed,
                     file=file,
@@ -2983,11 +3091,13 @@ class Client(discord.Client):
                 except:
                     pass
             else:
-                await message.channel.send(
+                gift_message = await message.channel.send(
                     content=f"{message.author.mention} is gifting {target_user.mention} a card!",
                     embed=gift_embed,
                     view=view
                 )
+
+            view.message = gift_message
 
             return
 
@@ -3041,10 +3151,11 @@ class Client(discord.Client):
                 target_user.id
             )
 
-            await message.channel.send(
+            request_message = await message.channel.send(
                 embed=request_view.get_embed(),
                 view=request_view
             )
+            request_view.message = request_message
 
             return
 
@@ -3053,11 +3164,15 @@ class Client(discord.Client):
         # =========================
         if content_lower.startswith("add "):
             try:
-                raw = content.split()[1]
+                words = content.split()
+                if len(words) < 2:
+                    return  # bare "add" -- ignore silently, no usage reply
+
+                raw = words[1]
                 try:
                     requested_num = int(raw)
                 except:
-                    return await message.channel.send("Usage: `add <card_number>` (use the number shown in your inventory)")
+                    return  # non-numeric -- ignore silently, no usage reply
 
                 # Find the user's active trade view
                 user_trade = None
@@ -3068,7 +3183,7 @@ class Client(discord.Client):
                         break
 
                 if not user_trade:
-                    return await message.channel.send("You're not in an active trade.")
+                    return  # not in an active trade -- ignore silently
 
                 inv_list = get_inventory(user_id)
                 # Displayed numbers count down from newest (highest) to
@@ -3101,7 +3216,8 @@ class Client(discord.Client):
                 except Exception:
                     pass
 
-                return
+                card_name = owned_card["card"].get("name", "Unknown Character")
+                return await message.channel.send(f"Added {card_name}")
             except Exception as e:
                 return await message.channel.send(f"Error: {e}")
 
@@ -3326,11 +3442,12 @@ class Client(discord.Client):
 
             view = CardView(card1, card2)
 
-            await message.channel.send(
+            drop_message = await message.channel.send(
                 content=f"{message.author.mention} is dropping 2 cards!",
                 file=file,
                 view=view
             )
+            view.message = drop_message
 
             try:
                 os.remove(image_path)
