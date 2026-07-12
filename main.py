@@ -43,6 +43,11 @@ CLAIM_TIME_LIMIT = 90  # seconds a dropped card stays claimable before its butto
 CARDS_PER_PAGE = 10
 THEME_COLOR = discord.Color.from_rgb(255, 227, 102)
 
+# Channel where a "new card added" announcement is posted after a
+# successful laddcard. Set to 0 to disable; if the channel can't be found
+# the notification is just skipped, never an error.
+CARD_UPDATES_CHANNEL_ID = 1525994134567911524
+
 # Global tracking for lookup history sessions
 user_last_lookup = {}
 
@@ -1156,6 +1161,56 @@ def render_card_final(card: dict, print_num, hide_print: bool = False) -> str:
     return temp_file.name
 
 
+async def send_card_added_notification(bot, card: dict):
+    """
+    Posts a "new card added" announcement to CARD_UPDATES_CHANNEL_ID.
+    Only ever called after laddcard has fully succeeded (image saved,
+    cards.json updated, GitHub sync completed if applicable) -- if that
+    hasn't happened, this is never invoked, so no notification is sent.
+
+    Silently does nothing if CARD_UPDATES_CHANNEL_ID is 0 or the channel
+    can't be found. Never raises -- any failure here is logged and
+    swallowed so it can't turn an already-successful card creation into a
+    reported error.
+    """
+    if not CARD_UPDATES_CHANNEL_ID:
+        return
+
+    channel = bot.get_channel(CARD_UPDATES_CHANNEL_ID)
+    if channel is None:
+        return
+
+    image_path = None
+    try:
+        # Reuses the existing renderer with hide_print=True -- same flag
+        # already used elsewhere (e.g. lup) to render a card without its
+        # print number, instead of a second renderer.
+        image_path = render_card_final(card, peek_next_print(card.get("id")), hide_print=True)
+
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.description = (
+            f"### Character: `{card.get('name', 'Unknown Character')}`\n"
+            f"### Series: `{card.get('series', 'Unknown Series')}`\n"
+            f"### Frame: `{card.get('frame', 'Unknown')}`\n"
+            f"### Stars: `{card.get('stars', 1)}`"
+        )
+
+        if image_path:
+            file = discord.File(image_path, filename="card.png")
+            embed.set_thumbnail(url="attachment://card.png")
+            await channel.send(embed=embed, file=file)
+        else:
+            await channel.send(embed=embed)
+    except Exception as e:
+        print("CARD UPDATE NOTIFICATION ERROR:", e)
+    finally:
+        if image_path:
+            try:
+                os.remove(image_path)
+            except Exception:
+                pass
+
+
 # ---------------------------------------------------------------------------
 # DROP IMAGE (combine two rendered cards side by side)
 # ---------------------------------------------------------------------------
@@ -2116,7 +2171,7 @@ class TradeView(discord.ui.View):
         user1_text = format_offer(self.user1, self.user1_card, self.user1_card_index, user1_status)
         user2_text = format_offer(self.user2, self.user2_card, self.user2_card_index, user2_status)
 
-        embed.description = user1_text + "───────────────────────────────────────\n" + user2_text
+        embed.description = user1_text + "────────────────────────\n" + user2_text
 
         embed.description += "\n-# 💡 **Reminder:** There are no official values for cards in LukaNet right now. Trade based on what you and the other user think is fair."
 
@@ -2728,6 +2783,8 @@ class Client(discord.Client):
                         save_cards_json()
 
                     await message.channel.send(f"✅ Card created successfully!\n**ID:** `{card_id}`\n**Name:** {char_name}\n**Series:** {series}\n**Stars:** {stars_val}\n**Frame:** {frame_name}")
+
+                    await send_card_added_notification(self, new_card)
                 except Exception as e:
                     await message.channel.send(f"❌ Error creating card: {e}")
 
