@@ -1090,7 +1090,7 @@
   },
   {
     "id": "kaito_rare",
-    "name": "Kaito",
+    "name": "KAITO",
     "series": "Vocaloid",
     "stars": 4,
     "weight": 5,
@@ -2526,6 +2526,33 @@
     "stars": 1,
     "weight": 10,
     "image": "card_art/gakupo_common.png",
+    "frame": "common"
+  },
+  {
+    "id": "mami_common",
+    "name": "Mami Tomoe",
+    "series": "Puebla Magi Madoka Magica",
+    "stars": 2,
+    "weight": 10,
+    "image": "card_art/mami_common.png",
+    "frame": "common"
+  },
+  {
+    "id": "madoka_common",
+    "name": "Madoka Kaname",
+    "series": "Puella Magi Madoka Magica",
+    "stars": 2,
+    "weight": 10,
+    "image": "card_art/madoka_common.png",
+    "frame": "common"
+  },
+  {
+    "id": "homura_common",
+    "name": "Homura Akemi",
+    "series": "Puella Magi Madoka Magica",
+    "stars": 2,
+    "weight": 10,
+    "image": "card_art/homura_common.png",
     "frame": "common"
   }
 ]
