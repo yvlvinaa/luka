@@ -143,6 +143,15 @@ def format_print(print_num):
         return "L"
 
 
+def card_version_label(card):
+    """
+    Returns 'Common' or 'Rare' for display, based on the card's frame --
+    never the frame color/name itself. Any frame other than exactly
+    "common" (case-insensitive) counts as Rare.
+    """
+    return "Common" if card.get("frame", "").strip().lower() == "common" else "Rare"
+
+
 def save_cards_json():
     """Saves the cards list to cards.json"""
     with open('cards.json', 'w') as f:
@@ -1169,15 +1178,42 @@ async def send_card_added_notification(bot, card: dict):
     hasn't happened, this is never invoked, so no notification is sent.
 
     Silently does nothing if CARD_UPDATES_CHANNEL_ID is 0 or the channel
-    can't be found. Never raises -- any failure here is logged and
-    swallowed so it can't turn an already-successful card creation into a
-    reported error.
+    truly can't be found (even after a fetch_channel fallback). Never
+    raises -- any failure here is logged and swallowed so it can't turn an
+    already-successful card creation into a reported error.
+
+    TEMPORARY DEBUG LOGGING: prints each stage to the console so a card
+    updates channel issue can be diagnosed from logs instead of guessed
+    at. This doesn't change the (intentionally silent-to-the-user)
+    behavior at all -- it only makes that existing behavior visible in
+    the console. Safe to trim back once the pipeline is confirmed working.
     """
+    print("[Card Updates] Notification started")
+    print(f"[Card Updates] Channel ID: {CARD_UPDATES_CHANNEL_ID}")
+
     if not CARD_UPDATES_CHANNEL_ID:
+        print("[Card Updates] Channel ID is 0/falsy -- notifications disabled, skipping.")
         return
 
     channel = bot.get_channel(CARD_UPDATES_CHANNEL_ID)
+    print(f"[Card Updates] Channel found via get_channel: {channel is not None}")
+
     if channel is None:
+        # get_channel only checks the client's internal cache -- it can
+        # return None even for a perfectly valid channel id if that guild
+        # or channel hasn't been cached. Fall back to an actual API fetch
+        # before giving up.
+        print("[Card Updates] get_channel returned None -- trying bot.fetch_channel()...")
+        try:
+            channel = await bot.fetch_channel(CARD_UPDATES_CHANNEL_ID)
+            print(f"[Card Updates] fetch_channel succeeded: {channel!r}")
+        except Exception as e:
+            print(f"[Card Updates] fetch_channel FAILED: {type(e).__name__}: {e}")
+            traceback.print_exc()
+            return
+
+    if channel is None:
+        print("[Card Updates] Channel still None after fetch_channel -- giving up silently.")
         return
 
     image_path = None
@@ -1185,6 +1221,7 @@ async def send_card_added_notification(bot, card: dict):
         # Reuses the existing renderer with hide_print=True -- same flag
         # already used elsewhere (e.g. lup) to render a card without its
         # print number, instead of a second renderer.
+        print("[Card Updates] Rendering thumbnail...")
         image_path = render_card_final(card, peek_next_print(card.get("id")), hide_print=True)
 
         embed = discord.Embed(color=THEME_COLOR)
@@ -1195,14 +1232,18 @@ async def send_card_added_notification(bot, card: dict):
             f"### Stars: `{card.get('stars', 1)}`"
         )
 
+        print("[Card Updates] Sending embed...")
         if image_path:
             file = discord.File(image_path, filename="card.png")
             embed.set_thumbnail(url="attachment://card.png")
             await channel.send(embed=embed, file=file)
         else:
             await channel.send(embed=embed)
+
+        print("[Card Updates] Notification sent successfully")
     except Exception as e:
-        print("CARD UPDATE NOTIFICATION ERROR:", e)
+        print(f"[Card Updates] FAILED while rendering/sending: {type(e).__name__}: {e}")
+        traceback.print_exc()
     finally:
         if image_path:
             try:
@@ -1510,6 +1551,7 @@ class CharacterVersionView(discord.ui.View):
             f"────────────────────\n"
             f"✦ **Claims:** **{claims}**\n"
             f"✦ **Level:** **{stars(card['stars'])}**\n"
+            f"✦ **Version:** **{card_version_label(card)}**\n"
         )
 
         embed.set_footer(
@@ -2171,7 +2213,7 @@ class TradeView(discord.ui.View):
         user1_text = format_offer(self.user1, self.user1_card, self.user1_card_index, user1_status)
         user2_text = format_offer(self.user2, self.user2_card, self.user2_card_index, user2_status)
 
-        embed.description = user1_text + "─────────────────────\n" + user2_text
+        embed.description = user1_text + "────────────────────────\n" + user2_text
 
         embed.description += "\n-# 💡 **Reminder:** There are no official values for cards in LukaNet right now. Trade based on what you and the other user think is fair."
 
@@ -3274,7 +3316,7 @@ class Client(discord.Client):
                     pass
 
                 card_name = owned_card["card"].get("name", "Unknown Character")
-                return await message.channel.send(f"Added **{card_name}//.")
+                return await message.channel.send(f"Added {card_name}")
             except Exception as e:
                 return await message.channel.send(f"Error: {e}")
 
@@ -3313,6 +3355,7 @@ class Client(discord.Client):
                 f"✦ **Owner:** <@{viewing_user_id}>\n"
                 f"✦ **Print:** **{format_print(print_num)}**\n"
                 f"✦ **Level:** **{stars(star_val)}**\n"
+                f"✦ **Version:** **{card_version_label(card)}**\n"
             )
             image_path = render_card_final(card, print_num)
 
