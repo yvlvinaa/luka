@@ -2647,7 +2647,7 @@
   },
   {
     "id": "north_common",
-    "name": "North Italy",
+    "name": "South Italy",
     "series": "Hetalia",
     "stars": 2,
     "weight": 10,
@@ -2787,6 +2787,33 @@
     "stars": 3,
     "weight": 10,
     "image": "card_art/usagi_common_2.png",
+    "frame": "common"
+  },
+  {
+    "id": "momoi_common",
+    "name": "Momoi Airi",
+    "series": "Project Sekai: Colorful Stage!",
+    "stars": 2,
+    "weight": 10,
+    "image": "card_art/momoi_common.png",
+    "frame": "common"
+  },
+  {
+    "id": "japan_common",
+    "name": "Japan",
+    "series": "Hetalia",
+    "stars": 2,
+    "weight": 10,
+    "image": "card_art/japan_common.png",
+    "frame": "common"
+  },
+  {
+    "id": "germany_common",
+    "name": "Germany",
+    "series": "Hetalia",
+    "stars": 2,
+    "weight": 10,
+    "image": "card_art/germany_common.png",
     "frame": "common"
   }
 ]
