@@ -46,7 +46,7 @@ THEME_COLOR = discord.Color.from_rgb(255, 227, 102)
 # Channel where a "new card added" announcement is posted after a
 # successful laddcard. Set to 0 to disable; if the channel can't be found
 # the notification is just skipped, never an error.
-CARD_UPDATES_CHANNEL_ID = 1525994134567911524
+CARD_UPDATES_CHANNEL_ID = 1526133115536539668
 
 # Global tracking for lookup history sessions
 user_last_lookup = {}
@@ -2171,7 +2171,7 @@ class TradeView(discord.ui.View):
         user1_text = format_offer(self.user1, self.user1_card, self.user1_card_index, user1_status)
         user2_text = format_offer(self.user2, self.user2_card, self.user2_card_index, user2_status)
 
-        embed.description = user1_text + "────────────────────────\n" + user2_text
+        embed.description = user1_text + "─────────────────────\n" + user2_text
 
         embed.description += "\n-# 💡 **Reminder:** There are no official values for cards in LukaNet right now. Trade based on what you and the other user think is fair."
 
@@ -3274,7 +3274,7 @@ class Client(discord.Client):
                     pass
 
                 card_name = owned_card["card"].get("name", "Unknown Character")
-                return await message.channel.send(f"Added {card_name}")
+                return await message.channel.send(f"Added **{card_name}//.")
             except Exception as e:
                 return await message.channel.send(f"Error: {e}")
 
