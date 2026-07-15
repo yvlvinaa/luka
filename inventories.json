@@ -2,6 +2,19 @@
   "727441845789130804": [
     {
       "card": {
+        "id": "laddcard_rare",
+        "name": "Vox Akuma",
+        "series": "Nijisanji",
+        "stars": 4,
+        "weight": 10,
+        "image": "card_art/laddcard_rare.png",
+        "frame": "red"
+      },
+      "print": 1,
+      "claimed_at": 1784153249.8995523
+    },
+    {
+      "card": {
         "id": "muichiro_common",
         "name": "Muichiro Tokito",
         "series": "Kimetsu no Yaiba",
@@ -201,19 +214,6 @@
     }
   ],
   "1028357602121351268": [
-    {
-      "card": {
-        "id": "angel_common",
-        "name": "Angel Devil",
-        "series": "Chainsaw Man",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/angel_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784153181.5379512
-    },
     {
       "card": {
         "id": "kurapika_common",
@@ -644,6 +644,21 @@
       },
       "print": 1,
       "claimed_at": 1784151506.6540341
+    }
+  ],
+  "1428341890025259091": [
+    {
+      "card": {
+        "id": "ikuyo_common",
+        "name": "Ikuyo Kita",
+        "series": "Bocchi The Rock!",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/ikuyo_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784153250.3097718
     }
   ]
 }
