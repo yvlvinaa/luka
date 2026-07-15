@@ -965,19 +965,6 @@
   "1095353184471490620": [
     {
       "card": {
-        "id": "tamon_common",
-        "name": "Kotaro Tamon",
-        "series": "Phantom Busters",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/tamon_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784155967.4330883
-    },
-    {
-      "card": {
         "id": "shin_rare",
         "name": "Shin Asakura",
         "series": "Sakamoto Days",
@@ -1218,7 +1205,21 @@
     }
   ],
   "155149108183695360": [],
-  "247066385849647107": [],
+  "247066385849647107": [
+    {
+      "card": {
+        "id": "follo_common",
+        "name": "Follo Tunito",
+        "series": "Gachiakuta",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/follo_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784156129.2841756
+    }
+  ],
   "1287932414211129345": [
     {
       "card": {
@@ -1264,5 +1265,32 @@
       "claimed_at": 1784155857.8321023
     }
   ],
-  "953055801252143175": []
+  "953055801252143175": [
+    {
+      "card": {
+        "id": "tamon_common",
+        "name": "Kotaro Tamon",
+        "series": "Phantom Busters",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/tamon_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784155967.4330883
+    },
+    {
+      "card": {
+        "id": "l_common",
+        "name": "L Lawliet",
+        "series": "Death Note",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/l_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784156119.9551506
+    }
+  ]
 }
