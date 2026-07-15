@@ -20,8 +20,35 @@
   "727441845789130804": [],
   "936932775393632266": [],
   "770651160695537697": [],
-  "1389607840288608377": [],
+  "1389607840288608377": [
+    {
+      "card": {
+        "id": "baek_common",
+        "name": "Baek Cirrus",
+        "series": "Lost in the Cloud",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/baek_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784129518.897894
+    }
+  ],
   "1028357602121351268": [
+    {
+      "card": {
+        "id": "mizi_common_2",
+        "name": "Mizi",
+        "series": "Alien Stage",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/mizi_common_2.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128717.3414683
+    },
     {
       "card": {
         "id": "mizi_common",
@@ -64,80 +91,41 @@
       "claimed_at": 1784128159.3575506
     }
   ],
-  "944204682409160705": [
+  "944204682409160705": [],
+  "897040507539189780": [],
+  "1428341890025259091": [],
+  "1245817648193867876": [
     {
       "card": {
-        "id": "kaguya_common",
-        "name": "Kaguya",
-        "series": "Cosmic Princess Kaguya",
-        "stars": 3,
+        "id": "phrolova_common",
+        "name": "Phrolova",
+        "series": "Wuthering Waves",
+        "stars": 2,
         "weight": 10,
-        "image": "card_art/kaguya_common.png",
+        "image": "card_art/phrolova_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784128650.3396208
+      "claimed_at": 1784128316.5090327
     }
   ],
-  "897040507539189780": [],
-  "1428341890025259091": [
+  "247066385849647107": [
     {
       "card": {
-        "id": "angel_common_2",
-        "name": "Angel Devil",
-        "series": "Chainsaw Man",
+        "id": "ashveil_common",
+        "name": "Ashveil",
+        "series": "Honkai: Star Rail",
         "stars": 1,
         "weight": 10,
-        "image": "card_art/angel_common_2.png",
+        "image": "card_art/ashveil_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784129492.1567144
-    },
-    {
-      "card": {
-        "id": "mydei_rare",
-        "name": "Mydei",
-        "series": "Honkai: Star Rail",
-        "stars": 4,
-        "weight": 5,
-        "image": "card_art/mydei_rare.png",
-        "frame": "red"
-      },
-      "print": 1,
-      "claimed_at": 1784128637.2762249
+      "claimed_at": 1784128321.6394525
     }
   ],
-  "1245817648193867876": [],
-  "1271705559162163241": [
-    {
-      "card": {
-        "id": "dabi_common",
-        "name": "Dabi",
-        "series": "My Hero Academia",
-        "stars": 3,
-        "weight": 10,
-        "image": "card_art/dabi_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128639.9105957
-    }
-  ],
-  "493716749342998541": [],
-  "965866067840884736": [
-    {
-      "card": {
-        "id": "luca_common",
-        "name": "Luca Kaneshiro",
-        "series": "Nijisanji",
-        "stars": 3,
-        "weight": 10,
-        "image": "card_art/luca_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784129482.6714342
-    }
-  ]
+  "1271705559162163241": [],
+  "1278803670192099482": [],
+  "965866067840884736": [],
+  "1287932414211129345": []
 }
