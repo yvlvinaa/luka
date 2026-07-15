@@ -31,9 +31,36 @@
       "claimed_at": 1784128164.451366
     }
   ],
-  "727441845789130804": [],
+  "727441845789130804": [
+    {
+      "card": {
+        "id": "neuvillette_common",
+        "name": "Neuvillette",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/neuvillette_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128464.3437355
+    }
+  ],
   "936932775393632266": [],
   "770651160695537697": [
+    {
+      "card": {
+        "id": "andrew_common",
+        "name": "Andrew Young",
+        "series": "Nerd Project",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/andrew_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128942.335257
+    },
     {
       "card": {
         "id": "luke_common",
@@ -50,19 +77,6 @@
   ],
   "1389607840288608377": [],
   "1028357602121351268": [
-    {
-      "card": {
-        "id": "hikaru_common",
-        "name": "Hikaru",
-        "series": "The Summer Hikaru Died",
-        "stars": 3,
-        "weight": 8,
-        "image": "card_art/hikaru_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130062.7814438
-    },
     {
       "card": {
         "id": "riyo_common",
@@ -95,19 +109,6 @@
   "764446760004354048": [
     {
       "card": {
-        "id": "kanzaki_common",
-        "name": "Kanzaki Kaoru",
-        "series": "Phantom Busters",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/kanzaki_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130084.5441735
-    },
-    {
-      "card": {
         "id": "yukiko_common",
         "name": "Yukiko Amagi",
         "series": "Persona",
@@ -124,32 +125,6 @@
   "1271705559162163241": [
     {
       "card": {
-        "id": "argenti_common",
-        "name": "Argenti",
-        "series": "Honkai: Star Rail",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/argenti_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130114.8848727
-    },
-    {
-      "card": {
-        "id": "clorinde_common",
-        "name": "Clorinde",
-        "series": "Genshin Impact",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/clorinde_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128824.4372857
-    },
-    {
-      "card": {
         "id": "qifrey_common",
         "name": "Qifrey",
         "series": "Witch Hat Atelier",
@@ -162,111 +137,38 @@
       "claimed_at": 1784128444.3209538
     }
   ],
-  "965866067840884736": [],
-  "944204682409160705": [
+  "965866067840884736": [
     {
       "card": {
-        "id": "tamon_common",
-        "name": "Kotaro Tamon",
-        "series": "Phantom Busters",
+        "id": "hanako_common",
+        "name": "Hanako Kun",
+        "series": "Toilet Bound Hanako-Kun",
         "stars": 1,
         "weight": 10,
-        "image": "card_art/tamon_common.png",
+        "image": "card_art/hanako_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784128830.2346306
+      "claimed_at": 1784128451.0323756
     }
   ],
-  "1278803670192099482": [],
-  "851909038409383936": [
-    {
-      "card": {
-        "id": "mydei_common",
-        "name": "Mydei",
-        "series": "Honkai: Star Rail",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/mydei_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128844.5098357
-    }
-  ],
-  "850348833217052742": [
-    {
-      "card": {
-        "id": "rudo_common",
-        "name": "Rudo Surebrec",
-        "series": "Gachiakuta",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/rudo_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128874.4890501
-    }
-  ],
-  "999178897629384754": [
-    {
-      "card": {
-        "id": "kirara_common",
-        "name": "Kirara Hoshi",
-        "series": "Jujutsu Kaisen",
-        "stars": 3,
-        "weight": 10,
-        "image": "card_art/kirara_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130094.6911328
-    }
-  ],
+  "944204682409160705": [],
+  "850348833217052742": [],
+  "627783823375204362": [],
+  "1428341890025259091": [],
   "960884355805351977": [
     {
       "card": {
-        "id": "baek_common_2",
-        "name": "Baek Yeongwoon",
-        "series": "Backlight",
+        "id": "lee_common",
+        "name": "Lee Yeon",
+        "series": "Red Thread Quest",
         "stars": 2,
         "weight": 10,
-        "image": "card_art/baek_common_2.png",
+        "image": "card_art/lee_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784130099.3436754
-    }
-  ],
-  "627783823375204362": [
-    {
-      "card": {
-        "id": "wanderer_common",
-        "name": "Wanderer",
-        "series": "Genshin Impact",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/wanderer_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130090.8852148
-    }
-  ],
-  "1371874080596299916": [
-    {
-      "card": {
-        "id": "toki_common",
-        "name": "Toki Ninomae",
-        "series": "Fall in love, false angels",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/toki_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130102.0398679
+      "claimed_at": 1784130128.6222842
     }
   ]
 }
