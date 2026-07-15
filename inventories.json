@@ -965,6 +965,19 @@
   "1095353184471490620": [
     {
       "card": {
+        "id": "zagreus_common",
+        "name": "Zagreus",
+        "series": "Hades",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/zagreus_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784155459.075238
+    },
+    {
+      "card": {
         "id": "emma_common",
         "name": "Emma",
         "series": "Veil",
@@ -991,19 +1004,6 @@
     }
   ],
   "777925664358531102": [
-    {
-      "card": {
-        "id": "zagreus_common",
-        "name": "Zagreus",
-        "series": "Hades",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/zagreus_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784155459.075238
-    },
     {
       "card": {
         "id": "england_common",
@@ -1113,5 +1113,6 @@
       "claimed_at": 1784154872.7862382
     }
   ],
-  "155149108183695360": []
+  "155149108183695360": [],
+  "247066385849647107": []
 }
