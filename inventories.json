@@ -52,6 +52,19 @@
   "1028357602121351268": [
     {
       "card": {
+        "id": "hikaru_common",
+        "name": "Hikaru",
+        "series": "The Summer Hikaru Died",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/hikaru_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784130062.7814438
+    },
+    {
+      "card": {
         "id": "riyo_common",
         "name": "Riyo Reaper",
         "series": "Gachiakuta",
@@ -80,19 +93,6 @@
     }
   ],
   "764446760004354048": [
-    {
-      "card": {
-        "id": "maomao_common",
-        "name": "Maomao",
-        "series": "The Apothecary Diaries",
-        "stars": 3,
-        "weight": 10,
-        "image": "card_art/maomao_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130017.9021747
-    },
     {
       "card": {
         "id": "yukiko_common",
@@ -168,6 +168,19 @@
       "claimed_at": 1784128844.5098357
     }
   ],
-  "960884355805351977": [],
-  "658879787577901068": []
+  "850348833217052742": [
+    {
+      "card": {
+        "id": "rudo_common",
+        "name": "Rudo Surebrec",
+        "series": "Gachiakuta",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/rudo_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128874.4890501
+    }
+  ]
 }
