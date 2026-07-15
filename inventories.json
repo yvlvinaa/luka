@@ -24,19 +24,6 @@
   "1028357602121351268": [
     {
       "card": {
-        "id": "kei_rare",
-        "name": "Kei Uzuki",
-        "series": "Sakamoto Days",
-        "stars": 4,
-        "weight": 5,
-        "image": "card_art/kei_rare.png",
-        "frame": "red"
-      },
-      "print": 1,
-      "claimed_at": 1784129552.903241
-    },
-    {
-      "card": {
         "id": "mizi_common_2",
         "name": "Mizi",
         "series": "Alien Stage",
@@ -96,19 +83,6 @@
   "1245817648193867876": [
     {
       "card": {
-        "id": "wriothesley_common",
-        "name": "Wriothesley",
-        "series": "Genshin Impact",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/wriothesley_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784129573.8352482
-    },
-    {
-      "card": {
         "id": "phrolova_common",
         "name": "Phrolova",
         "series": "Wuthering Waves",
@@ -139,6 +113,19 @@
   "1271705559162163241": [
     {
       "card": {
+        "id": "usagi_common",
+        "name": "Usagi",
+        "series": "Chiikawa",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/usagi_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784129583.521224
+    },
+    {
+      "card": {
         "id": "angel_common_2",
         "name": "Angel Devil",
         "series": "Chainsaw Man",
@@ -152,20 +139,20 @@
     }
   ],
   "1278803670192099482": [],
-  "960884355805351977": [],
-  "965866067840884736": [
+  "960884355805351977": [
     {
       "card": {
-        "id": "hanako_common",
-        "name": "Hanako Kun",
-        "series": "Toilet Bound Hanako-Kun",
-        "stars": 1,
+        "id": "cantarella_common",
+        "name": "Cantarella",
+        "series": "Wuthering Waves",
+        "stars": 3,
         "weight": 10,
-        "image": "card_art/hanako_common.png",
+        "image": "card_art/cantarella_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784129564.9528942
+      "claimed_at": 1784128730.1634564
     }
-  ]
+  ],
+  "965866067840884736": []
 }
