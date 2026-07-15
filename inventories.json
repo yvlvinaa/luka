@@ -2,6 +2,19 @@
   "590859362168209449": [
     {
       "card": {
+        "id": "fushiguro_common",
+        "name": "Fushiguro Megumi",
+        "series": "Jujutsu Kaisen",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/fushiguro_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128977.238856
+    },
+    {
+      "card": {
         "id": "ken_common",
         "name": "Ken Kaneki",
         "series": "Tokyo Ghoul",
@@ -94,19 +107,6 @@
   "1122003954436407336": [
     {
       "card": {
-        "id": "black\u2606star_common",
-        "name": "Black\u2606Star",
-        "series": "Soul Eater",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/black\u2606star_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130230.8880336
-    },
-    {
-      "card": {
         "id": "katsuki_common",
         "name": "Katsuki Bakugo",
         "series": "My Hero Academia",
@@ -136,19 +136,6 @@
   ],
   "1325579039888511056": [],
   "1271705559162163241": [
-    {
-      "card": {
-        "id": "flins_common",
-        "name": "Flins",
-        "series": "Genshin Impact",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/flins_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130220.5949662
-    },
     {
       "card": {
         "id": "qifrey_common",
@@ -191,36 +178,36 @@
       "claimed_at": 1784128451.0323756
     }
   ],
-  "944204682409160705": [],
-  "850348833217052742": [],
-  "960884355805351977": [
+  "944204682409160705": [
     {
       "card": {
-        "id": "chiaki_common",
-        "name": "Chiaki Nanami",
-        "series": "Danganronpa",
+        "id": "ashveil_common",
+        "name": "Ashveil",
+        "series": "Honkai: Star Rail",
         "stars": 1,
         "weight": 10,
-        "image": "card_art/chiaki_common.png",
+        "image": "card_art/ashveil_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784130237.2780123
+      "claimed_at": 1784128971.3136353
     }
   ],
-  "1245817648193867876": [
+  "850348833217052742": [],
+  "960884355805351977": [],
+  "1278803670192099482": [
     {
       "card": {
-        "id": "kangel_common",
-        "name": "KAngel",
-        "series": "Needy Streamer Overload",
-        "stars": 3,
+        "id": "riyo_common",
+        "name": "Riyo Reaper",
+        "series": "Gachiakuta",
+        "stars": 1,
         "weight": 10,
-        "image": "card_art/kangel_common.png",
+        "image": "card_art/riyo_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784130212.079683
+      "claimed_at": 1784130261.6334755
     }
   ]
 }
