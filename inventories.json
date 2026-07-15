@@ -14,21 +14,7 @@
       "claimed_at": 1784128096.2622488
     }
   ],
-  "1249975155204161569": [
-    {
-      "card": {
-        "id": "sakura_common",
-        "name": "Sakura Haruno",
-        "series": "Naruto",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/sakura_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128888.3487103
-    }
-  ],
+  "1249975155204161569": [],
   "1307722709567799318": [],
   "1171032839601520703": [
     {
@@ -45,9 +31,36 @@
       "claimed_at": 1784128164.451366
     }
   ],
-  "727441845789130804": [],
+  "727441845789130804": [
+    {
+      "card": {
+        "id": "neuvillette_common",
+        "name": "Neuvillette",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/neuvillette_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128464.3437355
+    }
+  ],
   "936932775393632266": [],
   "770651160695537697": [
+    {
+      "card": {
+        "id": "andrew_common",
+        "name": "Andrew Young",
+        "series": "Nerd Project",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/andrew_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128942.335257
+    },
     {
       "card": {
         "id": "luke_common",
@@ -112,19 +125,6 @@
   "1271705559162163241": [
     {
       "card": {
-        "id": "clorinde_common",
-        "name": "Clorinde",
-        "series": "Genshin Impact",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/clorinde_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128824.4372857
-    },
-    {
-      "card": {
         "id": "qifrey_common",
         "name": "Qifrey",
         "series": "Witch Hat Atelier",
@@ -137,51 +137,21 @@
       "claimed_at": 1784128444.3209538
     }
   ],
-  "965866067840884736": [],
-  "944204682409160705": [
+  "965866067840884736": [
     {
       "card": {
-        "id": "tamon_common",
-        "name": "Kotaro Tamon",
-        "series": "Phantom Busters",
+        "id": "hanako_common",
+        "name": "Hanako Kun",
+        "series": "Toilet Bound Hanako-Kun",
         "stars": 1,
         "weight": 10,
-        "image": "card_art/tamon_common.png",
+        "image": "card_art/hanako_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784128830.2346306
+      "claimed_at": 1784128451.0323756
     }
   ],
-  "1278803670192099482": [],
-  "851909038409383936": [
-    {
-      "card": {
-        "id": "mydei_common",
-        "name": "Mydei",
-        "series": "Honkai: Star Rail",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/mydei_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128844.5098357
-    }
-  ],
-  "850348833217052742": [
-    {
-      "card": {
-        "id": "rudo_common",
-        "name": "Rudo Surebrec",
-        "series": "Gachiakuta",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/rudo_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128874.4890501
-    }
-  ]
+  "944204682409160705": [],
+  "850348833217052742": []
 }
