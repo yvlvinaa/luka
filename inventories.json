@@ -30,16 +30,16 @@
   "1249975155204161569": [
     {
       "card": {
-        "id": "hua_common",
-        "name": "Hua Cheng",
-        "series": "Heavens Official Blessing",
-        "stars": 3,
+        "id": "seishiro_common",
+        "name": "Seishiro Nagi",
+        "series": "Blue Lock",
+        "stars": 1,
         "weight": 10,
-        "image": "card_art/hua_common.png",
+        "image": "card_art/seishiro_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784129207.2914133
+      "claimed_at": 1784129232.1371956
     }
   ],
   "1307722709567799318": [],
@@ -165,19 +165,6 @@
   "1245817648193867876": [
     {
       "card": {
-        "id": "alma_common",
-        "name": "Alma",
-        "series": "Gokurakugai",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/alma_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784129196.7528465
-    },
-    {
-      "card": {
         "id": "mizi_common",
         "name": "Mizi",
         "series": "Alien Stage",
@@ -191,6 +178,19 @@
     }
   ],
   "944204682409160705": [
+    {
+      "card": {
+        "id": "ysis_rare",
+        "name": "Ysis Del Elmir",
+        "series": "Into The Light, Once Again",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/ysis_rare.png",
+        "frame": "yellow"
+      },
+      "print": 1,
+      "claimed_at": 1784128547.5949035
+    },
     {
       "card": {
         "id": "neuvillette_common",
@@ -220,36 +220,8 @@
       "claimed_at": 1784128239.1489463
     }
   ],
-  "1271705559162163241": [
-    {
-      "card": {
-        "id": "amo_common_1",
-        "name": "Amo Empool",
-        "series": "Gachiakuta",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/amo_common_1.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784129187.5709958
-    }
-  ],
+  "1271705559162163241": [],
   "1287932414211129345": [],
   "247066385849647107": [],
-  "1278803670192099482": [
-    {
-      "card": {
-        "id": "qifrey_common",
-        "name": "Qifrey",
-        "series": "Witch Hat Atelier",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/qifrey_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784129190.2264943
-    }
-  ]
+  "1278803670192099482": []
 }
