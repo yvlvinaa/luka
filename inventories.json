@@ -1045,6 +1045,19 @@
   "777925664358531102": [
     {
       "card": {
+        "id": "enjin_common",
+        "name": "Enjin",
+        "series": "Gachiakuta",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/enjin_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784156057.0288897
+    },
+    {
+      "card": {
         "id": "luuk_common",
         "name": "Luuk Herssen",
         "series": "Wuthering Waves",
@@ -1250,5 +1263,6 @@
       "print": 1,
       "claimed_at": 1784155857.8321023
     }
-  ]
+  ],
+  "953055801252143175": []
 }
