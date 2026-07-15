@@ -2298,7 +2298,7 @@ class TradeView(discord.ui.View):
         user1_text = format_offer(self.user1, self.user1_card, self.user1_card_index, user1_status)
         user2_text = format_offer(self.user2, self.user2_card, self.user2_card_index, user2_status)
 
-        embed.description = user1_text + "────────────────────────\n" + user2_text
+        embed.description = user1_text + "─────────────────────────────\n" + user2_text
 
         embed.description += "\n-# 💡 **Reminder:** There are no official values for cards in LukaNet right now. Trade based on what you and the other user think is fair."
 
