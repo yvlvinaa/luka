@@ -24,6 +24,19 @@
   "1028357602121351268": [
     {
       "card": {
+        "id": "mizi_common_2",
+        "name": "Mizi",
+        "series": "Alien Stage",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/mizi_common_2.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128717.3414683
+    },
+    {
+      "card": {
         "id": "mizi_common",
         "name": "Mizi",
         "series": "Alien Stage",
@@ -64,52 +77,39 @@
       "claimed_at": 1784128159.3575506
     }
   ],
-  "944204682409160705": [
-    {
-      "card": {
-        "id": "kaguya_common",
-        "name": "Kaguya",
-        "series": "Cosmic Princess Kaguya",
-        "stars": 3,
-        "weight": 10,
-        "image": "card_art/kaguya_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128650.3396208
-    }
-  ],
+  "944204682409160705": [],
   "897040507539189780": [],
-  "1428341890025259091": [
+  "1428341890025259091": [],
+  "1245817648193867876": [
     {
       "card": {
-        "id": "mydei_rare",
-        "name": "Mydei",
-        "series": "Honkai: Star Rail",
-        "stars": 4,
-        "weight": 5,
-        "image": "card_art/mydei_rare.png",
-        "frame": "red"
-      },
-      "print": 1,
-      "claimed_at": 1784128637.2762249
-    }
-  ],
-  "1245817648193867876": [],
-  "1271705559162163241": [
-    {
-      "card": {
-        "id": "dabi_common",
-        "name": "Dabi",
-        "series": "My Hero Academia",
-        "stars": 3,
+        "id": "phrolova_common",
+        "name": "Phrolova",
+        "series": "Wuthering Waves",
+        "stars": 2,
         "weight": 10,
-        "image": "card_art/dabi_common.png",
+        "image": "card_art/phrolova_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784128639.9105957
+      "claimed_at": 1784128316.5090327
     }
   ],
-  "493716749342998541": []
+  "247066385849647107": [
+    {
+      "card": {
+        "id": "ashveil_common",
+        "name": "Ashveil",
+        "series": "Honkai: Star Rail",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/ashveil_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128321.6394525
+    }
+  ],
+  "1271705559162163241": [],
+  "1278803670192099482": []
 }
