@@ -887,6 +887,19 @@
   "1095353184471490620": [
     {
       "card": {
+        "id": "emma_common",
+        "name": "Emma",
+        "series": "Veil",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/emma_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784154866.1408856
+    },
+    {
+      "card": {
         "id": "ivan_common",
         "name": "Ivan",
         "series": "Alien Stage",
@@ -915,6 +928,19 @@
     }
   ],
   "1525557045023998093": [
+    {
+      "card": {
+        "id": "reze_common",
+        "name": "Reze",
+        "series": "Chainsaw Man",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/reze_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784154861.9329195
+    },
     {
       "card": {
         "id": "jinshi_common_2",
@@ -953,6 +979,21 @@
       },
       "print": 1,
       "claimed_at": 1784154422.9263964
+    }
+  ],
+  "658879787577901068": [
+    {
+      "card": {
+        "id": "senku_common",
+        "name": "Senku Ishigami",
+        "series": "Dr. Stone",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/senku_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784154872.7862382
     }
   ]
 }
