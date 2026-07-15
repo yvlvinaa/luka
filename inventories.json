@@ -125,19 +125,6 @@
   "1271705559162163241": [
     {
       "card": {
-        "id": "luka_common",
-        "name": "Luka",
-        "series": "Alien Stage",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/luka_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130133.4832563
-    },
-    {
-      "card": {
         "id": "qifrey_common",
         "name": "Qifrey",
         "series": "Witch Hat Atelier",
@@ -151,6 +138,19 @@
     }
   ],
   "965866067840884736": [
+    {
+      "card": {
+        "id": "flins_common",
+        "name": "Flins",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/flins_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128965.3513095
+    },
     {
       "card": {
         "id": "hanako_common",
@@ -167,35 +167,20 @@
   ],
   "944204682409160705": [],
   "850348833217052742": [],
-  "627783823375204362": [],
-  "1428341890025259091": [
+  "960884355805351977": [],
+  "1245817648193867876": [
     {
       "card": {
-        "id": "qifrey_common",
-        "name": "Qifrey",
-        "series": "Witch Hat Atelier",
-        "stars": 2,
+        "id": "kangel_common",
+        "name": "KAngel",
+        "series": "Needy Streamer Overload",
+        "stars": 3,
         "weight": 10,
-        "image": "card_art/qifrey_common.png",
+        "image": "card_art/kangel_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784130136.149593
-    }
-  ],
-  "960884355805351977": [
-    {
-      "card": {
-        "id": "lee_common",
-        "name": "Lee Yeon",
-        "series": "Red Thread Quest",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/lee_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130128.6222842
+      "claimed_at": 1784130212.079683
     }
   ]
 }
