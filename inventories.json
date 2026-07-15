@@ -99,6 +99,19 @@
   "1028357602121351268": [
     {
       "card": {
+        "id": "geto_common",
+        "name": "Suguru Geto",
+        "series": "Jujutsu Kaisen",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/geto_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784149731.911583
+    },
+    {
+      "card": {
         "id": "reze_common",
         "name": "Reze",
         "series": "Chainsaw Man",
@@ -137,6 +150,21 @@
       },
       "print": 1,
       "claimed_at": 1784148934.7532868
+    }
+  ],
+  "1278803670192099482": [
+    {
+      "card": {
+        "id": "satoru_rare",
+        "name": "Satoru Gojo",
+        "series": "Jujutsu Kaisen",
+        "stars": 4,
+        "weight": 10,
+        "image": "card_art/satoru_rare.png",
+        "frame": "blue"
+      },
+      "print": 1,
+      "claimed_at": 1784149711.2462778
     }
   ]
 }
