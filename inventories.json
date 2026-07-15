@@ -125,6 +125,19 @@
   "1028357602121351268": [
     {
       "card": {
+        "id": "hachiware_common",
+        "name": "Hachiware",
+        "series": "Chiikawa",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/hachiware_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784150077.8086815
+    },
+    {
+      "card": {
         "id": "geto_common",
         "name": "Suguru Geto",
         "series": "Jujutsu Kaisen",
@@ -191,6 +204,21 @@
       },
       "print": 1,
       "claimed_at": 1784149711.2462778
+    }
+  ],
+  "1307722709567799318": [
+    {
+      "card": {
+        "id": "ryo_common",
+        "name": "Ryo Yamada",
+        "series": "Bocchi The Rock!",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/ryo_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784150068.2541406
     }
   ]
 }
