@@ -27,7 +27,21 @@
       "claimed_at": 1784128096.2622488
     }
   ],
-  "1249975155204161569": [],
+  "1249975155204161569": [
+    {
+      "card": {
+        "id": "seishiro_common",
+        "name": "Seishiro Nagi",
+        "series": "Blue Lock",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/seishiro_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784129232.1371956
+    }
+  ],
   "1307722709567799318": [],
   "1171032839601520703": [
     {
@@ -102,7 +116,7 @@
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784130803.7564924
+      "claimed_at": 1784130868.442566
     },
     {
       "card": {
@@ -134,19 +148,6 @@
   "764446760004354048": [
     {
       "card": {
-        "id": "hikaru_common",
-        "name": "Hikaru",
-        "series": "The Summer Hikaru Died",
-        "stars": 3,
-        "weight": 8,
-        "image": "card_art/hikaru_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130821.4568176
-    },
-    {
-      "card": {
         "id": "jinshi_common_2",
         "name": "Jinshi",
         "series": "The Apothecary Diaries",
@@ -173,48 +174,8 @@
     }
   ],
   "1325579039888511056": [],
-  "897040507539189780": [
-    {
-      "card": {
-        "id": "navia_common",
-        "name": "Navia",
-        "series": "Genshin Impact",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/navia_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130847.950691
-    }
-  ],
+  "897040507539189780": [],
   "1245817648193867876": [
-    {
-      "card": {
-        "id": "amo_common_1",
-        "name": "Amo Empool",
-        "series": "Gachiakuta",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/amo_common_1.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130765.4936554
-    },
-    {
-      "card": {
-        "id": "alma_common",
-        "name": "Alma",
-        "series": "Gokurakugai",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/alma_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784129196.7528465
-    },
     {
       "card": {
         "id": "mizi_common",
@@ -230,6 +191,19 @@
     }
   ],
   "944204682409160705": [
+    {
+      "card": {
+        "id": "ysis_rare",
+        "name": "Ysis Del Elmir",
+        "series": "Into The Light, Once Again",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/ysis_rare.png",
+        "frame": "yellow"
+      },
+      "print": 1,
+      "claimed_at": 1784128547.5949035
+    },
     {
       "card": {
         "id": "neuvillette_common",
@@ -259,67 +233,9 @@
       "claimed_at": 1784128239.1489463
     }
   ],
-  "1271705559162163241": [
-    {
-      "card": {
-        "id": "amo_common_1",
-        "name": "Amo Empool",
-        "series": "Gachiakuta",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/amo_common_1.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784129187.5709958
-    }
-  ],
+  "1271705559162163241": [],
   "1287932414211129345": [],
   "247066385849647107": [],
-  "1278803670192099482": [
-    {
-      "card": {
-        "id": "qifrey_common",
-        "name": "Qifrey",
-        "series": "Witch Hat Atelier",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/qifrey_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784129190.2264943
-    }
-  ],
-  "965866067840884736": [],
-  "627783823375204362": [
-    {
-      "card": {
-        "id": "kanzaki_common",
-        "name": "Kanzaki Kaoru",
-        "series": "Phantom Busters",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/kanzaki_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130781.9320219
-    }
-  ],
-  "960884355805351977": [
-    {
-      "card": {
-        "id": "plotter_common",
-        "name": "Secretive Plotter",
-        "series": "Omniscient Reader's Viewpoint",
-        "stars": 3,
-        "weight": 8,
-        "image": "card_art/plotter_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130806.3606133
-    }
-  ]
+  "1278803670192099482": [],
+  "960884355805351977": []
 }
