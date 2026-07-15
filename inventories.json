@@ -14,27 +14,56 @@
       "claimed_at": 1784128096.2622488
     }
   ],
-  "1249975155204161569": [],
-  "1307722709567799318": [],
-  "1171032839601520703": [],
-  "727441845789130804": [],
-  "936932775393632266": [],
-  "770651160695537697": [],
-  "1389607840288608377": [],
-  "1028357602121351268": [
+  "1249975155204161569": [
     {
       "card": {
-        "id": "kei_rare",
-        "name": "Kei Uzuki",
-        "series": "Sakamoto Days",
-        "stars": 4,
-        "weight": 5,
-        "image": "card_art/kei_rare.png",
-        "frame": "red"
+        "id": "reze_common",
+        "name": "Reze",
+        "series": "Chainsaw Man",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/reze_common.png",
+        "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784129552.903241
-    },
+      "claimed_at": 1784129657.7735305
+    }
+  ],
+  "1307722709567799318": [],
+  "1171032839601520703": [],
+  "727441845789130804": [
+    {
+      "card": {
+        "id": "dan_common",
+        "name": "Dan Heng",
+        "series": "Honkai: Star Rail",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/dan_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128743.4997132
+    }
+  ],
+  "936932775393632266": [],
+  "770651160695537697": [
+    {
+      "card": {
+        "id": "kagamine_common",
+        "name": "Kagamine Rin",
+        "series": "Vocaloid",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/kagamine_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784131246.8367512
+    }
+  ],
+  "1389607840288608377": [],
+  "1028357602121351268": [
     {
       "card": {
         "id": "mizi_common_2",
@@ -91,21 +120,7 @@
     }
   ],
   "944204682409160705": [],
-  "897040507539189780": [
-    {
-      "card": {
-        "id": "uzui_common_2",
-        "name": "Uzui Tengen",
-        "series": "Kimetsu no Yaiba",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/uzui_common_2.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784131161.2798653
-    }
-  ],
+  "897040507539189780": [],
   "1428341890025259091": [],
   "1245817648193867876": [
     {
@@ -153,36 +168,20 @@
     }
   ],
   "1278803670192099482": [],
-  "960884355805351977": [],
-  "965866067840884736": [
+  "960884355805351977": [
     {
       "card": {
-        "id": "hanako_common",
-        "name": "Hanako Kun",
-        "series": "Toilet Bound Hanako-Kun",
-        "stars": 1,
+        "id": "cantarella_common",
+        "name": "Cantarella",
+        "series": "Wuthering Waves",
+        "stars": 3,
         "weight": 10,
-        "image": "card_art/hanako_common.png",
+        "image": "card_art/cantarella_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784129564.9528942
+      "claimed_at": 1784128730.1634564
     }
   ],
-  "764446760004354048": [],
-  "1287932414211129345": [
-    {
-      "card": {
-        "id": "agott_common",
-        "name": "Agott",
-        "series": "Witch Hat Atelier",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/agott_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784131121.2400477
-    }
-  ]
+  "764446760004354048": []
 }
