@@ -316,6 +316,19 @@
   "850348833217052742": [
     {
       "card": {
+        "id": "satoru_common_2",
+        "name": "Satoru Gojo",
+        "series": "Jujutsu Kaisen",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/satoru_common_2.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784132602.880671
+    },
+    {
+      "card": {
         "id": "death_common",
         "name": "Death The Kid",
         "series": "Soul Eater",
@@ -579,21 +592,6 @@
       },
       "print": 1,
       "claimed_at": 1784132524.008974
-    }
-  ],
-  "247066385849647107": [
-    {
-      "card": {
-        "id": "death_common",
-        "name": "Death The Kid",
-        "series": "Soul Eater",
-        "stars": 3,
-        "weight": 10,
-        "image": "card_art/death_common.png",
-        "frame": "common"
-      },
-      "print": 2,
-      "claimed_at": 1784132573.9891891
     }
   ]
 }
