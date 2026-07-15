@@ -35,10 +35,12 @@ from data import (
     card_prints
 )
 
+print("[inventory startup] imported the empty runtime inventory container from data.py")
+
 INVENTORIES_PATH = "inventories.json"
 
 
-def _load_inventories_json():
+def _load_inventories_json(source="local disk"):
     """Load persistent inventories once at startup without replacing the shared dict."""
     try:
         with open(INVENTORIES_PATH, "r", encoding="utf-8") as f:
@@ -54,11 +56,17 @@ def _load_inventories_json():
     if not isinstance(loaded_inventories, dict):
         raise ValueError("inventories.json must contain a JSON object")
 
+    entry_count = sum(
+        len(inventory) for inventory in loaded_inventories.values()
+        if isinstance(inventory, list)
+    )
+    print(
+        f"[inventory startup] loading inventories from {source}: "
+        f"{len(loaded_inventories)} users, {entry_count} entries"
+    )
+    print("[inventory startup] replacing in-memory inventories with startup data")
     inventories.clear()
     inventories.update(loaded_inventories)
-
-
-_load_inventories_json()
 
 
 # Initialize intents
@@ -234,7 +242,12 @@ async def save_and_sync_inventories(commit_message):
     helper; only then is the local JSON mirror atomically replaced.
     """
     inventory_bytes = json.dumps(inventories, indent=2).encode("utf-8")
+    print(
+        "[inventory sync] uploading inventories.json to GitHub "
+        f"({len(inventories)} users, {len(inventory_bytes)} bytes)"
+    )
     await github_commit_files({"inventories.json": inventory_bytes}, commit_message)
+    print("[inventory sync] GitHub upload succeeded; atomically updating local inventories.json")
     _atomic_write_bytes(INVENTORIES_PATH, inventory_bytes)
 
 
@@ -490,6 +503,79 @@ def _github_commit_changes_sync(write_files, delete_paths, commit_message):
 async def github_commit_changes(write_files, delete_paths, commit_message):
     """Async wrapper for _github_commit_changes_sync (write + delete in one atomic commit)."""
     return await asyncio.to_thread(_github_commit_changes_sync, write_files, delete_paths, commit_message)
+
+
+def _github_download_file_sync(repo_path):
+    """Read one repository file through the existing Git Data API setup."""
+    token = os.environ.get("GITHUB_TOKEN")
+    owner = os.environ.get("GITHUB_USERNAME")
+    repo = os.environ.get("GITHUB_REPO")
+    branch = os.environ.get("GITHUB_BRANCH")
+
+    missing = [
+        name for name, value in [
+            ("GITHUB_TOKEN", token),
+            ("GITHUB_USERNAME", owner),
+            ("GITHUB_REPO", repo),
+            ("GITHUB_BRANCH", branch),
+        ] if not value
+    ]
+    if missing:
+        raise Exception(f"Missing required environment variable(s): {', '.join(missing)}")
+
+    headers = _github_headers(token)
+    commit_sha = _github_get_branch_commit_sha(headers, owner, repo, branch)
+    tree_sha = _github_get_commit_tree_sha(headers, owner, repo, commit_sha)
+
+    tree_url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/trees/{tree_sha}?recursive=1"
+    tree_response = requests.get(tree_url, headers=headers, timeout=15)
+    if tree_response.status_code != 200:
+        raise Exception(f"Failed to read repository tree ({tree_response.status_code}): {tree_response.text}")
+
+    entry = next(
+        (item for item in tree_response.json().get("tree", [])
+         if item.get("path") == repo_path and item.get("type") == "blob"),
+        None,
+    )
+    if entry is None:
+        raise FileNotFoundError(f"{repo_path} does not exist in the GitHub repository")
+
+    blob_url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/blobs/{entry['sha']}"
+    blob_response = requests.get(blob_url, headers=headers, timeout=15)
+    if blob_response.status_code != 200:
+        raise Exception(f"Failed to read {repo_path} blob ({blob_response.status_code}): {blob_response.text}")
+    return base64.b64decode(blob_response.json()["content"])
+
+
+def _sync_inventories_from_github_at_startup():
+    """Mirror GitHub's inventory source locally before the one startup load."""
+    github_configured = all(
+        os.environ.get(name)
+        for name in ("GITHUB_TOKEN", "GITHUB_USERNAME", "GITHUB_REPO", "GITHUB_BRANCH")
+    )
+    if not github_configured:
+        print("[inventory startup] GitHub is not configured; loading local inventories.json")
+        return "local disk (GitHub not configured)"
+
+    print("[inventory startup] downloading inventories.json from GitHub")
+    try:
+        inventory_bytes = _github_download_file_sync("inventories.json")
+        _atomic_write_bytes(INVENTORIES_PATH, inventory_bytes)
+        print(
+            "[inventory startup] downloaded inventories.json from GitHub "
+            f"({len(inventory_bytes)} bytes)"
+        )
+        return "GitHub"
+    except Exception:
+        print("[inventory startup] GitHub download failed; refusing to load a potentially stale local inventory")
+        traceback.print_exc()
+        raise
+
+
+# Startup order is deliberate: the GitHub version is mirrored locally first,
+# then inventories are loaded exactly once into the existing shared dict.
+_inventory_startup_source = _sync_inventories_from_github_at_startup()
+_load_inventories_json(_inventory_startup_source)
 
 
 def _convert_image_bytes_to_png_sync(raw_bytes):
@@ -1407,6 +1493,7 @@ class CardView(discord.ui.View):
                 await save_and_sync_inventories(f"Claimed {card.get('name', 'card')}")
             except Exception:
                 traceback.print_exc()
+                print("[inventory sync] reverting in-memory inventories after failed claim save")
                 inventories.clear()
                 inventories.update(inventory_before)
                 if which == 1:
@@ -2015,6 +2102,7 @@ class GiftView(discord.ui.View):
                 )
             except Exception:
                 traceback.print_exc()
+                print("[inventory sync] reverting in-memory inventories after failed gift save")
                 inventories.clear()
                 inventories.update(inventory_before)
                 return await interaction.response.send_message(
@@ -2298,7 +2386,7 @@ class TradeView(discord.ui.View):
         user1_text = format_offer(self.user1, self.user1_card, self.user1_card_index, user1_status)
         user2_text = format_offer(self.user2, self.user2_card, self.user2_card_index, user2_status)
 
-        embed.description = user1_text + "─────────────────────────────\n" + user2_text
+        embed.description = user1_text + "────────────────────────\n" + user2_text
 
         embed.description += "\n-# 💡 **Reminder:** There are no official values for cards in LukaNet right now. Trade based on what you and the other user think is fair."
 
@@ -2388,6 +2476,7 @@ class TradeView(discord.ui.View):
                             try:
                                 await save_and_sync_inventories("Completed trade")
                             except Exception:
+                                print("[inventory sync] reverting in-memory inventories after failed trade save")
                                 inventories.clear()
                                 inventories.update(inventory_before)
                                 raise
