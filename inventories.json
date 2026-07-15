@@ -965,6 +965,19 @@
   "1095353184471490620": [
     {
       "card": {
+        "id": "shin_rare",
+        "name": "Shin Asakura",
+        "series": "Sakamoto Days",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/shin_rare.png",
+        "frame": "orange"
+      },
+      "print": 1,
+      "claimed_at": 1784155822.2713547
+    },
+    {
+      "card": {
         "id": "agott_common",
         "name": "Agott",
         "series": "Witch Hat Atelier",
@@ -1045,6 +1058,19 @@
     }
   ],
   "1525557045023998093": [
+    {
+      "card": {
+        "id": "tsuyu_rare",
+        "name": "Tsuyu Asui",
+        "series": "My Hero Academia",
+        "stars": 4,
+        "weight": 10,
+        "image": "card_art/tsuyu_rare.png",
+        "frame": "blue"
+      },
+      "print": 1,
+      "claimed_at": 1784155813.7974956
+    },
     {
       "card": {
         "id": "mogari_common_1",
@@ -1154,7 +1180,21 @@
   ],
   "155149108183695360": [],
   "247066385849647107": [],
-  "1287932414211129345": [],
+  "1287932414211129345": [
+    {
+      "card": {
+        "id": "maomao_common",
+        "name": "Maomao",
+        "series": "The Apothecary Diaries",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/maomao_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784155828.3176687
+    }
+  ],
   "1122003954436407336": [
     {
       "card": {
@@ -1168,6 +1208,21 @@
       },
       "print": 1,
       "claimed_at": 1784155729.540702
+    }
+  ],
+  "968786127081328660": [
+    {
+      "card": {
+        "id": "xie_common",
+        "name": "Xie Lian",
+        "series": "Heavens Official Blessing",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/xie_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784155857.8321023
     }
   ]
 }
