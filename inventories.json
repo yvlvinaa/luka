@@ -93,6 +93,19 @@
   "1122003954436407336": [
     {
       "card": {
+        "id": "sebastian_common",
+        "name": "Sebastian Michaelis",
+        "series": "Black Butler",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/sebastian_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784130803.7564924
+    },
+    {
+      "card": {
         "id": "kaito_rare",
         "name": "KAITO",
         "series": "Vocaloid",
@@ -266,5 +279,6 @@
       "print": 1,
       "claimed_at": 1784130781.9320219
     }
-  ]
+  ],
+  "960884355805351977": []
 }
