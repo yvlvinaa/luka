@@ -2,19 +2,6 @@
   "727441845789130804": [
     {
       "card": {
-        "id": "yu_common",
-        "name": "Yu Fan",
-        "series": "Wait For Me After School",
-        "stars": 3,
-        "weight": 10,
-        "image": "card_art/yu_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784152412.7776432
-    },
-    {
-      "card": {
         "id": "muichiro_common",
         "name": "Muichiro Tokito",
         "series": "Kimetsu no Yaiba",
@@ -324,6 +311,19 @@
   "1278803670192099482": [
     {
       "card": {
+        "id": "satoru_common_2",
+        "name": "Satoru Gojo",
+        "series": "Jujutsu Kaisen",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/satoru_common_2.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784152430.9369428
+    },
+    {
+      "card": {
         "id": "hatsune_common",
         "name": "Hatsune Miku",
         "series": "Vocaloid",
@@ -514,22 +514,6 @@
       },
       "print": 1,
       "claimed_at": 1784151506.6540341
-    }
-  ],
-  "1325579039888511056": [],
-  "1122003954436407336": [
-    {
-      "card": {
-        "id": "sae_rare",
-        "name": "Sae Itoshi",
-        "series": "BLUELOCK",
-        "stars": 4,
-        "weight": 5,
-        "image": "card_art/sae_rare.png",
-        "frame": "blue"
-      },
-      "print": 1,
-      "claimed_at": 1784152392.65455
     }
   ]
 }
