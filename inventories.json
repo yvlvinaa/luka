@@ -95,6 +95,19 @@
   "764446760004354048": [
     {
       "card": {
+        "id": "kanzaki_common",
+        "name": "Kanzaki Kaoru",
+        "series": "Phantom Busters",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/kanzaki_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784130084.5441735
+    },
+    {
+      "card": {
         "id": "yukiko_common",
         "name": "Yukiko Amagi",
         "series": "Persona",
@@ -109,19 +122,6 @@
   ],
   "1325579039888511056": [],
   "1271705559162163241": [
-    {
-      "card": {
-        "id": "reze_common",
-        "name": "Reze",
-        "series": "Chainsaw Man",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/reze_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784131648.5380368
-    },
     {
       "card": {
         "id": "clorinde_common",
@@ -196,5 +196,36 @@
       "claimed_at": 1784128874.4890501
     }
   ],
-  "1287932414211129345": []
+  "999178897629384754": [],
+  "960884355805351977": [],
+  "627783823375204362": [
+    {
+      "card": {
+        "id": "wanderer_common",
+        "name": "Wanderer",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/wanderer_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784130090.8852148
+    }
+  ],
+  "1069775194924789760": [
+    {
+      "card": {
+        "id": "denji_common",
+        "name": "Denji",
+        "series": "Chainsaw Man",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/denji_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784131679.654984
+    }
+  ]
 }
