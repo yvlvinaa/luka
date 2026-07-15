@@ -14,7 +14,21 @@
       "claimed_at": 1784128096.2622488
     }
   ],
-  "1249975155204161569": [],
+  "1249975155204161569": [
+    {
+      "card": {
+        "id": "lohen_common",
+        "name": "Lohen",
+        "series": "Genshin Impact",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/lohen_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784129137.897916
+    }
+  ],
   "1307722709567799318": [],
   "1171032839601520703": [
     {
@@ -52,6 +66,19 @@
   "1028357602121351268": [
     {
       "card": {
+        "id": "yukiko_common",
+        "name": "Yukiko Amagi",
+        "series": "Persona",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/yukiko_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784129109.0354512
+    },
+    {
+      "card": {
         "id": "riyo_common",
         "name": "Riyo Reaper",
         "series": "Gachiakuta",
@@ -65,19 +92,6 @@
     }
   ],
   "1122003954436407336": [
-    {
-      "card": {
-        "id": "varka_common",
-        "name": "Varka",
-        "series": "Genshin Impact",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/varka_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130421.0817032
-    },
     {
       "card": {
         "id": "kaito_rare",
@@ -108,16 +122,16 @@
   "764446760004354048": [
     {
       "card": {
-        "id": "kihoon_rare",
-        "name": "Hong Kihoon",
-        "series": "Red Thread Quest",
-        "stars": 4,
-        "weight": 5,
-        "image": "card_art/kihoon_rare.png",
-        "frame": "yellow"
+        "id": "jinshi_common_2",
+        "name": "Jinshi",
+        "series": "The Apothecary Diaries",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/jinshi_common_2.png",
+        "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784130410.055018
+      "claimed_at": 1784128521.137282
     },
     {
       "card": {
@@ -181,35 +195,22 @@
     }
   ],
   "1271705559162163241": [],
-  "1428341890025259091": [
+  "1287932414211129345": [],
+  "1428341890025259091": [],
+  "627783823375204362": [],
+  "960884355805351977": [
     {
       "card": {
-        "id": "hiyuki_common",
-        "name": "Hiyuki",
-        "series": "Wuthering Waves",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/hiyuki_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784129075.3857307
-    }
-  ],
-  "960884355805351977": [],
-  "658879787577901068": [
-    {
-      "card": {
-        "id": "emu_rare",
-        "name": "Emu Otori",
-        "series": "Project Sekai: Colorful Stage!",
+        "id": "tsuyu_rare",
+        "name": "Tsuyu Asui",
+        "series": "My Hero Academia",
         "stars": 4,
         "weight": 10,
-        "image": "card_art/emu_rare.png",
-        "frame": "pink"
+        "image": "card_art/tsuyu_rare.png",
+        "frame": "blue"
       },
       "print": 1,
-      "claimed_at": 1784130477.4111993
+      "claimed_at": 1784130553.6932268
     }
   ]
 }
