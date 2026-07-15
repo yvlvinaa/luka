@@ -2,19 +2,6 @@
   "590859362168209449": [
     {
       "card": {
-        "id": "shu_rare",
-        "name": "Shu Yamino",
-        "series": "Nijisanji",
-        "stars": 4,
-        "weight": 10,
-        "image": "card_art/shu_rare.png",
-        "frame": "pink"
-      },
-      "print": 1,
-      "claimed_at": 1784129055.1423502
-    },
-    {
-      "card": {
         "id": "ken_common",
         "name": "Ken Kaneki",
         "series": "Tokyo Ghoul",
@@ -27,21 +14,7 @@
       "claimed_at": 1784128096.2622488
     }
   ],
-  "1249975155204161569": [
-    {
-      "card": {
-        "id": "hatsune_common",
-        "name": "Hatsune Miku",
-        "series": "Vocaloid",
-        "stars": 3,
-        "weight": 8,
-        "image": "card_art/hatsune_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130387.6293824
-    }
-  ],
+  "1249975155204161569": [],
   "1307722709567799318": [],
   "1171032839601520703": [
     {
@@ -61,19 +34,6 @@
   "727441845789130804": [],
   "936932775393632266": [],
   "770651160695537697": [
-    {
-      "card": {
-        "id": "hatsune_common",
-        "name": "Hatsune Miku",
-        "series": "Vocaloid",
-        "stars": 3,
-        "weight": 8,
-        "image": "card_art/hatsune_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128498.7910783
-    },
     {
       "card": {
         "id": "luke_common",
@@ -107,6 +67,19 @@
   "1122003954436407336": [
     {
       "card": {
+        "id": "kaito_rare",
+        "name": "KAITO",
+        "series": "Vocaloid",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/kaito_rare.png",
+        "frame": "blue"
+      },
+      "print": 1,
+      "claimed_at": 1784128508.3321996
+    },
+    {
+      "card": {
         "id": "katsuki_common",
         "name": "Katsuki Bakugo",
         "series": "My Hero Academia",
@@ -122,29 +95,16 @@
   "764446760004354048": [
     {
       "card": {
-        "id": "iroha_common",
-        "name": "Iroha Sakayori",
-        "series": "Cosmic Princess Kaguya",
-        "stars": 3,
-        "weight": 10,
-        "image": "card_art/iroha_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784130369.5210545
-    },
-    {
-      "card": {
-        "id": "plotter_rare",
-        "name": "Secretive Plotter",
-        "series": "Omniscient Reader's Viewpoint",
+        "id": "kihoon_rare",
+        "name": "Hong Kihoon",
+        "series": "Red Thread Quest",
         "stars": 4,
         "weight": 5,
-        "image": "card_art/plotter_rare.png",
-        "frame": "blue"
+        "image": "card_art/kihoon_rare.png",
+        "frame": "yellow"
       },
       "print": 1,
-      "claimed_at": 1784128496.0166326
+      "claimed_at": 1784130410.055018
     },
     {
       "card": {
@@ -192,38 +152,36 @@
       "claimed_at": 1784128236.1134439
     }
   ],
-  "1271705559162163241": [],
-  "965866067840884736": [],
-  "960884355805351977": [
+  "1213941636829155338": [
     {
       "card": {
-        "id": "cloud_common",
-        "name": "Cloud Strife",
-        "series": "Final Fantasy",
-        "stars": 2,
+        "id": "hitori_common",
+        "name": "Hitori Gotou",
+        "series": "Bocchi The Rock!",
+        "stars": 1,
         "weight": 10,
-        "image": "card_art/cloud_common.png",
+        "image": "card_art/hitori_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784130395.6802278
+      "claimed_at": 1784128239.1489463
     }
   ],
-  "1428341890025259091": [],
-  "703260157982801931": [],
-  "850348833217052742": [
+  "1271705559162163241": [],
+  "1428341890025259091": [
     {
       "card": {
-        "id": "tanjiro_rare",
-        "name": "Kamado Tanjiro",
-        "series": "Kimetsu no Yaiba",
-        "stars": 4,
-        "weight": 5,
-        "image": "card_art/tanjiro_rare.png",
-        "frame": "red"
+        "id": "hiyuki_common",
+        "name": "Hiyuki",
+        "series": "Wuthering Waves",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/hiyuki_common.png",
+        "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784130384.9304702
+      "claimed_at": 1784129075.3857307
     }
-  ]
+  ],
+  "960884355805351977": []
 }
