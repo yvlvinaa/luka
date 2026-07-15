@@ -2,19 +2,6 @@
   "590859362168209449": [
     {
       "card": {
-        "id": "shu_rare",
-        "name": "Shu Yamino",
-        "series": "Nijisanji",
-        "stars": 4,
-        "weight": 10,
-        "image": "card_art/shu_rare.png",
-        "frame": "pink"
-      },
-      "print": 1,
-      "claimed_at": 1784129055.1423502
-    },
-    {
-      "card": {
         "id": "ken_common",
         "name": "Ken Kaneki",
         "series": "Tokyo Ghoul",
@@ -49,19 +36,6 @@
   "770651160695537697": [
     {
       "card": {
-        "id": "hatsune_common",
-        "name": "Hatsune Miku",
-        "series": "Vocaloid",
-        "stars": 3,
-        "weight": 8,
-        "image": "card_art/hatsune_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128498.7910783
-    },
-    {
-      "card": {
         "id": "luke_common",
         "name": "Luke Davis",
         "series": "Nerd Project",
@@ -93,6 +67,19 @@
   "1122003954436407336": [
     {
       "card": {
+        "id": "kaito_rare",
+        "name": "KAITO",
+        "series": "Vocaloid",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/kaito_rare.png",
+        "frame": "blue"
+      },
+      "print": 1,
+      "claimed_at": 1784128508.3321996
+    },
+    {
+      "card": {
         "id": "katsuki_common",
         "name": "Katsuki Bakugo",
         "series": "My Hero Academia",
@@ -106,19 +93,6 @@
     }
   ],
   "764446760004354048": [
-    {
-      "card": {
-        "id": "plotter_rare",
-        "name": "Secretive Plotter",
-        "series": "Omniscient Reader's Viewpoint",
-        "stars": 4,
-        "weight": 5,
-        "image": "card_art/plotter_rare.png",
-        "frame": "blue"
-      },
-      "print": 1,
-      "claimed_at": 1784128496.0166326
-    },
     {
       "card": {
         "id": "yukiko_common",
@@ -165,8 +139,36 @@
       "claimed_at": 1784128236.1134439
     }
   ],
+  "1213941636829155338": [
+    {
+      "card": {
+        "id": "hitori_common",
+        "name": "Hitori Gotou",
+        "series": "Bocchi The Rock!",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/hitori_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128239.1489463
+    }
+  ],
   "1271705559162163241": [],
-  "965866067840884736": [],
-  "960884355805351977": [],
-  "1428341890025259091": []
+  "1428341890025259091": [
+    {
+      "card": {
+        "id": "hiyuki_common",
+        "name": "Hiyuki",
+        "series": "Wuthering Waves",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/hiyuki_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784129075.3857307
+    }
+  ],
+  "960884355805351977": []
 }
