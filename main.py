@@ -14,7 +14,6 @@ import json
 import base64
 import functools
 import traceback
-import copy
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw, ImageFont, ImageStat
@@ -25,48 +24,13 @@ from PIL import Image, ImageDraw, ImageFont, ImageStat
 with open('cards.json', 'r') as f:
     cards = json.load(f)
 
-# Import the runtime state containers. Inventories are populated from
-# inventories.json immediately below so this existing shared dict reference
-# remains valid everywhere else in the bot.
+# Import your database
 from data import (
     inventories,
     drop_cooldowns,
     claim_cooldowns,
     card_prints
 )
-
-print("[inventory startup] imported the empty runtime inventory container from data.py")
-
-INVENTORIES_PATH = "inventories.json"
-
-
-def _load_inventories_json(source="local disk"):
-    """Load persistent inventories once at startup without replacing the shared dict."""
-    try:
-        with open(INVENTORIES_PATH, "r", encoding="utf-8") as f:
-            raw_inventories = f.read()
-    except FileNotFoundError:
-        loaded_inventories = {}
-    else:
-        # A missing value (including whitespace-only content) is an empty
-        # inventory database. Invalid non-empty JSON intentionally fails
-        # loudly instead of discarding potentially recoverable data.
-        loaded_inventories = {} if not raw_inventories.strip() else json.loads(raw_inventories)
-
-    if not isinstance(loaded_inventories, dict):
-        raise ValueError("inventories.json must contain a JSON object")
-
-    entry_count = sum(
-        len(inventory) for inventory in loaded_inventories.values()
-        if isinstance(inventory, list)
-    )
-    print(
-        f"[inventory startup] loading inventories from {source}: "
-        f"{len(loaded_inventories)} users, {entry_count} entries"
-    )
-    print("[inventory startup] replacing in-memory inventories with startup data")
-    inventories.clear()
-    inventories.update(loaded_inventories)
 
 
 # Initialize intents
@@ -100,11 +64,6 @@ user_viewing_inventory = {}
 # other's changes. Never used by read-only paths (ld, lookups, inventory,
 # claiming, trading, gifting, rendering).
 cards_lock = asyncio.Lock()
-
-# Serializes complete inventory transactions (mutate -> GitHub commit ->
-# atomic local mirror) so concurrent claims, gifts, and trades cannot lose
-# each other's changes.
-inventories_lock = asyncio.Lock()
 
 # Create card_art directory if it doesn't exist
 if not os.path.exists('card_art'):
@@ -221,8 +180,7 @@ def _atomic_write_bytes(path: str, data: bytes) -> None:
     directory = os.path.dirname(path) or "."
     os.makedirs(directory, exist_ok=True)
 
-    suffix = os.path.splitext(path)[1] or ".tmp"
-    fd, tmp_path = tempfile.mkstemp(dir=directory, prefix=".tmp-", suffix=suffix)
+    fd, tmp_path = tempfile.mkstemp(dir=directory, prefix=".tmp-", suffix=".png")
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(data)
@@ -233,22 +191,6 @@ def _atomic_write_bytes(path: str, data: bytes) -> None:
         except OSError:
             pass
         raise
-
-
-async def save_and_sync_inventories(commit_message):
-    """
-    Persist the current inventory structure without changing how commands
-    access it. GitHub is updated first using the established atomic commit
-    helper; only then is the local JSON mirror atomically replaced.
-    """
-    inventory_bytes = json.dumps(inventories, indent=2).encode("utf-8")
-    print(
-        "[inventory sync] uploading inventories.json to GitHub "
-        f"({len(inventories)} users, {len(inventory_bytes)} bytes)"
-    )
-    await github_commit_files({"inventories.json": inventory_bytes}, commit_message)
-    print("[inventory sync] GitHub upload succeeded; atomically updating local inventories.json")
-    _atomic_write_bytes(INVENTORIES_PATH, inventory_bytes)
 
 
 # Fields every card entry is expected to have (used by lsync / leditcard).
@@ -503,79 +445,6 @@ def _github_commit_changes_sync(write_files, delete_paths, commit_message):
 async def github_commit_changes(write_files, delete_paths, commit_message):
     """Async wrapper for _github_commit_changes_sync (write + delete in one atomic commit)."""
     return await asyncio.to_thread(_github_commit_changes_sync, write_files, delete_paths, commit_message)
-
-
-def _github_download_file_sync(repo_path):
-    """Read one repository file through the existing Git Data API setup."""
-    token = os.environ.get("GITHUB_TOKEN")
-    owner = os.environ.get("GITHUB_USERNAME")
-    repo = os.environ.get("GITHUB_REPO")
-    branch = os.environ.get("GITHUB_BRANCH")
-
-    missing = [
-        name for name, value in [
-            ("GITHUB_TOKEN", token),
-            ("GITHUB_USERNAME", owner),
-            ("GITHUB_REPO", repo),
-            ("GITHUB_BRANCH", branch),
-        ] if not value
-    ]
-    if missing:
-        raise Exception(f"Missing required environment variable(s): {', '.join(missing)}")
-
-    headers = _github_headers(token)
-    commit_sha = _github_get_branch_commit_sha(headers, owner, repo, branch)
-    tree_sha = _github_get_commit_tree_sha(headers, owner, repo, commit_sha)
-
-    tree_url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/trees/{tree_sha}?recursive=1"
-    tree_response = requests.get(tree_url, headers=headers, timeout=15)
-    if tree_response.status_code != 200:
-        raise Exception(f"Failed to read repository tree ({tree_response.status_code}): {tree_response.text}")
-
-    entry = next(
-        (item for item in tree_response.json().get("tree", [])
-         if item.get("path") == repo_path and item.get("type") == "blob"),
-        None,
-    )
-    if entry is None:
-        raise FileNotFoundError(f"{repo_path} does not exist in the GitHub repository")
-
-    blob_url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/blobs/{entry['sha']}"
-    blob_response = requests.get(blob_url, headers=headers, timeout=15)
-    if blob_response.status_code != 200:
-        raise Exception(f"Failed to read {repo_path} blob ({blob_response.status_code}): {blob_response.text}")
-    return base64.b64decode(blob_response.json()["content"])
-
-
-def _sync_inventories_from_github_at_startup():
-    """Mirror GitHub's inventory source locally before the one startup load."""
-    github_configured = all(
-        os.environ.get(name)
-        for name in ("GITHUB_TOKEN", "GITHUB_USERNAME", "GITHUB_REPO", "GITHUB_BRANCH")
-    )
-    if not github_configured:
-        print("[inventory startup] GitHub is not configured; loading local inventories.json")
-        return "local disk (GitHub not configured)"
-
-    print("[inventory startup] downloading inventories.json from GitHub")
-    try:
-        inventory_bytes = _github_download_file_sync("inventories.json")
-        _atomic_write_bytes(INVENTORIES_PATH, inventory_bytes)
-        print(
-            "[inventory startup] downloaded inventories.json from GitHub "
-            f"({len(inventory_bytes)} bytes)"
-        )
-        return "GitHub"
-    except Exception:
-        print("[inventory startup] GitHub download failed; refusing to load a potentially stale local inventory")
-        traceback.print_exc()
-        raise
-
-
-# Startup order is deliberate: the GitHub version is mirrored locally first,
-# then inventories are loaded exactly once into the existing shared dict.
-_inventory_startup_source = _sync_inventories_from_github_at_startup()
-_load_inventories_json(_inventory_startup_source)
 
 
 def _convert_image_bytes_to_png_sync(raw_bytes):
@@ -1462,56 +1331,28 @@ class CardView(discord.ui.View):
         user_id = interaction.user.id
         now = time.time()
 
-        async with inventories_lock:
-            if user_id in claim_cooldowns:
-                remaining = int(CLAIM_COOLDOWN - (now - claim_cooldowns[user_id]))
-                if remaining > 0:
-                    return await interaction.response.send_message(
-                        f"Wait {format_time(remaining)} before claiming again.", ephemeral=True
-                    )
-
-            if which == 1 and self.card1_claimed:
-                return await interaction.response.send_message("Already claimed.", ephemeral=True)
-            if which == 2 and self.card2_claimed:
-                return await interaction.response.send_message("Already claimed.", ephemeral=True)
-
-            card = self.card1 if which == 1 else self.card2
-            inventory_before = copy.deepcopy(inventories)
-            previous_print = card_prints.get(card["id"])
-            previous_cooldown = claim_cooldowns.get(user_id)
-
-            if which == 1:
-                self.card1_claimed = True
-            else:
-                self.card2_claimed = True
-
-            button.disabled = True
-            claim_cooldowns[user_id] = now
-            add_card(user_id, card)
-
-            try:
-                await save_and_sync_inventories(f"Claimed {card.get('name', 'card')}")
-            except Exception:
-                traceback.print_exc()
-                print("[inventory sync] reverting in-memory inventories after failed claim save")
-                inventories.clear()
-                inventories.update(inventory_before)
-                if which == 1:
-                    self.card1_claimed = False
-                else:
-                    self.card2_claimed = False
-                button.disabled = False
-                if previous_cooldown is None:
-                    claim_cooldowns.pop(user_id, None)
-                else:
-                    claim_cooldowns[user_id] = previous_cooldown
-                if previous_print is None:
-                    card_prints.pop(card["id"], None)
-                else:
-                    card_prints[card["id"]] = previous_print
+        if user_id in claim_cooldowns:
+            remaining = int(CLAIM_COOLDOWN - (now - claim_cooldowns[user_id]))
+            if remaining > 0:
                 return await interaction.response.send_message(
-                    "Unable to save the claim. Please try again.", ephemeral=True
+                    f"Wait {format_time(remaining)} before claiming again.", ephemeral=True
                 )
+
+        if which == 1 and self.card1_claimed:
+            return await interaction.response.send_message("Already claimed.", ephemeral=True)
+        if which == 2 and self.card2_claimed:
+            return await interaction.response.send_message("Already claimed.", ephemeral=True)
+
+        card = self.card1 if which == 1 else self.card2
+
+        if which == 1:
+            self.card1_claimed = True
+        else:
+            self.card2_claimed = True
+
+        button.disabled = True
+        claim_cooldowns[user_id] = now
+        add_card(user_id, card)
 
         await interaction.response.edit_message(view=self)
 
@@ -2072,42 +1913,28 @@ class GiftView(discord.ui.View):
                 ephemeral=True
             )
 
-        async with inventories_lock:
-            giver_inv = get_inventory(self.from_id)
+        giver_inv = get_inventory(self.from_id)
 
-            if self.card_index >= len(giver_inv):
-                return await interaction.response.send_message(
-                    "This card is no longer available to trade.",
-                    ephemeral=True
-                )
+        if self.card_index >= len(giver_inv):
+            return await interaction.response.send_message(
+                "This card is no longer available to trade.",
+                ephemeral=True
+            )
 
-            current_owned_card = giver_inv[self.card_index]
+        current_owned_card = giver_inv[self.card_index]
 
-            if (
-                current_owned_card["card"]["id"] != self.card["id"]
-                or current_owned_card["print"] != self.print_num
-            ):
-                return await interaction.response.send_message(
-                    "This card is no longer available to trade.",
-                    ephemeral=True
-                )
+        if (
+            current_owned_card["card"]["id"] != self.card["id"]
+            or current_owned_card["print"] != self.print_num
+        ):
+            return await interaction.response.send_message(
+                "This card is no longer available to trade.",
+                ephemeral=True
+            )
 
-            inventory_before = copy.deepcopy(inventories)
-            # Remove from giver by index and insert to receiver newest-first
-            moved_card = remove_card(self.from_id, self.card_index)
-            get_inventory(self.to_id).insert(0, moved_card)
-            try:
-                await save_and_sync_inventories(
-                    f"Gifted {self.card.get('name', 'card')}"
-                )
-            except Exception:
-                traceback.print_exc()
-                print("[inventory sync] reverting in-memory inventories after failed gift save")
-                inventories.clear()
-                inventories.update(inventory_before)
-                return await interaction.response.send_message(
-                    "Unable to save the gift. Please try again.", ephemeral=True
-                )
+        # Remove from giver by index and insert to receiver newest-first
+        moved_card = remove_card(self.from_id, self.card_index)
+        get_inventory(self.to_id).insert(0, moved_card)
 
         accepted_embed, file = self.build_embed(
             self.to_user,
@@ -2458,40 +2285,21 @@ class TradeView(discord.ui.View):
 
             # finalize trade: remove the correct entries by matching card id + print
             try:
-                async with inventories_lock:
-                    if self.user1_card and self.user2_card:
-                        inv1 = get_inventory(self.user1_id)
-                        inv2 = get_inventory(self.user2_id)
+                if self.user1_card and self.user2_card:
+                    inv1 = get_inventory(self.user1_id)
+                    inv2 = get_inventory(self.user2_id)
 
-                        # find by id + print to be robust against index shifts
-                        seq1_match_idx = next((i for i,c in enumerate(inv1) if c["card"]["id"] == self.user1_card["card"]["id"] and c["print"] == self.user1_card["print"]), None)
-                        seq2_match_idx = next((i for i,c in enumerate(inv2) if c["card"]["id"] == self.user2_card["card"]["id"] and c["print"] == self.user2_card["print"]), None)
+                    # find by id + print to be robust against index shifts
+                    seq1_match_idx = next((i for i,c in enumerate(inv1) if c["card"]["id"] == self.user1_card["card"]["id"] and c["print"] == self.user1_card["print"]), None)
+                    seq2_match_idx = next((i for i,c in enumerate(inv2) if c["card"]["id"] == self.user2_card["card"]["id"] and c["print"] == self.user2_card["print"]), None)
 
-                        if seq1_match_idx is not None and seq2_match_idx is not None:
-                            inventory_before = copy.deepcopy(inventories)
-                            c1 = inv1.pop(seq1_match_idx)
-                            c2 = inv2.pop(seq2_match_idx)
-                            inv1.insert(0, c2)  # receiver gets new card newest-first
-                            inv2.insert(0, c1)
-                            try:
-                                await save_and_sync_inventories("Completed trade")
-                            except Exception:
-                                print("[inventory sync] reverting in-memory inventories after failed trade save")
-                                inventories.clear()
-                                inventories.update(inventory_before)
-                                raise
-            except Exception:
-                traceback.print_exc()
-                self.decline.disabled = False
-                self.lock.disabled = False
-                self.confirm.disabled = False
-                if interaction.user.id == self.user1_id:
-                    self.user1_confirmed = False
-                else:
-                    self.user2_confirmed = False
-                return await interaction.response.send_message(
-                    "Unable to save the trade. Please try again.", ephemeral=True
-                )
+                    if seq1_match_idx is not None and seq2_match_idx is not None:
+                        c1 = inv1.pop(seq1_match_idx)
+                        c2 = inv2.pop(seq2_match_idx)
+                        inv1.insert(0, c2)  # receiver gets new card newest-first
+                        inv2.insert(0, c1)
+            except Exception as e:
+                print("TRADE FINALIZE ERROR:", e)
 
             embed = discord.Embed(color=THEME_COLOR)
             embed.title = "Trade Completed!"
