@@ -31,21 +31,7 @@
       "claimed_at": 1784128164.451366
     }
   ],
-  "727441845789130804": [
-    {
-      "card": {
-        "id": "neuvillette_common",
-        "name": "Neuvillette",
-        "series": "Genshin Impact",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/neuvillette_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128464.3437355
-    }
-  ],
+  "727441845789130804": [],
   "936932775393632266": [],
   "770651160695537697": [
     {
@@ -96,6 +82,19 @@
   "764446760004354048": [
     {
       "card": {
+        "id": "plotter_rare",
+        "name": "Secretive Plotter",
+        "series": "Omniscient Reader's Viewpoint",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/plotter_rare.png",
+        "frame": "blue"
+      },
+      "print": 1,
+      "claimed_at": 1784128496.0166326
+    },
+    {
+      "card": {
         "id": "yukiko_common",
         "name": "Yukiko Amagi",
         "series": "Persona",
@@ -109,34 +108,36 @@
     }
   ],
   "1325579039888511056": [],
-  "1271705559162163241": [
+  "897040507539189780": [],
+  "1245817648193867876": [
     {
       "card": {
-        "id": "qifrey_common",
-        "name": "Qifrey",
-        "series": "Witch Hat Atelier",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/qifrey_common.png",
-        "frame": "common"
-      },
-      "print": 1,
-      "claimed_at": 1784128444.3209538
-    }
-  ],
-  "965866067840884736": [
-    {
-      "card": {
-        "id": "hanako_common",
-        "name": "Hanako Kun",
-        "series": "Toilet Bound Hanako-Kun",
+        "id": "mizi_common",
+        "name": "Mizi",
+        "series": "Alien Stage",
         "stars": 1,
         "weight": 10,
-        "image": "card_art/hanako_common.png",
+        "image": "card_art/mizi_common.png",
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784128451.0323756
+      "claimed_at": 1784128228.2690964
     }
-  ]
+  ],
+  "944204682409160705": [
+    {
+      "card": {
+        "id": "neuvillette_common",
+        "name": "Neuvillette",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/neuvillette_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784128236.1134439
+    }
+  ],
+  "1271705559162163241": []
 }
