@@ -33,44 +33,6 @@ from data import (
 )
 
 
-# =========================
-# LOAD INVENTORIES FROM JSON (local fallback)
-# =========================
-def _load_inventories_json():
-    """
-    Loads persisted inventories from the local inventories.json on disk.
-    Returns an empty dict (never raises) if the file is missing or empty,
-    so a fresh deploy/first run still starts up cleanly instead of
-    crashing. Used both as the startup fallback when GitHub is
-    unavailable (see _sync_inventories_from_github_at_startup below,
-    defined after the GitHub helpers) and to actually parse whatever
-    ends up on disk once that startup sync has run.
-    """
-    try:
-        with open('inventories.json', 'r') as f:
-            raw = f.read().strip()
-    except FileNotFoundError:
-        return {}
-
-    if not raw:
-        return {}
-
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        print("[inventories] inventories.json contains invalid JSON -- starting with empty inventories.")
-        traceback.print_exc()
-        return {}
-
-
-# NOTE: `inventories` is populated further down in this file, in
-# _sync_inventories_from_github_at_startup(), which needs the GitHub
-# helpers defined later below (GitHub is the source of truth on startup;
-# local disk is only the fallback). See that function for the actual
-# load-into-memory step -- it still happens exactly once, at startup,
-# before the bot connects.
-
-
 # Initialize intents
 intents = discord.Intents.all()
 
@@ -102,18 +64,6 @@ user_viewing_inventory = {}
 # other's changes. Never used by read-only paths (ld, lookups, inventory,
 # claiming, trading, gifting, rendering).
 cards_lock = asyncio.Lock()
-
-# Same strategy as cards_lock, but for the `inventories` dict / GitHub
-# sync of inventories.json. Kept as a separate lock from cards_lock
-# (rather than reusing it) since inventory mutations -- claiming,
-# gifting, trading -- happen far more often than card-management admin
-# commands and shouldn't serialize behind unrelated card edits. Held for
-# the full transaction (mutate -> GitHub commit -> local save) so two
-# inventory changes (e.g. two simultaneous claims, or a gift and a trade
-# involving the same user) can never interleave and silently overwrite
-# each other. Never used by read-only paths (lc, inventory viewing,
-# trade/gift setup before acceptance).
-inventories_lock = asyncio.Lock()
 
 # Create card_art directory if it doesn't exist
 if not os.path.exists('card_art'):
@@ -230,12 +180,7 @@ def _atomic_write_bytes(path: str, data: bytes) -> None:
     directory = os.path.dirname(path) or "."
     os.makedirs(directory, exist_ok=True)
 
-    # Suffix is cosmetic (only affects the temp file's name, never the
-    # final path, since os.replace() renames to `path` regardless) but
-    # kept matching the real extension for easier debugging if a crash
-    # ever leaves a stray .tmp-* file behind.
-    suffix = os.path.splitext(path)[1] or ".tmp"
-    fd, tmp_path = tempfile.mkstemp(dir=directory, prefix=".tmp-", suffix=suffix)
+    fd, tmp_path = tempfile.mkstemp(dir=directory, prefix=".tmp-", suffix=".png")
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(data)
@@ -245,67 +190,6 @@ def _atomic_write_bytes(path: str, data: bytes) -> None:
             os.remove(tmp_path)
         except OSError:
             pass
-        raise
-
-
-def _inventories_json_bytes() -> bytes:
-    """Serializes the current in-memory `inventories` dict to JSON bytes."""
-    return json.dumps(inventories, indent=2).encode("utf-8")
-
-
-# Set (under inventories_lock) whenever inventories.json has been saved
-# locally but the change hasn't been pushed to GitHub yet. Cleared once
-# the periodic sync task (or the shutdown flush) successfully commits.
-_inventories_dirty = False
-
-# How often the background task checks for and pushes pending inventory
-# changes to GitHub. Local saves still happen immediately on every
-# mutation regardless of this interval -- this only debounces the
-# GitHub half of persistence, so a burst of claims/gifts/trades results
-# in one batched commit instead of one commit each.
-INVENTORY_SYNC_INTERVAL_SECONDS = 45
-
-
-def save_inventories_local() -> None:
-    """
-    Writes the current in-memory `inventories` dict to inventories.json
-    on disk, atomically (via _atomic_write_bytes). This happens
-    immediately after every successful inventory mutation, regardless of
-    when the next GitHub sync runs.
-    """
-    _atomic_write_bytes("inventories.json", _inventories_json_bytes())
-
-
-def mark_inventories_dirty_for_github() -> None:
-    """
-    Flags that inventories.json has local changes not yet pushed to
-    GitHub, so the periodic sync task (or the shutdown flush) picks it
-    up. Must be called, after save_inventories_local(), while still
-    holding inventories_lock, as part of the same mutate-and-save
-    transaction.
-    """
-    global _inventories_dirty
-    _inventories_dirty = True
-
-
-def save_and_mark_inventories(commit_context: str = "") -> None:
-    """
-    Call immediately after mutating the in-memory `inventories` dict,
-    while still holding inventories_lock: saves inventories.json to disk
-    right away (atomic), then marks it dirty so the next periodic sync
-    (or the shutdown flush) pushes it to GitHub in a batch rather than
-    committing on every single mutation. Raises (after printing a full
-    traceback) on failure so the caller can roll back its in-memory
-    mutation -- inventories.json itself is never left partially written,
-    since _atomic_write_bytes only ever produces the complete old file or
-    the complete new file.
-    """
-    try:
-        save_inventories_local()
-        mark_inventories_dirty_for_github()
-    except Exception:
-        print(f"[inventories] Failed to save inventories.json locally ({commit_context}):")
-        traceback.print_exc()
         raise
 
 
@@ -561,150 +445,6 @@ def _github_commit_changes_sync(write_files, delete_paths, commit_message):
 async def github_commit_changes(write_files, delete_paths, commit_message):
     """Async wrapper for _github_commit_changes_sync (write + delete in one atomic commit)."""
     return await asyncio.to_thread(_github_commit_changes_sync, write_files, delete_paths, commit_message)
-
-
-def _github_get_file_sync(path: str):
-    """
-    Downloads a single file's raw bytes from the GitHub repo via the
-    Contents API. Read-only; not part of the existing blob/tree/commit
-    write machinery above and doesn't touch it. Returns None (never
-    raises) if credentials aren't configured, the file doesn't exist in
-    the repo, or the request fails for any reason (network issue,
-    GitHub outage, etc.) -- callers are expected to fall back to local
-    data in that case.
-    """
-    token = os.environ.get("GITHUB_TOKEN")
-    owner = os.environ.get("GITHUB_USERNAME")
-    repo = os.environ.get("GITHUB_REPO")
-    branch = os.environ.get("GITHUB_BRANCH")
-
-    if not all([token, owner, repo, branch]):
-        print("[github] Skipping download of "
-              f"{path!r}: missing GitHub environment variable(s).")
-        return None
-
-    try:
-        headers = _github_headers(token)
-        url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
-        resp = requests.get(url, headers=headers, params={"ref": branch}, timeout=15)
-        if resp.status_code == 404:
-            return None
-        if resp.status_code != 200:
-            raise Exception(f"Failed to download {path} ({resp.status_code}): {resp.text}")
-        payload = resp.json()
-        if payload.get("encoding") != "base64" or "content" not in payload:
-            raise Exception(f"Unexpected response shape downloading {path}: {payload!r}")
-        return base64.b64decode(payload["content"])
-    except Exception:
-        print(f"[github] Failed to download {path} from GitHub:")
-        traceback.print_exc()
-        return None
-
-
-async def github_get_file(path: str):
-    """Async wrapper so the blocking GitHub API call doesn't block the event loop."""
-    return await asyncio.to_thread(_github_get_file_sync, path)
-
-
-# =========================
-# INVENTORIES: STARTUP SYNC + DEBOUNCED GITHUB PUSH
-# =========================
-
-async def _sync_inventories_from_github_at_startup() -> dict:
-    """
-    Startup-only. Makes GitHub the source of truth for inventories.json:
-        1. Try to download inventories.json from GitHub.
-        2. If that succeeds and is valid JSON, atomically replace the
-           local inventories.json with the downloaded copy.
-        3. If GitHub is unavailable (or returns something invalid),
-           fall back to whatever is already on local disk.
-        4. Load whatever inventories.json now contains locally into
-           memory -- this is the single load-into-memory step; nothing
-           later re-triggers it.
-    An empty inventory set is only used if BOTH the GitHub download and
-    the local file are missing, empty, or invalid.
-    """
-    remote_bytes = await github_get_file("inventories.json")
-
-    if remote_bytes is not None:
-        try:
-            json.loads(remote_bytes.decode("utf-8") or "{}")
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            print("[inventories] Downloaded inventories.json from GitHub was not valid JSON -- "
-                  "falling back to the local copy.")
-            remote_bytes = None
-
-    if remote_bytes is not None:
-        try:
-            _atomic_write_bytes("inventories.json", remote_bytes)
-            print("[inventories] Loaded latest inventories.json from GitHub.")
-        except Exception:
-            print("[inventories] Downloaded inventories.json from GitHub but failed to write it "
-                  "locally -- falling back to the local copy.")
-            traceback.print_exc()
-    else:
-        print("[inventories] Could not download inventories.json from GitHub -- "
-              "falling back to the local copy.")
-
-    return _load_inventories_json()
-
-
-async def inventory_github_sync_loop():
-    """
-    Background task: every INVENTORY_SYNC_INTERVAL_SECONDS, if
-    inventories.json has local changes that haven't been pushed yet
-    (_inventories_dirty), pushes ONE batched commit containing the
-    current inventories to GitHub -- instead of committing on every
-    single claim/gift/trade. If nothing changed since the last push,
-    this cycle does nothing (no-op, no empty commits).
-    """
-    global _inventories_dirty
-    while True:
-        await asyncio.sleep(INVENTORY_SYNC_INTERVAL_SECONDS)
-        async with inventories_lock:
-            if not _inventories_dirty:
-                continue
-            try:
-                data = _inventories_json_bytes()
-                await github_commit_files({"inventories.json": data}, "Batched inventory sync")
-                _inventories_dirty = False
-            except Exception:
-                print("[inventories] Periodic GitHub sync failed (will retry next cycle):")
-                traceback.print_exc()
-                # _inventories_dirty stays True so the next cycle retries.
-
-
-async def flush_inventories_to_github():
-    """
-    Best-effort final push of any pending (locally-saved but not yet
-    committed) inventory changes to GitHub. Intended to be called on
-    graceful shutdown so a batch of changes made just before the process
-    exits isn't stranded until the next boot's startup sync.
-    """
-    global _inventories_dirty
-    async with inventories_lock:
-        if not _inventories_dirty:
-            return
-        try:
-            data = _inventories_json_bytes()
-            await github_commit_files({"inventories.json": data}, "Final inventory sync (shutdown)")
-            _inventories_dirty = False
-            print("[inventories] Flushed pending inventory changes to GitHub before shutdown.")
-        except Exception:
-            print("[inventories] Failed to flush pending inventory changes to GitHub on shutdown "
-                  "(they remain saved locally):")
-            traceback.print_exc()
-
-
-# `inventories` is the exact dict object imported from data.py, and every
-# command in this file (get_inventory/add_card/remove_card/etc.) reads
-# and writes that same object. We populate it in place here -- rather
-# than rebinding the name `inventories` to a new dict -- so it stays the
-# single source of truth everywhere it's referenced. This is the one and
-# only load into memory, done once at startup before the bot connects;
-# nothing later re-triggers it.
-inventories.clear()
-inventories.update(asyncio.run(_sync_inventories_from_github_at_startup()))
 
 
 def _convert_image_bytes_to_png_sync(raw_bytes):
@@ -1612,28 +1352,7 @@ class CardView(discord.ui.View):
 
         button.disabled = True
         claim_cooldowns[user_id] = now
-
-        async with inventories_lock:
-            add_card(user_id, card)
-            try:
-                save_and_mark_inventories(
-                    f"{interaction.user} claimed {card.get('id', 'unknown')}"
-                )
-            except Exception:
-                # Roll back the claim entirely so a failed local save never
-                # silently duplicates or loses a card, or blocks the
-                # user's next claim attempt.
-                get_inventory(user_id).pop(0)
-                if which == 1:
-                    self.card1_claimed = False
-                else:
-                    self.card2_claimed = False
-                button.disabled = False
-                claim_cooldowns.pop(user_id, None)
-                return await interaction.response.send_message(
-                    "❌ Something went wrong saving your claim. Please try again.",
-                    ephemeral=True
-                )
+        add_card(user_id, card)
 
         await interaction.response.edit_message(view=self)
 
@@ -2194,43 +1913,28 @@ class GiftView(discord.ui.View):
                 ephemeral=True
             )
 
-        async with inventories_lock:
-            giver_inv = get_inventory(self.from_id)
+        giver_inv = get_inventory(self.from_id)
 
-            if self.card_index >= len(giver_inv):
-                return await interaction.response.send_message(
-                    "This card is no longer available to trade.",
-                    ephemeral=True
-                )
+        if self.card_index >= len(giver_inv):
+            return await interaction.response.send_message(
+                "This card is no longer available to trade.",
+                ephemeral=True
+            )
 
-            current_owned_card = giver_inv[self.card_index]
+        current_owned_card = giver_inv[self.card_index]
 
-            if (
-                current_owned_card["card"]["id"] != self.card["id"]
-                or current_owned_card["print"] != self.print_num
-            ):
-                return await interaction.response.send_message(
-                    "This card is no longer available to trade.",
-                    ephemeral=True
-                )
+        if (
+            current_owned_card["card"]["id"] != self.card["id"]
+            or current_owned_card["print"] != self.print_num
+        ):
+            return await interaction.response.send_message(
+                "This card is no longer available to trade.",
+                ephemeral=True
+            )
 
-            # Remove from giver by index and insert to receiver newest-first
-            moved_card = remove_card(self.from_id, self.card_index)
-            get_inventory(self.to_id).insert(0, moved_card)
-
-            try:
-                save_and_mark_inventories(
-                    f"{self.from_user} gifted {moved_card['card'].get('id', 'unknown')} to {self.to_user}"
-                )
-            except Exception:
-                # Roll back the transfer so a failed local save never
-                # silently duplicates or loses the card.
-                get_inventory(self.to_id).pop(0)
-                giver_inv.insert(self.card_index, moved_card)
-                return await interaction.response.send_message(
-                    "❌ Something went wrong saving this gift. Please try again.",
-                    ephemeral=True
-                )
+        # Remove from giver by index and insert to receiver newest-first
+        moved_card = remove_card(self.from_id, self.card_index)
+        get_inventory(self.to_id).insert(0, moved_card)
 
         accepted_embed, file = self.build_embed(
             self.to_user,
@@ -2582,36 +2286,20 @@ class TradeView(discord.ui.View):
             # finalize trade: remove the correct entries by matching card id + print
             try:
                 if self.user1_card and self.user2_card:
-                    async with inventories_lock:
-                        inv1 = get_inventory(self.user1_id)
-                        inv2 = get_inventory(self.user2_id)
+                    inv1 = get_inventory(self.user1_id)
+                    inv2 = get_inventory(self.user2_id)
 
-                        # find by id + print to be robust against index shifts
-                        seq1_match_idx = next((i for i,c in enumerate(inv1) if c["card"]["id"] == self.user1_card["card"]["id"] and c["print"] == self.user1_card["print"]), None)
-                        seq2_match_idx = next((i for i,c in enumerate(inv2) if c["card"]["id"] == self.user2_card["card"]["id"] and c["print"] == self.user2_card["print"]), None)
+                    # find by id + print to be robust against index shifts
+                    seq1_match_idx = next((i for i,c in enumerate(inv1) if c["card"]["id"] == self.user1_card["card"]["id"] and c["print"] == self.user1_card["print"]), None)
+                    seq2_match_idx = next((i for i,c in enumerate(inv2) if c["card"]["id"] == self.user2_card["card"]["id"] and c["print"] == self.user2_card["print"]), None)
 
-                        if seq1_match_idx is not None and seq2_match_idx is not None:
-                            c1 = inv1.pop(seq1_match_idx)
-                            c2 = inv2.pop(seq2_match_idx)
-                            inv1.insert(0, c2)  # receiver gets new card newest-first
-                            inv2.insert(0, c1)
-
-                            try:
-                                save_and_mark_inventories(
-                                    f"Trade: {self.user1} <-> {self.user2}"
-                                )
-                            except Exception:
-                                # Roll back the swap so a failed local
-                                # save never silently duplicates or loses
-                                # either card.
-                                inv1.pop(0)
-                                inv2.pop(0)
-                                inv1.insert(seq1_match_idx, c1)
-                                inv2.insert(seq2_match_idx, c2)
-                                raise
+                    if seq1_match_idx is not None and seq2_match_idx is not None:
+                        c1 = inv1.pop(seq1_match_idx)
+                        c2 = inv2.pop(seq2_match_idx)
+                        inv1.insert(0, c2)  # receiver gets new card newest-first
+                        inv2.insert(0, c1)
             except Exception as e:
                 print("TRADE FINALIZE ERROR:", e)
-                traceback.print_exc()
 
             embed = discord.Embed(color=THEME_COLOR)
             embed.title = "Trade Completed!"
@@ -2948,30 +2636,8 @@ class RemoveCardView(discord.ui.View):
 # =========================
 class Client(discord.Client):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._inventory_sync_task = None
-
     async def on_ready(self):
         print(f"Logged in as {self.user}")
-        # Guard so a reconnect (on_ready can fire more than once) never
-        # starts a second copy of the periodic sync loop.
-        if self._inventory_sync_task is None or self._inventory_sync_task.done():
-            self._inventory_sync_task = asyncio.create_task(inventory_github_sync_loop())
-
-    async def close(self):
-        # Best-effort: push any inventory changes saved locally since the
-        # last periodic sync before the process actually exits, so a
-        # graceful shutdown never leaves a batch of changes stranded
-        # until the next boot's startup sync.
-        if self._inventory_sync_task is not None:
-            self._inventory_sync_task.cancel()
-        try:
-            await flush_inventories_to_github()
-        except Exception:
-            print("[inventories] Failed to flush pending inventory changes on shutdown:")
-            traceback.print_exc()
-        await super().close()
 
     async def on_message(self, message):
         # Ignore bot's own messages
