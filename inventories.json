@@ -177,6 +177,19 @@
   "1028357602121351268": [
     {
       "card": {
+        "id": "nakahara_common",
+        "name": "Nakahara Chuuya",
+        "series": "Bungo Stray Dogs",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/nakahara_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784151523.4963286
+    },
+    {
+      "card": {
         "id": "han_common",
         "name": "Han Seo-in",
         "series": "Backlight",
@@ -270,6 +283,19 @@
     }
   ],
   "1278803670192099482": [
+    {
+      "card": {
+        "id": "hatsune_common",
+        "name": "Hatsune Miku",
+        "series": "Vocaloid",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/hatsune_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784151526.558911
+    },
     {
       "card": {
         "id": "flins_common",
@@ -395,6 +421,21 @@
       },
       "print": 1,
       "claimed_at": 1784151184.0106254
+    }
+  ],
+  "1437367017576595467": [
+    {
+      "card": {
+        "id": "andrew_rare",
+        "name": "Andrew Young & Luke Davis",
+        "series": "Nerd Project",
+        "stars": 4,
+        "weight": 10,
+        "image": "card_art/andrew_rare.png",
+        "frame": "red"
+      },
+      "print": 1,
+      "claimed_at": 1784151506.6540341
     }
   ]
 }
