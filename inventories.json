@@ -1034,6 +1034,19 @@
   "1525557045023998093": [
     {
       "card": {
+        "id": "mogari_common_1",
+        "name": "Shishikuno Mogari",
+        "series": "Phantom Busters",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/mogari_common_1.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784155713.108781
+    },
+    {
+      "card": {
         "id": "amo_common_1",
         "name": "Amo Empool",
         "series": "Gachiakuta",
@@ -1128,5 +1141,20 @@
   ],
   "155149108183695360": [],
   "247066385849647107": [],
-  "1287932414211129345": []
+  "1287932414211129345": [],
+  "1122003954436407336": [
+    {
+      "card": {
+        "id": "stelle_common",
+        "name": "Stelle",
+        "series": "Honkai: Star Rail",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/stelle_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784155729.540702
+    }
+  ]
 }
