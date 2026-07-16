@@ -3629,5 +3629,5 @@ class Client(discord.Client):
 # --- Run Bot Connection ---
 client = Client(intents=intents)
 
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("TOKEN")
 client.run(TOKEN)
