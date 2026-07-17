@@ -343,7 +343,7 @@
   },
   {
     "id": "natsume_common",
-    "name": "Natsume Sakasaki",
+    "name": "Leo Tsukinaga",
     "series": "Ensemble Stars!",
     "stars": 3,
     "weight": 8,
@@ -3498,6 +3498,51 @@
     "stars": 2,
     "weight": 10,
     "image": "card_art/tomura_common.png",
+    "frame": "common"
+  },
+  {
+    "id": "sh\u014dko_common",
+    "name": "Sh\u014dko Nishimiya",
+    "series": "A Silent Voice",
+    "stars": 1,
+    "weight": 10,
+    "image": "card_art/sh\u014dko_common.png",
+    "frame": "common"
+  },
+  {
+    "id": "sh\u014dya_common",
+    "name": "Sh\u014dya Ishida",
+    "series": "A Silent Voice",
+    "stars": 1,
+    "weight": 10,
+    "image": "card_art/sh\u014dya_common.png",
+    "frame": "common"
+  },
+  {
+    "id": "goro_rare",
+    "name": "Goro Akechi",
+    "series": "Persona",
+    "stars": 4,
+    "weight": 10,
+    "image": "card_art/goro_rare.png",
+    "frame": "red"
+  },
+  {
+    "id": "zanka_common",
+    "name": "Zanka Nijiku",
+    "series": "Gachiakuta",
+    "stars": 2,
+    "weight": 10,
+    "image": "card_art/zanka_common.png",
+    "frame": "common"
+  },
+  {
+    "id": "mayuri_common",
+    "name": "Mayuri Kurotsuchi",
+    "series": "Bleach",
+    "stars": 1,
+    "weight": 10,
+    "image": "card_art/mayuri_common.png",
     "frame": "common"
   }
 ]
