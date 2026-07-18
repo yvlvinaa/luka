@@ -33,6 +33,64 @@ from data import (
 )
 
 
+# =========================
+# LOAD INVENTORIES FROM JSON (local only, for now)
+# =========================
+def _load_inventories_json():
+    """
+    Loads and validates the local inventories.json.
+
+    A local file is considered VALID if:
+        - it exists,
+        - it parses successfully as JSON,
+        - the parsed value is a dict.
+    A valid file that parses to an empty dict ({}) is a legitimate,
+    valid inventory set -- e.g. a brand new bot with no claims yet --
+    and is NOT treated as invalid.
+
+    Returns:
+        - the parsed dict (possibly empty) if valid.
+        - None if the file is missing, unreadable, contains malformed
+          JSON, or parses to something other than a dict. None (not {})
+          is the signal for "invalid" specifically so callers can tell
+          a genuinely valid empty inventory apart from an invalid file
+          without relying on truthiness.
+    """
+    try:
+        with open('inventories.json', 'r') as f:
+            raw = f.read().strip()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        print("[inventories] Failed to read inventories.json:")
+        traceback.print_exc()
+        return None
+
+    if not raw:
+        print("[inventories] inventories.json is empty (not even '{}') -- treating as invalid.")
+        return None
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        print("[inventories] inventories.json contains invalid JSON.")
+        traceback.print_exc()
+        return None
+
+    if not isinstance(parsed, dict):
+        print(f"[inventories] inventories.json did not contain a JSON object "
+              f"(got {type(parsed).__name__}) -- treating as invalid.")
+        return None
+
+    return parsed
+
+
+# NOTE: the actual startup load (local-first, GitHub fallback) happens
+# further below, in _sync_inventories_from_github_at_startup(), once the
+# GitHub helpers it needs are defined. This is still the single
+# load-into-memory step -- nothing here runs it yet.
+
+
 # Initialize intents
 intents = discord.Intents.all()
 
@@ -42,6 +100,25 @@ CLAIM_COOLDOWN = 300
 CLAIM_TIME_LIMIT = 90  # seconds a dropped card stays claimable before its buttons expire
 CARDS_PER_PAGE = 10
 THEME_COLOR = discord.Color.from_rgb(255, 227, 102)
+
+# "Drop Powers": for this many seconds after a drop is posted, only the
+# user who dropped it may claim from it. Ends early the moment the
+# dropper successfully claims either card. Separate from DROP_COOLDOWN
+# (which gates how often a user may drop) and CLAIM_COOLDOWN (which
+# gates how often a user may claim) -- neither of those changes.
+DROP_PRIORITY_SECONDS = 6
+
+# Command anti-spam (ld / lg / lt / lcd): NOT the real gameplay
+# cooldowns (DROP_COOLDOWN/CLAIM_COOLDOWN above), which are untouched.
+# This only stops a user from rapidly double/triple-firing the same
+# command. If the same command is used twice within
+# COMMAND_SPAM_WINDOW_SECONDS, further attempts are blocked for
+# COMMAND_SPAM_BLOCK_SECONDS.
+COMMAND_SPAM_WINDOW_SECONDS = 5
+COMMAND_SPAM_BLOCK_SECONDS = 3
+
+# lpin / lunpin
+MAX_PINNED_CARDS = 3
 
 # Channel where a "new card added" announcement is posted after a
 # successful laddcard. Set to 0 to disable; if the channel can't be found
@@ -56,6 +133,34 @@ active_trades = {}
 active_gifts = {}
 user_viewing_inventory = {}
 
+# Command anti-spam state (see COMMAND_SPAM_* above). Keyed by
+# (user_id, command_name); purely in-memory, not persisted.
+_command_spam_last_used = {}
+_command_spam_blocked_until = {}
+
+
+def is_command_spam(user_id, command_name: str) -> bool:
+    """
+    Returns True if this invocation of `command_name` by `user_id`
+    should be silently rate-limited as spam (not the real gameplay
+    cooldown -- just rapid double/triple-firing of the same command).
+    Records this attempt's timestamp as a side effect.
+    """
+    now = time.time()
+    key = (user_id, command_name)
+
+    if now < _command_spam_blocked_until.get(key, 0):
+        return True
+
+    last = _command_spam_last_used.get(key)
+    _command_spam_last_used[key] = now
+
+    if last is not None and (now - last) < COMMAND_SPAM_WINDOW_SECONDS:
+        _command_spam_blocked_until[key] = now + COMMAND_SPAM_BLOCK_SECONDS
+        return True
+
+    return False
+
 # Guards every write transaction that touches the card database: the
 # in-memory `cards` list, cards.json, GitHub sync, and card_art/ files.
 # Held for the full transaction (mutate -> GitHub commit -> local
@@ -64,6 +169,13 @@ user_viewing_inventory = {}
 # other's changes. Never used by read-only paths (ld, lookups, inventory,
 # claiming, trading, gifting, rendering).
 cards_lock = asyncio.Lock()
+
+# Same idea as cards_lock, but for the `inventories` dict / local
+# inventories.json save. Held for the mutate + save transaction so two
+# inventory changes (e.g. two simultaneous claims) can never interleave
+# and silently overwrite each other. Local-only for now -- no GitHub
+# sync, no background tasks -- per the incremental rebuild plan.
+inventories_lock = asyncio.Lock()
 
 # Create card_art directory if it doesn't exist
 if not os.path.exists('card_art'):
@@ -153,9 +265,17 @@ def card_version_label(card):
 
 
 def save_cards_json():
-    """Saves the cards list to cards.json"""
-    with open('cards.json', 'w') as f:
-        json.dump(cards, f, indent=2)
+    """
+    Saves the cards list to cards.json, atomically (via
+    _atomic_write_bytes): written to a temp file in the same directory,
+    then moved into place with os.replace(). This guarantees the file on
+    disk is always either the complete old version or the complete new
+    version -- never truncated or partially written, even if the
+    process is killed or an exception occurs mid-write. Previously this
+    used a plain open(..., "w"), which had no such guarantee.
+    """
+    cards_json_bytes = json.dumps(cards, indent=2).encode("utf-8")
+    _atomic_write_bytes("cards.json", cards_json_bytes)
 
 
 def _atomic_write_bytes(path: str, data: bytes) -> None:
@@ -191,6 +311,122 @@ def _atomic_write_bytes(path: str, data: bytes) -> None:
         except OSError:
             pass
         raise
+
+
+def _inventories_json_bytes() -> bytes:
+    """Serializes the current in-memory `inventories` dict to JSON bytes."""
+    return json.dumps(inventories, indent=2).encode("utf-8")
+
+
+def save_inventories_local() -> None:
+    """
+    Writes the current in-memory `inventories` dict to inventories.json
+    on disk, atomically (via _atomic_write_bytes). Called immediately
+    after every successful inventory mutation (claim/gift/trade).
+
+    Local-only for now: no GitHub sync, no debouncing, no background
+    tasks -- this is deliberately just the local-persistence half, per
+    the incremental rebuild plan. Raises (after printing a full
+    traceback) on failure so the caller can roll back its in-memory
+    mutation; inventories.json itself is never left partially written,
+    since _atomic_write_bytes only ever produces the complete old file
+    or the complete new file.
+    """
+    try:
+        _atomic_write_bytes("inventories.json", _inventories_json_bytes())
+    except Exception:
+        print("[inventories] Failed to save inventories.json locally:")
+        traceback.print_exc()
+        raise
+
+
+# How often (at most) inventories.json is pushed to GitHub. Local saves
+# still happen immediately on every mutation regardless of this value --
+# this only paces the GitHub half of persistence. Single configurable
+# constant, per spec.
+INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS = 300
+
+# Handle for the single running instance of inventory_github_sync_loop()
+# (started once from Client.on_ready below). Kept at module level --
+# rather than as a Client instance attribute -- so Client.__init__
+# doesn't need to be touched; on_ready() only needs to read/set this one
+# name to guard against starting a duplicate after a reconnect.
+_inventory_sync_task = None
+
+# Set True (under inventories_lock, immediately after a successful
+# save_inventories_local()) whenever inventories.json has local changes
+# not yet pushed to GitHub. Cleared by inventory_github_sync_loop() once
+# it has snapshotted the data for an upload.
+_inventories_dirty = False
+
+# Defensive guard against a concurrent upload. Not strictly required by
+# the loop's own control flow (it's sequential: one iteration's upload
+# always completes, or fails, before the next begins), but kept as an
+# explicit belt-and-suspenders check so "never run two uploads at once"
+# holds even if this loop is ever called from more than one place.
+_inventory_upload_in_progress = False
+
+
+def mark_inventories_dirty() -> None:
+    """
+    Marks that inventories.json has local changes not yet pushed to
+    GitHub. Must be called while holding inventories_lock, immediately
+    after a successful save_inventories_local(), as part of the same
+    mutate -> save -> mark-dirty transaction. Does not touch the
+    network -- just flips a flag for inventory_github_sync_loop() to
+    notice on its next cycle.
+    """
+    global _inventories_dirty
+    _inventories_dirty = True
+
+
+async def inventory_github_sync_loop():
+    """
+    Background task: wakes up every INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS
+    and, only if inventories.json has unpushed local changes, performs
+    exactly one GitHub commit containing the current inventories --
+    coalescing any number of claims/gifts/trades from that interval into
+    a single upload, instead of committing on every mutation. Reuses the
+    exact same GitHub commit helper already used for cards.json
+    (github_commit_files) -- no second GitHub system.
+
+    inventories_lock is only held for the brief snapshot + dirty-flag
+    read/write, never across the actual network call, so this never
+    blocks a claim/gift/trade for the duration of a GitHub upload.
+
+    If a mutation happens while an upload is in flight, it re-sets the
+    dirty flag (via mark_inventories_dirty(), under the lock) after this
+    loop already snapshotted and cleared it -- so that change is picked
+    up and pushed on the *next* cycle, one interval later, rather than
+    being lost or triggering an immediate second upload.
+
+    On failure, the dirty flag is restored so the next cycle retries; a
+    GitHub outage never rolls back or otherwise affects gameplay, since
+    the local save that already succeeded is untouched.
+    """
+    global _inventories_dirty, _inventory_upload_in_progress
+    while True:
+        await asyncio.sleep(INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS)
+
+        if not _inventories_dirty or _inventory_upload_in_progress:
+            continue
+
+        async with inventories_lock:
+            if not _inventories_dirty:
+                continue
+            data = _inventories_json_bytes()
+            _inventories_dirty = False
+
+        _inventory_upload_in_progress = True
+        try:
+            await github_commit_files({"inventories.json": data}, "Batched inventory sync")
+        except Exception:
+            print("[inventories] Periodic GitHub sync failed (will retry next cycle):")
+            traceback.print_exc()
+            async with inventories_lock:
+                _inventories_dirty = True
+        finally:
+            _inventory_upload_in_progress = False
 
 
 # Fields every card entry is expected to have (used by lsync / leditcard).
@@ -447,6 +683,117 @@ async def github_commit_changes(write_files, delete_paths, commit_message):
     return await asyncio.to_thread(_github_commit_changes_sync, write_files, delete_paths, commit_message)
 
 
+def _github_get_file_sync(path: str):
+    """
+    Downloads a single file's raw bytes from the GitHub repo via the
+    Contents API. Read-only; separate from the blob/tree/commit write
+    machinery above and doesn't touch it. Returns None (never raises) if
+    credentials aren't configured, the file doesn't exist in the repo, or
+    the request fails for any reason (network issue, GitHub outage,
+    etc.) -- callers fall back to local data in that case.
+    """
+    token = os.environ.get("GITHUB_TOKEN")
+    owner = os.environ.get("GITHUB_USERNAME")
+    repo = os.environ.get("GITHUB_REPO")
+    branch = os.environ.get("GITHUB_BRANCH")
+
+    if not all([token, owner, repo, branch]):
+        print(f"[github] Skipping download of {path!r}: missing GitHub environment variable(s).")
+        return None
+
+    try:
+        headers = _github_headers(token)
+        url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+        resp = requests.get(url, headers=headers, params={"ref": branch}, timeout=15)
+        if resp.status_code == 404:
+            return None
+        if resp.status_code != 200:
+            raise Exception(f"Failed to download {path} ({resp.status_code}): {resp.text}")
+        payload = resp.json()
+        if payload.get("encoding") != "base64" or "content" not in payload:
+            raise Exception(f"Unexpected response shape downloading {path}: {payload!r}")
+        return base64.b64decode(payload["content"])
+    except Exception:
+        print(f"[github] Failed to download {path} from GitHub:")
+        traceback.print_exc()
+        return None
+
+
+async def github_get_file(path: str):
+    """Async wrapper so the blocking GitHub API call doesn't block the event loop."""
+    return await asyncio.to_thread(_github_get_file_sync, path)
+
+
+async def _sync_inventories_from_github_at_startup() -> dict:
+    """
+    Startup-only, single load into memory.
+
+    IMPORTANT: local disk is now the preferred/authoritative source, not
+    GitHub. This is a deliberate change from the immediate-sync design:
+    now that GitHub uploads are debounced (see
+    INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS), every mutation is written to
+    inventories.json locally *immediately*, while the GitHub copy is
+    only a periodic (at most once every interval) mirror of that. GitHub
+    can therefore legitimately lag local disk by up to that interval at
+    any given moment -- e.g. right after a crash/restart that happened
+    before the next scheduled upload. Local disk is always >= GitHub in
+    recency by construction, so preferring GitHub here would risk
+    silently reverting confirmed, already-saved local changes.
+
+        1. If local inventories.json is VALID -- see
+           _load_inventories_json() for the exact criteria (exists,
+           parses, is a dict) -- use it, even if it's an empty dict.
+           An empty dict is a legitimate inventory set (e.g. a brand
+           new bot with no claims yet), not a reason to fall back.
+        2. Only if local is missing, unreadable, malformed, or not a
+           dict -- which should only really happen on a brand-new
+           deploy/container that has never written the file, or a
+           corrupted file -- try downloading from GitHub as a backfill.
+        3. If both are invalid/unavailable, start with an empty
+           inventory set.
+
+    Exactly one load; nothing polls, retries, or reloads after this.
+    """
+    local_inventories = _load_inventories_json()
+    if local_inventories is not None:
+        print("[inventories] Loaded inventories.json from local disk.")
+        return local_inventories
+
+    print("[inventories] Local inventories.json is missing/unreadable/malformed -- trying GitHub as a backfill.")
+    remote_bytes = await github_get_file("inventories.json")
+
+    if remote_bytes is None:
+        print("[inventories] GitHub unavailable or has no inventories.json -- starting with empty inventories.")
+        return {}
+
+    try:
+        remote_inventories = json.loads(remote_bytes.decode("utf-8") or "{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        print("[inventories] Downloaded inventories.json from GitHub was not valid JSON -- starting with empty inventories.")
+        traceback.print_exc()
+        return {}
+
+    try:
+        _atomic_write_bytes("inventories.json", remote_bytes)
+        print("[inventories] Local inventories.json was missing/empty; backfilled from GitHub.")
+    except Exception:
+        print("[inventories] Backfilled from GitHub in memory, but failed to write inventories.json locally:")
+        traceback.print_exc()
+
+    return remote_inventories
+
+
+# `inventories` is the exact dict object defined in data.py, and every
+# command in this file (get_inventory/add_card/remove_card/etc.) reads
+# and writes that same object. We populate it in place -- rather than
+# rebinding the name `inventories` to a new dict -- so it stays the
+# single source of truth everywhere it's referenced. This is the one and
+# only load into memory, done once here at startup, before the bot
+# connects. Nothing later re-triggers it -- no polling, no retry loop.
+inventories.clear()
+inventories.update(asyncio.run(_sync_inventories_from_github_at_startup()))
+
+
 def _convert_image_bytes_to_png_sync(raw_bytes):
     """
     Decodes raw uploaded image bytes (png, jpg, jpeg, webp, etc.) with
@@ -641,7 +988,7 @@ def get_gradient_color(frame_name: str) -> tuple:
 
 # Drop image (two cards combined) -- spacing matches the original renderer
 DROP_SPACING = 70
-DROP_UPSCALE = 2.0   # higher output resolution so Discord shows it bigger/sharper
+DROP_UPSCALE = 1.5   # higher output resolution so Discord shows it bigger/sharper
 
 _font_cache = {}
 
@@ -1311,8 +1658,12 @@ def render_drop(card1: dict, print1, card2: dict, print2) -> str:
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     # compress_level=1: same lossless tradeoff as render_card_final -- no
     # effect on decoded pixels, just faster encoding of the large combined
-    # (2x-upscaled) drop image.
+    # drop image.
     combined.save(temp_file.name, compress_level=1)
+
+    file_size_mb = os.path.getsize(temp_file.name) / 1_000_000
+    print(f"[Drop Render] Final image: {combined.size[0]}x{combined.size[1]}, {file_size_mb:.2f} MB")
+
     return temp_file.name
 
 
@@ -1320,15 +1671,45 @@ def render_drop(card1: dict, print1, card2: dict, print2) -> str:
 # 1. DROP VIEW
 # =========================
 class CardView(discord.ui.View):
-    def __init__(self, card1, card2):
+    def __init__(self, card1, card2, dropper_id):
         super().__init__(timeout=CLAIM_TIME_LIMIT)
         self.card1 = card1
         self.card2 = card2
         self.card1_claimed = False
         self.card2_claimed = False
 
+        # Drop priority ("Drop Powers"): for DROP_PRIORITY_SECONDS after
+        # this drop is posted, only `dropper_id` may claim. Ends early --
+        # before the timer runs out -- the instant the dropper lands a
+        # successful claim (see claim() below). Purely additive: nobody
+        # but the dropper is affected once the window closes, and the
+        # dropper themself is never restricted by it.
+        self.dropper_id = dropper_id
+        self.drop_time = time.time()
+        self.priority_active = True
+
+    def _priority_blocks(self, user_id) -> bool:
+        """
+        True if `user_id` must be silently ignored right now because the
+        dropper's exclusive priority window is still open. Never blocks
+        the dropper. Lazily turns itself off once the window naturally
+        expires, so it only needs to be checked here.
+        """
+        if user_id == self.dropper_id or not self.priority_active:
+            return False
+        if time.time() - self.drop_time >= DROP_PRIORITY_SECONDS:
+            self.priority_active = False
+            return False
+        return True
+
     async def claim(self, interaction, which, button):
         user_id = interaction.user.id
+
+        # Drop priority: anyone but the dropper is completely ignored
+        # during the window -- no response of any kind, per spec.
+        if self._priority_blocks(user_id):
+            return
+
         now = time.time()
 
         if user_id in claim_cooldowns:
@@ -1352,7 +1733,31 @@ class CardView(discord.ui.View):
 
         button.disabled = True
         claim_cooldowns[user_id] = now
-        add_card(user_id, card)
+
+        async with inventories_lock:
+            add_card(user_id, card)
+            try:
+                save_inventories_local()
+                mark_inventories_dirty()
+                if user_id == self.dropper_id:
+                    # Successful claim by the dropper ends the exclusive
+                    # window immediately, even if time remains on it.
+                    self.priority_active = False
+            except Exception:
+                # Roll back the claim entirely so a failed save never
+                # silently duplicates or loses a card, or blocks the
+                # user's next claim attempt.
+                get_inventory(user_id).pop(0)
+                if which == 1:
+                    self.card1_claimed = False
+                else:
+                    self.card2_claimed = False
+                button.disabled = False
+                claim_cooldowns.pop(user_id, None)
+                return await interaction.response.send_message(
+                    "❌ Something went wrong saving your claim. Please try again.",
+                    ephemeral=True
+                )
 
         await interaction.response.edit_message(view=self)
 
@@ -1424,12 +1829,15 @@ class InventoryView(discord.ui.View):
             series = card.get("series", "Unknown Series")
             star_val = card.get("stars", 1)
             print_num = owned_card["print"]
+            pin_prefix = "📌 " if owned_card.get("pinned") else ""
+            tags = owned_card.get("tags")
+            tag_prefix = f"`{tags}` • " if tags else ""
 
             text += (
-                f"`{display_number:02d}` ✦ "
+                f"{pin_prefix}`{display_number:02d}` ✦ "
                 f"• `{format_print(print_num)}` "
-                f"• `⭐ {star_val}` "
-                f"• **{name}** • *{series}*\n"
+                f"• `★ {star_val}` "
+                f"• {tag_prefix}**{name}** • *{series}*\n"
             )
 
         embed.description = text
@@ -1913,28 +2321,42 @@ class GiftView(discord.ui.View):
                 ephemeral=True
             )
 
-        giver_inv = get_inventory(self.from_id)
+        async with inventories_lock:
+            giver_inv = get_inventory(self.from_id)
 
-        if self.card_index >= len(giver_inv):
-            return await interaction.response.send_message(
-                "This card is no longer available to trade.",
-                ephemeral=True
-            )
+            if self.card_index >= len(giver_inv):
+                return await interaction.response.send_message(
+                    "This card is no longer available to trade.",
+                    ephemeral=True
+                )
 
-        current_owned_card = giver_inv[self.card_index]
+            current_owned_card = giver_inv[self.card_index]
 
-        if (
-            current_owned_card["card"]["id"] != self.card["id"]
-            or current_owned_card["print"] != self.print_num
-        ):
-            return await interaction.response.send_message(
-                "This card is no longer available to trade.",
-                ephemeral=True
-            )
+            if (
+                current_owned_card["card"]["id"] != self.card["id"]
+                or current_owned_card["print"] != self.print_num
+            ):
+                return await interaction.response.send_message(
+                    "This card is no longer available to trade.",
+                    ephemeral=True
+                )
 
-        # Remove from giver by index and insert to receiver newest-first
-        moved_card = remove_card(self.from_id, self.card_index)
-        get_inventory(self.to_id).insert(0, moved_card)
+            # Remove from giver by index and insert to receiver newest-first
+            moved_card = remove_card(self.from_id, self.card_index)
+            get_inventory(self.to_id).insert(0, moved_card)
+
+            try:
+                save_inventories_local()
+                mark_inventories_dirty()
+            except Exception:
+                # Roll back the transfer so a failed save never silently
+                # duplicates or loses the card.
+                get_inventory(self.to_id).pop(0)
+                giver_inv.insert(self.card_index, moved_card)
+                return await interaction.response.send_message(
+                    "❌ Something went wrong saving this gift. Please try again.",
+                    ephemeral=True
+                )
 
         accepted_embed, file = self.build_embed(
             self.to_user,
@@ -2286,20 +2708,35 @@ class TradeView(discord.ui.View):
             # finalize trade: remove the correct entries by matching card id + print
             try:
                 if self.user1_card and self.user2_card:
-                    inv1 = get_inventory(self.user1_id)
-                    inv2 = get_inventory(self.user2_id)
+                    async with inventories_lock:
+                        inv1 = get_inventory(self.user1_id)
+                        inv2 = get_inventory(self.user2_id)
 
-                    # find by id + print to be robust against index shifts
-                    seq1_match_idx = next((i for i,c in enumerate(inv1) if c["card"]["id"] == self.user1_card["card"]["id"] and c["print"] == self.user1_card["print"]), None)
-                    seq2_match_idx = next((i for i,c in enumerate(inv2) if c["card"]["id"] == self.user2_card["card"]["id"] and c["print"] == self.user2_card["print"]), None)
+                        # find by id + print to be robust against index shifts
+                        seq1_match_idx = next((i for i,c in enumerate(inv1) if c["card"]["id"] == self.user1_card["card"]["id"] and c["print"] == self.user1_card["print"]), None)
+                        seq2_match_idx = next((i for i,c in enumerate(inv2) if c["card"]["id"] == self.user2_card["card"]["id"] and c["print"] == self.user2_card["print"]), None)
 
-                    if seq1_match_idx is not None and seq2_match_idx is not None:
-                        c1 = inv1.pop(seq1_match_idx)
-                        c2 = inv2.pop(seq2_match_idx)
-                        inv1.insert(0, c2)  # receiver gets new card newest-first
-                        inv2.insert(0, c1)
+                        if seq1_match_idx is not None and seq2_match_idx is not None:
+                            c1 = inv1.pop(seq1_match_idx)
+                            c2 = inv2.pop(seq2_match_idx)
+                            inv1.insert(0, c2)  # receiver gets new card newest-first
+                            inv2.insert(0, c1)
+
+                            try:
+                                save_inventories_local()
+                                mark_inventories_dirty()
+                            except Exception:
+                                # Roll back the swap so a failed save
+                                # never silently duplicates or loses
+                                # either card.
+                                inv1.pop(0)
+                                inv2.pop(0)
+                                inv1.insert(seq1_match_idx, c1)
+                                inv2.insert(seq2_match_idx, c2)
+                                raise
             except Exception as e:
                 print("TRADE FINALIZE ERROR:", e)
+                traceback.print_exc()
 
             embed = discord.Embed(color=THEME_COLOR)
             embed.title = "Trade Completed!"
@@ -2638,6 +3075,15 @@ class Client(discord.Client):
 
     async def on_ready(self):
         print(f"Logged in as {self.user}")
+        # Starts the periodic (every INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS)
+        # inventories.json GitHub sync exactly once. on_ready can fire
+        # again after a reconnect; the .done() check stops a second copy
+        # of the loop from ever running (it never returns normally, so
+        # .done() only becomes True if it died -- in which case starting
+        # a fresh one here is correct self-healing, not a duplicate).
+        global _inventory_sync_task
+        if _inventory_sync_task is None or _inventory_sync_task.done():
+            _inventory_sync_task = asyncio.create_task(inventory_github_sync_loop())
 
     async def on_message(self, message):
         # Ignore bot's own messages
@@ -3013,6 +3459,11 @@ class Client(discord.Client):
         # COOLDOWNS COMMAND (lcd)
         # =========================
         if content_lower == "lcd":
+            if is_command_spam(user_id, "lcd"):
+                return await message.channel.send(
+                    "Please wait a few seconds before using this command again."
+                )
+
             now = time.time()
 
             def _cooldown_status(seconds_remaining, ready_text):
@@ -3080,6 +3531,15 @@ class Client(discord.Client):
                         target_user = member
                         args = args[len(first_part):].strip()
 
+            # `-p`: display-order-only sort by print number ascending.
+            # Extracted as a standalone flag before the s:/c: filters
+            # below so it can never be mistaken for part of a query.
+            # Never changes inventory numbering.
+            arg_tokens = args.split()
+            sort_by_print = any(t.lower() == "-p" for t in arg_tokens)
+            if sort_by_print:
+                args = " ".join(t for t in arg_tokens if t.lower() != "-p")
+
             target_inv = get_inventory(target_user.id)
 
             # Attach each card's TRUE display number (its position in the
@@ -3111,6 +3571,17 @@ class Client(discord.Client):
                     if char_query in owned_card["card"].get("name", "").lower()
                 ]
 
+            if sort_by_print:
+                filtered_inventory.sort(key=lambda item: item[1]["print"])
+
+            # Pinned cards always appear first, regardless of any other
+            # sort/filter above -- a stable sort preserves whatever
+            # relative order was already established (newest-first
+            # normally, or print-ascending under -p) within each of the
+            # pinned/unpinned groups. Display order only; doesn't touch
+            # display_number, which was already fixed above.
+            filtered_inventory.sort(key=lambda item: not item[1].get("pinned", False))
+
             user_viewing_inventory[user_id] = target_user.id
 
             view = InventoryView(
@@ -3129,6 +3600,11 @@ class Client(discord.Client):
         # GIFT COMMAND (lg / lgift)
         # =========================
         if content_lower.startswith(("lgift ", "lg ")):
+            if is_command_spam(user_id, "lg"):
+                return await message.channel.send(
+                    "Please wait a few seconds before using this command again."
+                )
+
             if not message.mentions:
                 return await message.channel.send(
                     "Usage: `lgift @user <inventory number>`"
@@ -3201,9 +3677,250 @@ class Client(discord.Client):
             return
 
         # =========================
+        # LTAG COMMAND
+        # =========================
+        if content_lower.startswith("ltag "):
+            raw_args = content[5:].strip()
+            if not raw_args:
+                return await message.channel.send("Usage: `ltag <character> <tags>`")
+
+            words = raw_args.split()
+
+            # Leading inventory-number mode: "ltag 17 <tags>" or
+            # "ltag 17, 25, 81 <tags>" -- consume as many leading
+            # comma-separated-number tokens as match (e.g. "17,", "25,",
+            # "81", or a single token like "17,25,81"), then treat
+            # everything after as the tag text. Falls through to the
+            # existing character-name mode if no leading tokens match.
+            number_token = re.compile(r'^\d+(,\d+)*,?$')
+            inventory_numbers = []
+            consumed = 0
+            for w in words:
+                if number_token.fullmatch(w):
+                    inventory_numbers.extend(int(x) for x in re.findall(r'\d+', w))
+                    consumed += 1
+                else:
+                    break
+
+            if inventory_numbers and consumed < len(words):
+                tag_text = " ".join(words[consumed:]).strip()
+
+                if len(tag_text) > 10:
+                    return await message.channel.send("Tags cannot exceed 10 letter limit.")
+
+                target_indexes = []
+                invalid_numbers = []
+                for requested_num in inventory_numbers:
+                    card_index = len(inv) - requested_num
+                    if card_index < 0 or card_index >= len(inv):
+                        invalid_numbers.append(requested_num)
+                    else:
+                        target_indexes.append(card_index)
+
+                if not target_indexes:
+                    return await message.channel.send("Invalid inventory number(s).")
+
+                async with inventories_lock:
+                    previous_tags = {}
+                    for i in target_indexes:
+                        previous_tags[i] = inv[i].get("tags")
+                        inv[i]["tags"] = tag_text
+
+                    try:
+                        save_inventories_local()
+                        mark_inventories_dirty()
+                    except Exception:
+                        for i, old_value in previous_tags.items():
+                            if old_value is None:
+                                inv[i].pop("tags", None)
+                            else:
+                                inv[i]["tags"] = old_value
+                        return await message.channel.send(
+                            "❌ Something went wrong saving your tags. Please try again."
+                        )
+
+                updated = len(target_indexes)
+                note = ""
+                if invalid_numbers:
+                    note = f" (skipped invalid number(s): {', '.join(map(str, invalid_numbers))})"
+                return await message.channel.send(f"Updated {updated} card(s) with {tag_text}.{note}")
+
+            # Character-name mode: "ltag <character> <tags>". Longest-
+            # prefix match against character names the user actually
+            # owns, so multi-word names work without needing quotes --
+            # everything left over after the matched name is the tag
+            # text, exactly as typed.
+            owned_names = {oc["card"].get("name", "") for oc in inv}
+
+            match_name = None
+            tag_text = None
+            for word_count in range(len(words), 0, -1):
+                candidate = " ".join(words[:word_count])
+                found = next((n for n in owned_names if n.lower() == candidate.lower()), None)
+                if found:
+                    match_name = found
+                    tag_text = " ".join(words[word_count:]).strip()
+                    break
+
+            if not match_name:
+                return await message.channel.send(
+                    f"You don't own any cards matching **{words[0]}**."
+                )
+            if not tag_text:
+                return await message.channel.send("Usage: `ltag <character> <tags>`")
+
+            if len(tag_text) > 10:
+                return await message.channel.send("Tags cannot exceed 10 letter limit.")
+
+            async with inventories_lock:
+                previous_tags = {}
+                updated = 0
+                for i, owned_card in enumerate(inv):
+                    if owned_card["card"].get("name", "") == match_name:
+                        previous_tags[i] = owned_card.get("tags")
+                        owned_card["tags"] = tag_text
+                        updated += 1
+
+                try:
+                    save_inventories_local()
+                    mark_inventories_dirty()
+                except Exception:
+                    # Roll back so a failed save never leaves tags
+                    # applied only in memory.
+                    for i, old_value in previous_tags.items():
+                        if old_value is None:
+                            inv[i].pop("tags", None)
+                        else:
+                            inv[i]["tags"] = old_value
+                    return await message.channel.send(
+                        "❌ Something went wrong saving your tags. Please try again."
+                    )
+
+            return await message.channel.send(f"Updated {updated} {match_name} card(s) with {tag_text}.")
+
+        # =========================
+        # LUNTAG COMMAND
+        # =========================
+        if content_lower.startswith("luntag "):
+            raw_args = content[7:].strip()
+            if not raw_args:
+                return await message.channel.send("Usage: `luntag <character>`")
+
+            owned_names = {oc["card"].get("name", "") for oc in inv}
+            match_name = next((n for n in owned_names if n.lower() == raw_args.lower()), None)
+
+            if not match_name:
+                return await message.channel.send(f"You don't own any cards matching **{raw_args}**.")
+
+            async with inventories_lock:
+                previous_tags = {}
+                updated = 0
+                for i, owned_card in enumerate(inv):
+                    if owned_card["card"].get("name", "") == match_name and "tags" in owned_card:
+                        previous_tags[i] = owned_card["tags"]
+                        del owned_card["tags"]
+                        updated += 1
+
+                try:
+                    save_inventories_local()
+                    mark_inventories_dirty()
+                except Exception:
+                    for i, old_value in previous_tags.items():
+                        inv[i]["tags"] = old_value
+                    return await message.channel.send(
+                        "❌ Something went wrong saving your tags. Please try again."
+                    )
+
+            return await message.channel.send(f"Updated {updated} {match_name} card(s).")
+
+        # =========================
+        # LPIN COMMAND
+        # =========================
+        if content_lower.startswith("lpin "):
+            parts = content.split()
+            if len(parts) < 2:
+                return await message.channel.send("Usage: `lpin <inventory number>`")
+
+            try:
+                requested_num = int(parts[1])
+            except ValueError:
+                return await message.channel.send("Please provide a valid inventory number.")
+
+            card_index = len(inv) - requested_num
+            if card_index < 0 or card_index >= len(inv):
+                return await message.channel.send("Invalid inventory number.")
+
+            owned_card = inv[card_index]
+
+            if owned_card.get("pinned"):
+                return await message.channel.send("That card is already pinned.")
+
+            pinned_count = sum(1 for oc in inv if oc.get("pinned"))
+            if pinned_count >= MAX_PINNED_CARDS:
+                return await message.channel.send(
+                    f"You can only pin up to {MAX_PINNED_CARDS} cards. "
+                    f"Unpin one first with `lunpin <inventory number>`."
+                )
+
+            async with inventories_lock:
+                owned_card["pinned"] = True
+                try:
+                    save_inventories_local()
+                    mark_inventories_dirty()
+                except Exception:
+                    owned_card.pop("pinned", None)
+                    return await message.channel.send(
+                        "❌ Something went wrong saving your pin. Please try again."
+                    )
+
+            name = owned_card["card"].get("name", "Unknown")
+            return await message.channel.send(f"📌 Pinned **{name}**.")
+
+        # =========================
+        # LUNPIN COMMAND
+        # =========================
+        if content_lower.startswith("lunpin "):
+            parts = content.split()
+            if len(parts) < 2:
+                return await message.channel.send("Usage: `lunpin <inventory number>`")
+
+            try:
+                requested_num = int(parts[1])
+            except ValueError:
+                return await message.channel.send("Please provide a valid inventory number.")
+
+            card_index = len(inv) - requested_num
+            if card_index < 0 or card_index >= len(inv):
+                return await message.channel.send("Invalid inventory number.")
+
+            owned_card = inv[card_index]
+
+            if not owned_card.get("pinned"):
+                return await message.channel.send("That card isn't pinned.")
+
+            async with inventories_lock:
+                owned_card["pinned"] = False
+                try:
+                    save_inventories_local()
+                    mark_inventories_dirty()
+                except Exception:
+                    owned_card["pinned"] = True
+                    return await message.channel.send(
+                        "❌ Something went wrong saving your unpin. Please try again."
+                    )
+
+            name = owned_card["card"].get("name", "Unknown")
+            return await message.channel.send(f"Unpinned **{name}**.")
+
+        # =========================
         # TRADE COMMAND (lt / ltrade)
         # =========================
         if content_lower.startswith(("ltrade ", "lt")):
+            if is_command_spam(user_id, "lt"):
+                return await message.channel.send(
+                    "Please wait a few seconds before using this command again."
+                )
+
             target_user = None
 
             if message.reference:
@@ -3501,6 +4218,11 @@ class Client(discord.Client):
         # DROP CARDS COMMAND (ld)
         # =========================
         if content_lower == "ld":
+            if is_command_spam(user_id, "ld"):
+                return await message.channel.send(
+                    "Please wait a few seconds before using this command again."
+                )
+
             now = time.time()
 
             if user_id in drop_cooldowns:
@@ -3540,7 +4262,7 @@ class Client(discord.Client):
                 filename="drop.png"
             )
 
-            view = CardView(card1, card2)
+            view = CardView(card1, card2, dropper_id=user_id)
 
             drop_message = await message.channel.send(
                 content=f"{message.author.mention} is dropping 2 cards!",
@@ -3548,6 +4270,13 @@ class Client(discord.Client):
                 view=view
             )
             view.message = drop_message
+            # The priority window must start counting from the moment
+            # the drop is actually visible/clickable, not from
+            # CardView's construction above -- rendering and the upload
+            # itself can easily eat 1-3+ seconds, which was silently
+            # consuming the window before anyone could even see the
+            # buttons.
+            view.drop_time = time.time()
 
             try:
                 os.remove(image_path)
