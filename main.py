@@ -8,6 +8,7 @@ import random
 import re
 import time
 import asyncio
+import signal
 import requests
 import tempfile
 import json
@@ -353,6 +354,10 @@ INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS = 300
 # name to guard against starting a duplicate after a reconnect.
 _inventory_sync_task = None
 
+# Guards against registering the SIGTERM handler (see Client.on_ready)
+# more than once if on_ready fires again after a reconnect.
+_shutdown_handler_registered = False
+
 # Set True (under inventories_lock, immediately after a successful
 # save_inventories_local()) whenever inventories.json has local changes
 # not yet pushed to GitHub. Cleared by inventory_github_sync_loop() once
@@ -427,6 +432,41 @@ async def inventory_github_sync_loop():
                 _inventories_dirty = True
         finally:
             _inventory_upload_in_progress = False
+
+
+async def flush_inventories_to_github() -> None:
+    """
+    Best-effort final push of any pending (locally-saved but not yet
+    committed) inventory changes to GitHub. Called from Client.close()
+    on graceful shutdown (see below) so that a Railway redeploy -- which
+    sends SIGTERM to the outgoing container before replacing it with a
+    fresh one built from the latest GitHub state -- can't discard a
+    claim/trade/gift that was already confirmed and saved locally just
+    because it hadn't reached the next scheduled batch yet.
+
+    Keeps the batching/dirty-flag design entirely intact: this only
+    triggers one extra, early upload at shutdown time, using the exact
+    same snapshot-then-clear-then-push pattern as the periodic loop
+    above. If it fails, the dirty flag is restored so a normal restart
+    (without a clean shutdown) still retries via the periodic loop.
+    """
+    global _inventories_dirty
+
+    async with inventories_lock:
+        if not _inventories_dirty:
+            return
+        data = _inventories_json_bytes()
+        _inventories_dirty = False
+
+    try:
+        await github_commit_files({"inventories.json": data}, "Final inventory sync (shutdown)")
+        print("[inventories] Flushed pending inventory changes to GitHub before shutdown.")
+    except Exception:
+        async with inventories_lock:
+            _inventories_dirty = True
+        print("[inventories] Failed to flush pending inventory changes to GitHub on shutdown "
+              "(they remain saved locally):")
+        traceback.print_exc()
 
 
 # Fields every card entry is expected to have (used by lsync / leditcard).
@@ -792,6 +832,33 @@ async def _sync_inventories_from_github_at_startup() -> dict:
 # connects. Nothing later re-triggers it -- no polling, no retry loop.
 inventories.clear()
 inventories.update(asyncio.run(_sync_inventories_from_github_at_startup()))
+
+
+def _rebuild_card_prints_from_inventories() -> None:
+    """
+    Rebuilds the in-memory card_prints counter from the inventories that
+    were just loaded above, instead of relying on card_prints itself
+    surviving a restart (it doesn't -- it's never written to disk).
+
+    For every owned card in every user's inventory, keeps the highest
+    print number seen for that card's id. get_next_print() then resumes
+    counting up from there, so a restart (crash or Railway redeploy)
+    can no longer hand out a print number that's already owned by
+    someone else. Purely a read over the already-loaded `inventories`;
+    does not touch inventories.json's format or content, and does not
+    write anything to disk itself.
+    """
+    for owned_cards in inventories.values():
+        for owned_card in owned_cards:
+            card_id = owned_card.get("card", {}).get("id")
+            print_num = owned_card.get("print")
+            if card_id is None or not isinstance(print_num, int):
+                continue
+            if print_num > card_prints.get(card_id, 0):
+                card_prints[card_id] = print_num
+
+
+_rebuild_card_prints_from_inventories()
 
 
 def _convert_image_bytes_to_png_sync(raw_bytes):
@@ -3085,6 +3152,40 @@ class Client(discord.Client):
         if _inventory_sync_task is None or _inventory_sync_task.done():
             _inventory_sync_task = asyncio.create_task(inventory_github_sync_loop())
 
+        # Registers a SIGTERM handler exactly once so Railway's redeploy
+        # signal actually triggers a graceful close() (and therefore the
+        # shutdown flush below) -- Python does NOT do this on its own for
+        # SIGTERM (unlike SIGINT/Ctrl-C, which asyncio.run already turns
+        # into a clean shutdown). Without this, Railway's SIGTERM would
+        # just kill the process outright, skipping the flush entirely.
+        global _shutdown_handler_registered
+        if not _shutdown_handler_registered:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.add_signal_handler(signal.SIGTERM, lambda: asyncio.create_task(self.close()))
+                _shutdown_handler_registered = True
+            except (NotImplementedError, RuntimeError):
+                # add_signal_handler isn't available on some platforms
+                # (e.g. Windows); Railway's containers are Linux, so this
+                # should always succeed there, but don't fail startup if
+                # it's ever unavailable.
+                pass
+
+    async def close(self):
+        # Best-effort: push any inventory changes saved locally since
+        # the last periodic sync before the process actually exits.
+        # Triggered both by the SIGTERM handler above (Railway redeploy)
+        # and by discord.py's own normal shutdown path. Keeps the
+        # batched/dirty-flag design entirely intact -- this is only one
+        # extra, early flush at shutdown, not a change to how batching
+        # works day-to-day.
+        try:
+            await flush_inventories_to_github()
+        except Exception:
+            print("[inventories] Failed to flush pending inventory changes on shutdown:")
+            traceback.print_exc()
+        await super().close()
+
     async def on_message(self, message):
         # Ignore bot's own messages
         if message.author == self.user:
@@ -3253,8 +3354,6 @@ class Client(discord.Client):
                             card_id = generate_card_id(char_name, is_rare)
                             save_path = f"card_art/{card_id}.png"
 
-                        _atomic_write_bytes(save_path, image_data)
-
                         # Create the card object
                         new_card = {
                             "id": card_id,
@@ -3266,9 +3365,36 @@ class Client(discord.Client):
                             "frame": frame_name
                         }
 
-                        # Add to cards list and save
+                        # Mutate in-memory first so the cards.json payload
+                        # below includes the new card, then push to GitHub
+                        # FIRST -- same safety pattern as
+                        # lupdateimage/persist_and_sync -- and only mirror
+                        # locally once that succeeds. Previously this saved
+                        # locally only and never reached GitHub, so a new
+                        # card would vanish on the next Railway redeploy
+                        # (a fresh checkout never had it).
                         cards.append(new_card)
-                        save_cards_json()
+
+                        try:
+                            cards_json_bytes = json.dumps(cards, indent=2).encode("utf-8")
+                            github_files = {
+                                save_path: image_data,
+                                "cards.json": cards_json_bytes,
+                            }
+                            commit_message = f"Added card {card_id}"
+
+                            await github_commit_files(github_files, commit_message)
+
+                            # GitHub commit succeeded -- now mirror locally.
+                            _atomic_write_bytes(save_path, image_data)
+                            save_cards_json()
+                        except Exception:
+                            # Roll back the in-memory addition so a failed
+                            # GitHub push never leaves a card that only
+                            # exists in memory (and would vanish silently
+                            # on the next restart anyway).
+                            cards.pop()
+                            raise
 
                     await message.channel.send(f"✅ Card created successfully!\n**ID:** `{card_id}`\n**Name:** {char_name}\n**Series:** {series}\n**Stars:** {stars_val}\n**Frame:** {frame_name}")
 
