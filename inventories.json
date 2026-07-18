@@ -32,6 +32,19 @@
   "1028357602121351268": [
     {
       "card": {
+        "id": "dabi_common",
+        "name": "Dabi",
+        "series": "My Hero Academia",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/dabi_common.png",
+        "frame": "common"
+      },
+      "print": 2,
+      "claimed_at": 1784410400.9471736
+    },
+    {
+      "card": {
         "id": "hirofumi_common",
         "name": "Hirofumi Yoshida",
         "series": "Chainsaw Man",
@@ -134,7 +147,21 @@
       "claimed_at": 1784410077.8485687
     }
   ],
-  "770651160695537697": [],
+  "770651160695537697": [
+    {
+      "card": {
+        "id": "yeon_rare",
+        "name": "Lee Yeon",
+        "series": "Red Thread Quest",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/yeon_rare.png",
+        "frame": "blue"
+      },
+      "print": 1,
+      "claimed_at": 1784410353.956265
+    }
+  ],
   "751661073727225887": [
     {
       "card": {
@@ -151,6 +178,19 @@
     }
   ],
   "667365610748903445": [
+    {
+      "card": {
+        "id": "hong_common",
+        "name": "Hong Lu",
+        "series": "Limbus Company",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/hong_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784410452.0161335
+    },
     {
       "card": {
         "id": "hachiware_common",
@@ -242,6 +282,19 @@
     }
   ],
   "1482470698038460459": [
+    {
+      "card": {
+        "id": "stark_common",
+        "name": "Stark",
+        "series": "Frieren: Beyond Journey\u2019s End",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/stark_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784410453.7388973
+    },
     {
       "card": {
         "id": "phainon_rare",
@@ -375,7 +428,8 @@
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784410196.1985004
+      "claimed_at": 1784410196.1985004,
+      "tags": "\ud83c\udf75"
     }
   ],
   "872293015698415668": [
@@ -408,7 +462,21 @@
       "claimed_at": 1784410159.3472488
     }
   ],
-  "1114684923824066720": [],
+  "1114684923824066720": [
+    {
+      "card": {
+        "id": "l_common",
+        "name": "L Lawliet",
+        "series": "Death Note",
+        "stars": 3,
+        "weight": 10,
+        "image": "card_art/l_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784410412.581663
+    }
+  ],
   "1194747459101007873": [
     {
       "card": {
@@ -591,7 +659,8 @@
         "frame": "common"
       },
       "print": 1,
-      "claimed_at": 1784410270.8450718
+      "claimed_at": 1784410270.8450718,
+      "tags": "$\ufe55\u1e9c\ud835\ude35\u1e9cs\u05c4"
     }
   ],
   "1271962211606204560": [
@@ -609,5 +678,80 @@
       "claimed_at": 1784410284.6037269
     }
   ],
-  "1380617653248589924": []
+  "1380617653248589924": [
+    {
+      "card": {
+        "id": "kurapika_common",
+        "name": "Kurapika",
+        "series": "Hunter x Hunter",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/kurapika_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784410305.2292998
+    }
+  ],
+  "789544317085548614": [
+    {
+      "card": {
+        "id": "won_common",
+        "name": "Won Yo-il",
+        "series": "Save The Dae",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/won_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784410359.688926
+    }
+  ],
+  "894445820613644318": [
+    {
+      "card": {
+        "id": "muichiro_common",
+        "name": "Muichiro Tokito",
+        "series": "Kimetsu no Yaiba",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/muichiro_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784410409.0341384
+    }
+  ],
+  "1343044120058531912": [
+    {
+      "card": {
+        "id": "nahida_common",
+        "name": "Nahida",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/nahida_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784410391.1885076
+    }
+  ],
+  "889013975046574091": [
+    {
+      "card": {
+        "id": "boothill_common",
+        "name": "Boothill",
+        "series": "Honkai: Star Rail",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/boothill_common.png",
+        "frame": "common"
+      },
+      "print": 1,
+      "claimed_at": 1784410455.8772845
+    }
+  ],
+  "930186314295427082": []
 }
