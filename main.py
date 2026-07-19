@@ -246,6 +246,22 @@ def get_weighted_card():
     return random.choice(weighted)
 
 
+# Intended drop weight per star rating -- higher stars are rarer, so they
+# get a lower weight. Used both for new cards (laddcard) and the one-time
+# migration of existing cards.
+STAR_WEIGHTS = {
+    1: 10,
+    2: 10,
+    3: 8,
+    4: 5,
+}
+
+
+def weight_for_stars(stars_val: int) -> int:
+    """Returns the intended drop weight for a given star rating, per STAR_WEIGHTS."""
+    return STAR_WEIGHTS.get(stars_val, 10)
+
+
 def format_print(print_num):
     """Formats print number for display."""
     if print_num < 100:
@@ -834,6 +850,25 @@ inventories.clear()
 inventories.update(asyncio.run(_sync_inventories_from_github_at_startup()))
 
 
+# One-time migration: every existing card previously had a hardcoded
+# "weight": 10 regardless of its star rating, so rarity never actually
+# affected drop odds. This corrects each card's weight to match
+# STAR_WEIGHTS based on its existing "stars" value. Idempotent -- it only
+# writes cards.json if a card's weight actually needed changing, so on
+# every later startup (once all cards already match) this is a no-op.
+# One-time, startup-only pass -- nothing polls or re-runs this later.
+_weights_migrated = 0
+for _card in cards:
+    _correct_weight = weight_for_stars(_card.get("stars", 1))
+    if _card.get("weight") != _correct_weight:
+        _card["weight"] = _correct_weight
+        _weights_migrated += 1
+
+if _weights_migrated:
+    save_cards_json()
+    print(f"[cards] Migrated weight for {_weights_migrated} card(s) to match their star rating.")
+
+
 def _rebuild_card_prints_from_inventories() -> None:
     """
     Rebuilds the in-memory card_prints counter from the inventories that
@@ -1004,6 +1039,15 @@ SERIES_LINE_SPACING = 50
 # match the original renderer's placement more closely.
 PRINT_POS_COMMON = (1030, 325)
 PRINT_POS_RARE = (380, 295)
+
+# Print text is drawn left-anchored (anchor="la"), so it grows rightward
+# from a fixed left edge as digits are added. A single digit (1-9) is
+# already visually centered where it should be; two digits (10-99) and
+# three digits (100) then extend further right than intended, so the x
+# position is nudged left by these amounts to compensate. Legacy prints
+# ("L") are a single character and use no shift, same as single digits.
+PRINT_X_SHIFT_2_DIGITS = -3
+PRINT_X_SHIFT_3_DIGITS = -7
 
 # Gradient (Kita/Gachapon style: dark gray, not pure black) -- shorter now
 # so it covers less of the artwork and the card reads brighter overall.
@@ -1545,7 +1589,15 @@ def render_card(card: dict, print_num, hide_print: bool = False) -> Image.Image:
     if not hide_print:
         print_text = format_print(print_num).lstrip("#")
         print_font = get_font(PRINT_FONT_SIZE)
-        print_pos = PRINT_POS_RARE if rare else PRINT_POS_COMMON
+        base_x, base_y = PRINT_POS_RARE if rare else PRINT_POS_COMMON
+
+        if print_text.isdigit():
+            if len(print_text) == 2:
+                base_x += PRINT_X_SHIFT_2_DIGITS
+            elif len(print_text) >= 3:
+                base_x += PRINT_X_SHIFT_3_DIGITS
+
+        print_pos = (base_x, base_y)
         draw_text_with_outline(draw, print_pos, print_text, print_font, anchor="la")
 
     # 6. Character name (large) -- shrinks and/or wraps to two balanced
@@ -2001,6 +2053,64 @@ class LookupListView(discord.ui.View):
 # 4. CHARACTER VERSION VIEW
 # =========================
 
+OWNERS_PER_PAGE = 10
+
+
+class OwnersPaginationView(discord.ui.View):
+    """
+    Paginates an already-fetched list of owner lines (10 per page). All
+    member fetching happens once, up front, before this view is ever
+    shown -- paging back and forth here never makes another API call, so
+    it can't hit an interaction timeout.
+    """
+    def __init__(self, user_id, card_name, lines):
+        super().__init__(timeout=90)
+        self.user_id = user_id
+        self.card_name = card_name
+        self.lines = lines
+        self.page = 0
+        self.max_page = max(0, (len(lines) - 1) // OWNERS_PER_PAGE) if lines else 0
+        self._update_button_states()
+
+    def _update_button_states(self):
+        self.previous.disabled = (self.page <= 0)
+        self.next.disabled = (self.page >= self.max_page)
+
+    def build_embed(self):
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.title = f"**{self.card_name} Owners**"
+
+        if not self.lines:
+            embed.description = "Nobody owns this card yet."
+        else:
+            start = self.page * OWNERS_PER_PAGE
+            page_lines = self.lines[start:start + OWNERS_PER_PAGE]
+            embed.description = "\n".join(page_lines)
+            embed.set_footer(text=f"Page {self.page + 1}/{self.max_page + 1}")
+
+        return embed
+
+    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+
+        if self.page > 0:
+            self.page -= 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+
+        if self.page < self.max_page:
+            self.page += 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+
 class CharacterVersionView(discord.ui.View):
     def __init__(self, versions, user, user_id):
         super().__init__(timeout=60)
@@ -2096,6 +2206,12 @@ class CharacterVersionView(discord.ui.View):
                 ephemeral=True
             )
 
+        # Defer immediately, before any member-fetching -- fetch_member
+        # below is a real API call per uncached member, and with enough
+        # owners that can easily blow past Discord's 3-second initial
+        # response window. Deferring extends that to ~15 minutes.
+        await interaction.response.defer()
+
         card = self.versions[self.index]
 
         owners = []
@@ -2103,37 +2219,35 @@ class CharacterVersionView(discord.ui.View):
         for owner_id, inventory in inventories.items():
             for owned in inventory:
                 if owned["card"]["id"] == card["id"]:
-                    owners.append((owned["print"], owner_id))
+                    print_num = owned["print"]
+                    # Only standard prints (#1-#100) are ever shown --
+                    # Legacy (L) prints are anything above 100, per
+                    # format_print(). This also caps the list at 100
+                    # owners -> a maximum of 10 pages.
+                    if print_num <= 100:
+                        owners.append((print_num, owner_id))
 
         owners.sort()
 
-        embed = discord.Embed(color=THEME_COLOR)
-        embed.title = f"**{card['name']} Owners**"
+        lines = []
+        for print_num, owner_id in owners:
+            member = interaction.guild.get_member(owner_id)
 
-        if not owners:
-            embed.description = "Nobody owns this card yet."
+            if member is None:
+                try:
+                    member = await interaction.guild.fetch_member(owner_id)
+                except:
+                    continue
 
-        else:
-            lines = []
+            lines.append(
+                f"`{format_print(print_num)}.` • {member.mention}"
+            )
 
-            for print_num, owner_id in owners:
+        owners_view = OwnersPaginationView(self.user_id, card['name'], lines)
 
-                member = interaction.guild.get_member(owner_id)
-
-                if member is None:
-                    try:
-                        member = await interaction.guild.fetch_member(owner_id)
-                    except:
-                        continue
-
-                lines.append(
-                    f"`{format_print(print_num)}.` • {member.mention}"
-                )
-
-            embed.description = "\n".join(lines)
-
-        await interaction.response.send_message(
-            embed=embed
+        await interaction.followup.send(
+            embed=owners_view.build_embed(),
+            view=owners_view
         )
 
     @discord.ui.button(
@@ -2639,6 +2753,9 @@ class TradeRequestView(discord.ui.View):
 # 8. TRADE VIEW
 # =========================
 
+MAX_TRADE_CARDS = 3
+
+
 class TradeView(discord.ui.View):
     def __init__(self, user1, user2, user1_id, user2_id):
         super().__init__(timeout=None)
@@ -2646,10 +2763,10 @@ class TradeView(discord.ui.View):
         self.user2 = user2
         self.user1_id = user1_id
         self.user2_id = user2_id
-        self.user1_card = None
-        self.user1_card_index = None
-        self.user2_card = None
-        self.user2_card_index = None
+        self.user1_cards = []
+        self.user1_card_indices = []
+        self.user2_cards = []
+        self.user2_card_indices = []
         self.user1_locked = False
         self.user2_locked = False
         self.user1_confirmed = False
@@ -2679,28 +2796,29 @@ class TradeView(discord.ui.View):
             user1_status = "Completed!" if self.user1_confirmed else "Completing"
             user2_status = "Completed!" if self.user2_confirmed else "Completing"
 
-        def format_offer(user, owned_card, card_index, status):
+        def format_offer(user, owned_cards, card_indices, status):
             block = f"> ## {trade_emoji} {user.mention} is offering... - {status}\n"
-            if owned_card:
-                card = owned_card["card"]
-                name = card.get("name", "Unknown")
-                series = card.get("series", "Unknown Series")
-                print_num = owned_card["print"]
-                star_val = card.get("stars", 1)
-                if card_index is not None:
-                    # Same descending scheme as the inventory display:
-                    # highest number = newest/top of the owner's inventory.
-                    owner_inv_len = len(get_inventory(user.id))
-                    inv_num = owner_inv_len - card_index
-                else:
-                    inv_num = "?"
-                block += f"### `{inv_num} • {format_print(print_num)} • ☆{star_val} • {name} • {series}`\n"
+            if owned_cards:
+                owner_inv_len = len(get_inventory(user.id))
+                for owned_card, card_index in zip(owned_cards, card_indices):
+                    card = owned_card["card"]
+                    name = card.get("name", "Unknown")
+                    series = card.get("series", "Unknown Series")
+                    print_num = owned_card["print"]
+                    star_val = card.get("stars", 1)
+                    if card_index is not None:
+                        # Same descending scheme as the inventory display:
+                        # highest number = newest/top of the owner's inventory.
+                        inv_num = owner_inv_len - card_index
+                    else:
+                        inv_num = "?"
+                    block += f"### `{inv_num} • {format_print(print_num)} • ☆{star_val} • {name} • {series}`\n"
             else:
                 block += "### `No cards selected yet.`\n"
             return block
 
-        user1_text = format_offer(self.user1, self.user1_card, self.user1_card_index, user1_status)
-        user2_text = format_offer(self.user2, self.user2_card, self.user2_card_index, user2_status)
+        user1_text = format_offer(self.user1, self.user1_cards, self.user1_card_indices, user1_status)
+        user2_text = format_offer(self.user2, self.user2_cards, self.user2_card_indices, user2_status)
 
         embed.description = user1_text + "────────────────────────\n" + user2_text
 
@@ -2774,20 +2892,46 @@ class TradeView(discord.ui.View):
 
             # finalize trade: remove the correct entries by matching card id + print
             try:
-                if self.user1_card and self.user2_card:
+                if self.user1_cards and self.user2_cards:
                     async with inventories_lock:
                         inv1 = get_inventory(self.user1_id)
                         inv2 = get_inventory(self.user2_id)
 
                         # find by id + print to be robust against index shifts
-                        seq1_match_idx = next((i for i,c in enumerate(inv1) if c["card"]["id"] == self.user1_card["card"]["id"] and c["print"] == self.user1_card["print"]), None)
-                        seq2_match_idx = next((i for i,c in enumerate(inv2) if c["card"]["id"] == self.user2_card["card"]["id"] and c["print"] == self.user2_card["print"]), None)
+                        idx1_list = []
+                        ok = True
+                        for sel in self.user1_cards:
+                            idx = next((i for i, c in enumerate(inv1)
+                                        if c["card"]["id"] == sel["card"]["id"] and c["print"] == sel["print"]), None)
+                            if idx is None:
+                                ok = False
+                                break
+                            idx1_list.append(idx)
 
-                        if seq1_match_idx is not None and seq2_match_idx is not None:
-                            c1 = inv1.pop(seq1_match_idx)
-                            c2 = inv2.pop(seq2_match_idx)
-                            inv1.insert(0, c2)  # receiver gets new card newest-first
-                            inv2.insert(0, c1)
+                        idx2_list = []
+                        if ok:
+                            for sel in self.user2_cards:
+                                idx = next((i for i, c in enumerate(inv2)
+                                            if c["card"]["id"] == sel["card"]["id"] and c["print"] == sel["print"]), None)
+                                if idx is None:
+                                    ok = False
+                                    break
+                                idx2_list.append(idx)
+
+                        if ok:
+                            # Snapshot both inventories so a failed save can
+                            # restore them exactly, regardless of how many
+                            # cards moved.
+                            inv1_backup = list(inv1)
+                            inv2_backup = list(inv2)
+
+                            c1_list = [inv1.pop(i) for i in sorted(idx1_list, reverse=True)]
+                            c2_list = [inv2.pop(i) for i in sorted(idx2_list, reverse=True)]
+
+                            for c in c2_list:
+                                inv1.insert(0, c)  # receiver gets new cards newest-first
+                            for c in c1_list:
+                                inv2.insert(0, c)
 
                             try:
                                 save_inventories_local()
@@ -2795,11 +2939,9 @@ class TradeView(discord.ui.View):
                             except Exception:
                                 # Roll back the swap so a failed save
                                 # never silently duplicates or loses
-                                # either card.
-                                inv1.pop(0)
-                                inv2.pop(0)
-                                inv1.insert(seq1_match_idx, c1)
-                                inv2.insert(seq2_match_idx, c2)
+                                # either side's cards.
+                                inv1[:] = inv1_backup
+                                inv2[:] = inv2_backup
                                 raise
             except Exception as e:
                 print("TRADE FINALIZE ERROR:", e)
@@ -2808,15 +2950,15 @@ class TradeView(discord.ui.View):
             embed = discord.Embed(color=THEME_COLOR)
             embed.title = "Trade Completed!"
 
-            user1_name = self.user1_card["card"].get("name", "Unknown") if self.user1_card else "Nothing"
-            user2_name = self.user2_card["card"].get("name", "Unknown") if self.user2_card else "Nothing"
+            user1_names = ", ".join(c["card"].get("name", "Unknown") for c in self.user1_cards) if self.user1_cards else "Nothing"
+            user2_names = ", ".join(c["card"].get("name", "Unknown") for c in self.user2_cards) if self.user2_cards else "Nothing"
 
             if self.trade_id in active_trades:
                 del active_trades[self.trade_id]
 
             embed.description = (
-                f"{self.user1.mention} received **{user2_name}**\n!"
-                f"{self.user2.mention} received **{user1_name}**!"
+                f"{self.user1.mention} received **{user2_names}**\n!"
+                f"{self.user2.mention} received **{user1_names}**!"
             )
 
             await interaction.response.edit_message(
@@ -3360,7 +3502,7 @@ class Client(discord.Client):
                             "name": char_name,
                             "series": series,
                             "stars": stars_val,
-                            "weight": 10,
+                            "weight": weight_for_stars(stars_val),
                             "image": save_path,
                             "frame": frame_name
                         }
@@ -3930,8 +4072,64 @@ class Client(discord.Client):
         if content_lower.startswith("luntag "):
             raw_args = content[7:].strip()
             if not raw_args:
-                return await message.channel.send("Usage: `luntag <character>`")
+                return await message.channel.send("Usage: `luntag <character>` or `luntag <inventory number(s)>`")
 
+            words = raw_args.split()
+
+            # Leading inventory-number mode: "luntag 17" or
+            # "luntag 17, 25, 81" -- same comma-aware parsing as ltag's
+            # number mode. Only triggers if EVERY word is a numeric
+            # token (luntag takes no trailing text like ltag does), so
+            # a character name never gets misread as numbers. Falls
+            # through to the existing character-name mode otherwise.
+            number_token = re.compile(r'^\d+(,\d+)*,?$')
+            inventory_numbers = []
+            consumed = 0
+            for w in words:
+                if number_token.fullmatch(w):
+                    inventory_numbers.extend(int(x) for x in re.findall(r'\d+', w))
+                    consumed += 1
+                else:
+                    break
+
+            if inventory_numbers and consumed == len(words):
+                target_indexes = []
+                invalid_numbers = []
+                for requested_num in inventory_numbers:
+                    card_index = len(inv) - requested_num
+                    if card_index < 0 or card_index >= len(inv):
+                        invalid_numbers.append(requested_num)
+                    else:
+                        target_indexes.append(card_index)
+
+                if not target_indexes:
+                    return await message.channel.send("Invalid inventory number(s).")
+
+                async with inventories_lock:
+                    previous_tags = {}
+                    updated = 0
+                    for i in target_indexes:
+                        if "tags" in inv[i]:
+                            previous_tags[i] = inv[i]["tags"]
+                            del inv[i]["tags"]
+                            updated += 1
+
+                    try:
+                        save_inventories_local()
+                        mark_inventories_dirty()
+                    except Exception:
+                        for i, old_value in previous_tags.items():
+                            inv[i]["tags"] = old_value
+                        return await message.channel.send(
+                            "❌ Something went wrong saving your tags. Please try again."
+                        )
+
+                note = ""
+                if invalid_numbers:
+                    note = f" (skipped invalid number(s): {', '.join(map(str, invalid_numbers))})"
+                return await message.channel.send(f"Updated {updated} card(s).{note}")
+
+            # Character-name mode: "luntag <character>" -- unchanged.
             owned_names = {oc["card"].get("name", "") for oc in inv}
             match_name = next((n for n in owned_names if n.lower() == raw_args.lower()), None)
 
@@ -4137,18 +4335,51 @@ class Client(discord.Client):
                 owned_card = inv_list[pos_idx]
                 card_index = pos_idx
 
-                # Assign to trade by index
+                # Assign to trade by index -- append up to MAX_TRADE_CARDS
+                # cards per person. If this exact card (by id + print) is
+                # already in that person's selection, treat it as a
+                # toggle-off: remove only that one card, leaving the rest
+                # of the selection untouched.
                 if user_id == user_trade.user1_id:
-                    user_trade.user1_card = owned_card
-                    user_trade.user1_card_index = card_index
+                    cards_list = user_trade.user1_cards
+                    indices_list = user_trade.user1_card_indices
                 elif user_id == user_trade.user2_id:
-                    user_trade.user2_card = owned_card
-                    user_trade.user2_card_index = card_index
+                    cards_list = user_trade.user2_cards
+                    indices_list = user_trade.user2_card_indices
                 else:
                     return await message.channel.send("You're not part of this trade.")
 
-                if user_trade.user1_card and user_trade.user2_card:
-                    user_trade.stage = "locking"
+                existing_pos = next(
+                    (i for i, c in enumerate(cards_list)
+                     if c["card"]["id"] == owned_card["card"]["id"] and c["print"] == owned_card["print"]),
+                    None
+                )
+
+                if existing_pos is not None:
+                    cards_list.pop(existing_pos)
+                    indices_list.pop(existing_pos)
+                    action_text = f"Removed {owned_card['card'].get('name', 'Unknown Character')}"
+                elif len(cards_list) >= MAX_TRADE_CARDS:
+                    return await message.channel.send(f"You can only add up to {MAX_TRADE_CARDS} cards.")
+                else:
+                    cards_list.append(owned_card)
+                    indices_list.append(card_index)
+                    action_text = f"Added {owned_card['card'].get('name', 'Unknown Character')}"
+
+                if user_trade.user1_cards and user_trade.user2_cards:
+                    if user_trade.stage == "selecting":
+                        user_trade.stage = "locking"
+                elif user_trade.stage == "locking":
+                    # A toggle-off just emptied one side after locking had
+                    # already begun -- go back to selecting and clear any
+                    # lock flags, since they no longer reflect a real,
+                    # non-empty offer on both sides. Without this, someone
+                    # could still hit "lock" with zero cards selected,
+                    # since that button only blocks while stage ==
+                    # "selecting".
+                    user_trade.stage = "selecting"
+                    user_trade.user1_locked = False
+                    user_trade.user2_locked = False
 
                 # Update the trade message immediately (if stored)
                 try:
@@ -4158,8 +4389,7 @@ class Client(discord.Client):
                 except Exception:
                     pass
 
-                card_name = owned_card["card"].get("name", "Unknown Character")
-                return await message.channel.send(f"Added {card_name}")
+                return await message.channel.send(action_text)
             except Exception as e:
                 return await message.channel.send(f"Error: {e}")
 
