@@ -1046,8 +1046,8 @@ PRINT_POS_RARE = (380, 295)
 # three digits (100) then extend further right than intended, so the x
 # position is nudged left by these amounts to compensate. Legacy prints
 # ("L") are a single character and use no shift, same as single digits.
-PRINT_X_SHIFT_2_DIGITS = -3
-PRINT_X_SHIFT_3_DIGITS = -7
+PRINT_X_SHIFT_2_DIGITS = -7
+PRINT_X_SHIFT_3_DIGITS = -11
 
 # Gradient (Kita/Gachapon style: dark gray, not pure black) -- shorter now
 # so it covers less of the artwork and the card reads brighter overall.
