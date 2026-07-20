@@ -11518,6 +11518,19 @@
   "1310677632769327257": [
     {
       "card": {
+        "id": "orugio_common",
+        "name": "Olruggio",
+        "series": "Witch Hat Atelier",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/orugio_common.png",
+        "frame": "common"
+      },
+      "print": 31,
+      "claimed_at": 1784554593.1148424
+    },
+    {
+      "card": {
         "id": "durin_common",
         "name": "Durin",
         "series": "Genshin Impact",
@@ -12747,7 +12760,8 @@
         "frame": "common"
       },
       "print": 39,
-      "claimed_at": 1784553774.5070076
+      "claimed_at": 1784553774.5070076,
+      "tags": "4Eugene"
     },
     {
       "card": {
@@ -12774,7 +12788,8 @@
         "frame": "common"
       },
       "print": 22,
-      "claimed_at": 1784553159.3955681
+      "claimed_at": 1784553159.3955681,
+      "tags": "4Eugene"
     },
     {
       "card": {
@@ -12787,7 +12802,8 @@
         "frame": "common"
       },
       "print": 38,
-      "claimed_at": 1784511292.3969994
+      "claimed_at": 1784511292.3969994,
+      "tags": "4Eugene"
     },
     {
       "card": {
@@ -12800,7 +12816,8 @@
         "frame": "common"
       },
       "print": 17,
-      "claimed_at": 1784510580.4092636
+      "claimed_at": 1784510580.4092636,
+      "tags": "4Eugene"
     },
     {
       "card": {
@@ -28200,6 +28217,33 @@
   "247066385849647107": [
     {
       "card": {
+        "id": "atsumu_common",
+        "name": "Atsumu Miya",
+        "series": "Haikyuu!!",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/atsumu_common.png",
+        "frame": "common"
+      },
+      "print": 28,
+      "claimed_at": 1784554348.52543,
+      "tags": "[\ud80c\udda9\ud83e\udd8a\ud80c\uddaa]"
+    },
+    {
+      "card": {
+        "id": "yuuichirou_common",
+        "name": "Yuuichirou Hyakuya",
+        "series": "Seraph of the End",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/yuuichirou_common.png",
+        "frame": "common"
+      },
+      "print": 21,
+      "claimed_at": 1784554313.4680047
+    },
+    {
+      "card": {
         "id": "goo_common",
         "name": "Goo Yoon-won",
         "series": "Save The Dae",
@@ -28370,7 +28414,8 @@
         "frame": "common"
       },
       "print": 26,
-      "claimed_at": 1784531842.6712465
+      "claimed_at": 1784531842.6712465,
+      "tags": "[\ud80c\udda9\ud83e\udd8a\ud80c\uddaa]"
     },
     {
       "card": {
@@ -28877,19 +28922,6 @@
       },
       "print": 17,
       "claimed_at": 1784483488.320569
-    },
-    {
-      "card": {
-        "id": "wanderer_common",
-        "name": "Wanderer",
-        "series": "Genshin Impact",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/wanderer_common.png",
-        "frame": "common"
-      },
-      "print": 28,
-      "claimed_at": 1784481279.510887
     },
     {
       "card": {
@@ -33827,6 +33859,19 @@
   "1132475401701171262": [
     {
       "card": {
+        "id": "satoru_common_2",
+        "name": "Satoru Gojo",
+        "series": "Jujutsu Kaisen",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/satoru_common_2.png",
+        "frame": "common"
+      },
+      "print": 37,
+      "claimed_at": 1784554378.246816
+    },
+    {
+      "card": {
         "id": "arataka_common",
         "name": "Arataka Reigen",
         "series": "Mob Psycho 100",
@@ -37182,6 +37227,19 @@
   "703745509835407402": [
     {
       "card": {
+        "id": "japan_common",
+        "name": "Japan",
+        "series": "Hetalia",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/japan_common.png",
+        "frame": "common"
+      },
+      "print": 23,
+      "claimed_at": 1784554462.309501
+    },
+    {
+      "card": {
         "id": "katsuki_common",
         "name": "Katsuki Bakugo",
         "series": "My Hero Academia",
@@ -39729,6 +39787,19 @@
   "977162721520918538": [
     {
       "card": {
+        "id": "wanderer_common",
+        "name": "Wanderer",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/wanderer_common.png",
+        "frame": "common"
+      },
+      "print": 28,
+      "claimed_at": 1784481279.510887
+    },
+    {
+      "card": {
         "id": "katsuki_common_2",
         "name": "Katsuki Bakugo",
         "series": "My Hero Academia",
@@ -39739,7 +39810,7 @@
       },
       "print": 1,
       "claimed_at": 1784549936.5294588,
-      "tags": "pswap"
+      "tags": "ml"
     },
     {
       "card": {
@@ -61556,6 +61627,19 @@
   "529199838844157962": [
     {
       "card": {
+        "id": "superman_rare",
+        "name": "Superman",
+        "series": "DC",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/superman_rare.png",
+        "frame": "red"
+      },
+      "print": 14,
+      "claimed_at": 1784554371.672278
+    },
+    {
+      "card": {
         "id": "joonghyuk_common",
         "name": "Yoo Joonghyuk",
         "series": "Omniscient Reader's Viewpoint",
@@ -63840,6 +63924,19 @@
     }
   ],
   "897040507539189780": [
+    {
+      "card": {
+        "id": "nahida_common",
+        "name": "Nahida",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/nahida_common.png",
+        "frame": "common"
+      },
+      "print": 25,
+      "claimed_at": 1784554351.7058446
+    },
     {
       "card": {
         "id": "kokushibo_common",
@@ -124566,6 +124663,19 @@
   "1187588552083656734": [
     {
       "card": {
+        "id": "yamagishi_common",
+        "name": "Yamagishi Asako",
+        "series": "The Summer Hikaru Died",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/yamagishi_common.png",
+        "frame": "common"
+      },
+      "print": 21,
+      "claimed_at": 1784554446.3830898
+    },
+    {
+      "card": {
         "id": "nejire_common",
         "name": "Nejire Hado",
         "series": "My Hero Academia",
@@ -128101,6 +128211,19 @@
     }
   ],
   "1017829457492463617": [
+    {
+      "card": {
+        "id": "denki_common",
+        "name": "Denki Kaminari",
+        "series": "My Hero Academia",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/denki_common.png",
+        "frame": "common"
+      },
+      "print": 27,
+      "claimed_at": 1784554578.9467423
+    },
     {
       "card": {
         "id": "won_common",
@@ -135959,6 +136082,19 @@
   "1358228187691225088": [
     {
       "card": {
+        "id": "ai_common",
+        "name": "Ai Haibara",
+        "series": "Detective Conan",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/ai_common.png",
+        "frame": "common"
+      },
+      "print": 10,
+      "claimed_at": 1784554526.3684313
+    },
+    {
+      "card": {
         "id": "yu_common",
         "name": "Yu Fan",
         "series": "Wait For Me After School",
@@ -136265,6 +136401,19 @@
     }
   ],
   "1205851657901178892": [
+    {
+      "card": {
+        "id": "kaveh_common",
+        "name": "Kaveh",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/kaveh_common.png",
+        "frame": "common"
+      },
+      "print": 27,
+      "claimed_at": 1784554373.3391333
+    },
     {
       "card": {
         "id": "ryusei_common",
