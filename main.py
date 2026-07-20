@@ -1046,8 +1046,8 @@ PRINT_POS_RARE = (380, 295)
 # three digits (100) then extend further right than intended, so the x
 # position is nudged left by these amounts to compensate. Legacy prints
 # ("L") are a single character and use no shift, same as single digits.
-PRINT_X_SHIFT_2_DIGITS = -7
-PRINT_X_SHIFT_3_DIGITS = -11
+PRINT_X_SHIFT_2_DIGITS = -12
+PRINT_X_SHIFT_3_DIGITS = -20
 
 # Gradient (Kita/Gachapon style: dark gray, not pure black) -- shorter now
 # so it covers less of the artwork and the card reads brighter overall.
@@ -2229,16 +2229,45 @@ class CharacterVersionView(discord.ui.View):
 
         owners.sort()
 
+        # Resolve every unique owner id exactly once. Two things were
+        # making this slow before: (1) if the same person owned more
+        # than one print of this card, their id was looked up again
+        # from scratch for each print; (2) every cache miss called
+        # `fetch_member()` (a real Discord API request) one at a time
+        # in this loop, so N misses meant N sequential round-trips
+        # stacking up in wall-clock time. Deduping first, then firing
+        # all cache-miss fetches concurrently, turns "N round-trips in
+        # a row" into "all of them at once" without changing which
+        # members end up resolved or in what order the final list is
+        # built.
+        unique_owner_ids = {owner_id for _, owner_id in owners}
+
+        member_by_id = {}
+        uncached_ids = []
+        for owner_id in unique_owner_ids:
+            member = interaction.guild.get_member(owner_id)
+            if member is not None:
+                member_by_id[owner_id] = member
+            else:
+                uncached_ids.append(owner_id)
+
+        if uncached_ids:
+            async def _safe_fetch_member(oid):
+                try:
+                    return oid, await interaction.guild.fetch_member(oid)
+                except Exception:
+                    return oid, None
+
+            fetched = await asyncio.gather(*(_safe_fetch_member(oid) for oid in uncached_ids))
+            for oid, member in fetched:
+                if member is not None:
+                    member_by_id[oid] = member
+
         lines = []
         for print_num, owner_id in owners:
-            member = interaction.guild.get_member(owner_id)
-
+            member = member_by_id.get(owner_id)
             if member is None:
-                try:
-                    member = await interaction.guild.fetch_member(owner_id)
-                except:
-                    continue
-
+                continue
             lines.append(
                 f"`{format_print(print_num)}.` • {member.mention}"
             )
