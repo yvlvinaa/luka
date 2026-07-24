@@ -132,6 +132,21 @@ user_last_lookup = {}
 # Global tracking for trade and gift sessions
 active_trades = {}
 active_gifts = {}
+
+
+def user_has_active_trade(user_id) -> bool:
+    """
+    True if user_id is a participant in any currently-active trade (an
+    accepted TradeRequestView that became a real TradeView, tracked in
+    active_trades). Pending/unaccepted trade requests aren't tracked in
+    active_trades at all, so they don't count here -- only an actually
+    ongoing trade blocks starting another one.
+    """
+    for trade_data in active_trades.values():
+        view = trade_data.get("view")
+        if view is not None and user_id in (view.user1_id, view.user2_id):
+            return True
+    return False
 user_viewing_inventory = {}
 
 # Command anti-spam state (see COMMAND_SPAM_* above). Keyed by
@@ -189,6 +204,20 @@ if not os.path.exists('card_art'):
 def stars(amount):
     """Converts a number into a star emoji string."""
     return "⭐" * int(amount)
+
+
+async def reply(message, *args, **kwargs):
+    """
+    Sends a response as a reply to the user's message instead of a bare
+    channel send, so busy channels are easier to follow. Falls back to a
+    normal channel send if the reply fails for any reason (e.g. the
+    original message was deleted in the meantime), so a reply-formatting
+    issue can never block a response from going out.
+    """
+    try:
+        return await message.reply(*args, **kwargs, mention_author=False)
+    except Exception:
+        return await message.channel.send(*args, **kwargs)
 
 
 def format_time(seconds):
@@ -1047,7 +1076,7 @@ PRINT_POS_RARE = (380, 295)
 # position is nudged left by these amounts to compensate. Legacy prints
 # ("L") are a single character and use no shift, same as single digits.
 PRINT_X_SHIFT_2_DIGITS = -12
-PRINT_X_SHIFT_3_DIGITS = -20
+PRINT_X_SHIFT_3_DIGITS = -40
 
 # Gradient (Kita/Gachapon style: dark gray, not pure black) -- shorter now
 # so it covers less of the artwork and the card reads brighter overall.
@@ -2206,11 +2235,14 @@ class CharacterVersionView(discord.ui.View):
                 ephemeral=True
             )
 
-        # Defer immediately, before any member-fetching -- fetch_member
-        # below is a real API call per uncached member, and with enough
-        # owners that can easily blow past Discord's 3-second initial
-        # response window. Deferring extends that to ~15 minutes.
+        # Defer immediately, before any member-resolution -- resolving
+        # owners below can still involve real fetch_member() calls for
+        # any uncached users, and with enough owners that can easily
+        # blow past Discord's 3-second initial response window.
+        # Deferring extends that to ~15 minutes.
         await interaction.response.defer()
+
+        t_start = time.perf_counter()
 
         card = self.versions[self.index]
 
@@ -2229,53 +2261,72 @@ class CharacterVersionView(discord.ui.View):
 
         owners.sort()
 
-        # Resolve every unique owner id exactly once. Two things were
-        # making this slow before: (1) if the same person owned more
-        # than one print of this card, their id was looked up again
-        # from scratch for each print; (2) every cache miss called
-        # `fetch_member()` (a real Discord API request) one at a time
-        # in this loop, so N misses meant N sequential round-trips
-        # stacking up in wall-clock time. Deduping first, then firing
-        # all cache-miss fetches concurrently, turns "N round-trips in
-        # a row" into "all of them at once" without changing which
-        # members end up resolved or in what order the final list is
-        # built.
-        unique_owner_ids = {owner_id for _, owner_id in owners}
+        t_built_list = time.perf_counter()
+
+        # Resolve every unique owner id exactly once, so a person who
+        # owns multiple prints of this card is never looked up twice.
+        # get_member() is a pure cache read -- no API call, no privileged
+        # Server Members Intent needed -- and is tried first, resolving
+        # most users instantly.
+        unique_owner_ids = list(dict.fromkeys(owner_id for _, owner_id in owners))
 
         member_by_id = {}
-        uncached_ids = []
+        missing_ids = []
         for owner_id in unique_owner_ids:
             member = interaction.guild.get_member(owner_id)
             if member is not None:
                 member_by_id[owner_id] = member
             else:
-                uncached_ids.append(owner_id)
+                missing_ids.append(owner_id)
 
-        if uncached_ids:
-            async def _safe_fetch_member(oid):
-                try:
-                    return oid, await interaction.guild.fetch_member(oid)
-                except Exception:
-                    return oid, None
+        t_cache_lookup = time.perf_counter()
 
-            fetched = await asyncio.gather(*(_safe_fetch_member(oid) for oid in uncached_ids))
-            for oid, member in fetched:
-                if member is not None:
-                    member_by_id[oid] = member
+        # Only ids that aren't cached ever need a real API call, and all
+        # of them are fetched concurrently instead of one at a time --
+        # this is what actually cuts wall-clock time when several owners
+        # aren't cached. return_exceptions=True means a failed fetch
+        # (left the server, NotFound, Forbidden, etc.) comes back as an
+        # exception object in the results list rather than raising and
+        # aborting the whole gather -- that owner is simply shown as
+        # "Unknown User" instead of breaking the embed. No
+        # guild.query_members() or other privileged-intent API is used
+        # anywhere in this path.
+        if missing_ids:
+            fetch_results = await asyncio.gather(
+                *(interaction.guild.fetch_member(oid) for oid in missing_ids),
+                return_exceptions=True
+            )
+            for owner_id, result in zip(missing_ids, fetch_results):
+                member_by_id[owner_id] = None if isinstance(result, Exception) else result
+
+        t_fetch = time.perf_counter()
 
         lines = []
         for print_num, owner_id in owners:
             member = member_by_id.get(owner_id)
-            if member is None:
-                continue
+            mention_text = member.mention if member is not None else "Unknown User"
             lines.append(
-                f"`{format_print(print_num)}.` • {member.mention}"
+                f"`{format_print(print_num)}.` • {mention_text}"
             )
 
         owners_view = OwnersPaginationView(self.user_id, card['name'], lines)
+        embed = owners_view.build_embed()
+
+        t_embed = time.perf_counter()
+
+        # TEMPORARY instrumentation to identify the real bottleneck --
+        # safe to remove once performance is confirmed acceptable.
+        print(
+            "Owners timing:\n"
+            f"- Build owners list: {(t_built_list - t_start) * 1000:.1f} ms\n"
+            f"- Cache lookup: {(t_cache_lookup - t_built_list) * 1000:.1f} ms\n"
+            f"- Fetch missing members: {(t_fetch - t_cache_lookup) * 1000:.1f} ms\n"
+            f"- Build embed: {(t_embed - t_fetch) * 1000:.1f} ms\n"
+            f"- Total: {(t_embed - t_start) * 1000:.1f} ms"
+        )
 
         await interaction.followup.send(
-            embed=owners_view.build_embed(),
+            embed=embed,
             view=owners_view
         )
 
@@ -2787,7 +2838,11 @@ MAX_TRADE_CARDS = 3
 
 class TradeView(discord.ui.View):
     def __init__(self, user1, user2, user1_id, user2_id):
-        super().__init__(timeout=None)
+        # 3-minute timeout for the selecting/locking phase only -- once
+        # both sides lock in and move to "confirming" (see lock() below),
+        # the timeout is disabled entirely so the final confirmation step
+        # never expires mid-transaction.
+        super().__init__(timeout=180)
         self.user1 = user1
         self.user2 = user2
         self.user1_id = user1_id
@@ -2866,6 +2921,32 @@ class TradeView(discord.ui.View):
             view=None
         )
 
+    async def on_timeout(self):
+        # Only relevant during selecting/locking -- the timeout is
+        # disabled entirely once both users lock in (see lock() above),
+        # so this shouldn't normally fire during "confirming", but guard
+        # anyway rather than assume.
+        if self.stage == "confirming":
+            return
+
+        if self.trade_id not in active_trades:
+            # Already declined/completed/removed some other way.
+            return
+
+        del active_trades[self.trade_id]
+
+        for item in self.children:
+            item.disabled = True
+
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.description = "Trade has expired."
+
+        if self.message:
+            try:
+                await self.message.edit(content=None, embed=embed, view=self)
+            except Exception:
+                pass
+
     @discord.ui.button(emoji="<:lock:1522002571496128553>", style=discord.ButtonStyle.secondary)
     async def lock(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.stage == "selecting":
@@ -2886,6 +2967,10 @@ class TradeView(discord.ui.View):
 
         if self.user1_locked and self.user2_locked:
             self.stage = "confirming"
+            # The 3-minute timeout only applies to the main
+            # selecting/locking embed -- the final confirmation stage
+            # should never expire mid-transaction.
+            self.timeout = None
             try:
                 self.lock.emoji = "<:accept:1515633292605657088>"
             except Exception:
@@ -3373,22 +3458,22 @@ class Client(discord.Client):
         if content_lower.startswith("lupdateimage "):
             # Check if user has "uploader" role
             if not any(role.name.lower() == "uploader" for role in message.author.roles):
-                return await message.channel.send("You need the **Uploader** role to use this command.")
+                return await reply(message, "You need the **Uploader** role to use this command.")
 
             parts = content.split()
             if len(parts) < 2:
-                return await message.channel.send("Usage: `lupdateimage <card_id>`")
+                return await reply(message, "Usage: `lupdateimage <card_id>`")
 
             card_id = parts[1]
 
             # Find the card
             card = next((c for c in cards if c["id"] == card_id), None)
             if not card:
-                return await message.channel.send(f"Card with ID `{card_id}` not found.")
+                return await reply(message, f"Card with ID `{card_id}` not found.")
 
             # Check for attachments
             if not message.attachments:
-                return await message.channel.send("Please attach an image to update.")
+                return await reply(message, "Please attach an image to update.")
 
             attachment = message.attachments[0]
 
@@ -3397,7 +3482,7 @@ class Client(discord.Client):
             # a generated path -- if it's missing or invalid, stop here.
             existing_path = card.get("image", "") or ""
             if not existing_path.startswith("card_art/"):
-                return await message.channel.send(
+                return await reply(message, 
                     "❌ This card does not have a valid image path in `cards.json`. "
                     "Please fix the `image` field before using `lupdateimage`."
                 )
@@ -3434,11 +3519,11 @@ class Client(discord.Client):
                     # GitHub commit succeeded -- now mirror the change locally.
                     _atomic_write_bytes(save_path, image_data)
 
-                await message.channel.send(
+                await reply(message, 
                     f"✅ Card `{card_id}` image updated successfully and pushed to GitHub!\nNew path: `{save_path}`"
                 )
             except Exception as e:
-                await message.channel.send(f"❌ Error updating image: {e}")
+                await reply(message, f"❌ Error updating image: {e}")
             return
 
         # =========================
@@ -3447,7 +3532,7 @@ class Client(discord.Client):
         if content_lower.startswith("laddcard "):
             # Check if user has "uploader" role
             if not any(role.name.lower() == "uploader" for role in message.author.roles):
-                return await message.channel.send("You need the **Uploader** role to use this command.")
+                return await reply(message, "You need the **Uploader** role to use this command.")
 
             # Parse the command: laddcard "Name" | "Series" | frame | stars
             try:
@@ -3455,7 +3540,7 @@ class Client(discord.Client):
                 parts = [p.strip().strip('"') for p in args.split('|')]
 
                 if len(parts) < 4:
-                    return await message.channel.send("Usage: `laddcard \"Name\" | \"Series\" | frame | stars`\nExample: `laddcard \"Ivan\" | \"Alien Stage\" | common | 4`")
+                    return await reply(message, "Usage: `laddcard \"Name\" | \"Series\" | frame | stars`\nExample: `laddcard \"Ivan\" | \"Alien Stage\" | common | 4`")
 
                 char_name = parts[0]
                 series = parts[1]
@@ -3472,7 +3557,7 @@ class Client(discord.Client):
                 candidate_path = os.path.join(frames_dir, f"{candidate}.png")
 
                 if not os.path.exists(candidate_path):
-                    return await message.channel.send(
+                    return await reply(message, 
                         f"❌ Frame `{requested_frame}` not found in the `frames` folder. "
                         "Use `common` or the exact name of an existing frame file (with or without `.png`)."
                     )
@@ -3481,7 +3566,7 @@ class Client(discord.Client):
                 is_rare = (frame_name.lower() != "common")
 
                 if stars_val not in [1, 2, 3, 4]:
-                    return await message.channel.send("Stars must be 1, 2, 3, or 4.")
+                    return await reply(message, "Stars must be 1, 2, 3, or 4.")
 
                 # Generate card ID based on rarity (common/rare), not the
                 # specific frame color -- e.g. mydei_common / mydei_rare,
@@ -3489,7 +3574,7 @@ class Client(discord.Client):
                 card_id = generate_card_id(char_name, is_rare)
 
                 # Ask for image
-                await message.channel.send(f"Card ID: `{card_id}`\nNow send the art image for **{char_name}**.")
+                await reply(message, f"Card ID: `{card_id}`\nNow send the art image for **{char_name}**.")
 
                 # Wait for image attachment using the client wait_for
                 def check(m):
@@ -3498,7 +3583,7 @@ class Client(discord.Client):
                 try:
                     img_msg = await self.wait_for('message', check=check, timeout=300)
                 except asyncio.TimeoutError:
-                    return await message.channel.send("❌ Image upload timed out. Card creation cancelled.")
+                    return await reply(message, "❌ Image upload timed out. Card creation cancelled.")
 
                 # Save the image
                 try:
@@ -3567,14 +3652,14 @@ class Client(discord.Client):
                             cards.pop()
                             raise
 
-                    await message.channel.send(f"✅ Card created successfully!\n**ID:** `{card_id}`\n**Name:** {char_name}\n**Series:** {series}\n**Stars:** {stars_val}\n**Frame:** {frame_name}")
+                    await reply(message, f"✅ Card created successfully!\n**ID:** `{card_id}`\n**Name:** {char_name}\n**Series:** {series}\n**Stars:** {stars_val}\n**Frame:** {frame_name}")
 
                     await send_card_added_notification(self, new_card)
                 except Exception as e:
-                    await message.channel.send(f"❌ Error creating card: {e}")
+                    await reply(message, f"❌ Error creating card: {e}")
 
             except Exception as e:
-                await message.channel.send(f"❌ Error parsing command: {e}")
+                await reply(message, f"❌ Error parsing command: {e}")
             return
 
         # =========================
@@ -3659,7 +3744,7 @@ class Client(discord.Client):
             )
             embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))} UTC")
 
-            await message.channel.send(embed=embed)
+            await reply(message, embed=embed)
             return
 
         # =========================
@@ -3667,16 +3752,16 @@ class Client(discord.Client):
         # =========================
         if content_lower.startswith("leditcard "):
             if not has_uploader_role(message.author):
-                return await message.channel.send("You need the **Uploader** role to use this command.")
+                return await reply(message, "You need the **Uploader** role to use this command.")
 
             parts = content.split()
             if len(parts) < 2:
-                return await message.channel.send("Usage: `leditcard <card_id>`")
+                return await reply(message, "Usage: `leditcard <card_id>`")
 
             card_id = parts[1]
             card = next((c for c in cards if c.get("id") == card_id), None)
             if not card:
-                return await message.channel.send(f"Card with ID `{card_id}` not found.")
+                return await reply(message, f"Card with ID `{card_id}` not found.")
 
             view = EditCardView(self, card, message.author, user_id)
             sent = await message.channel.send(embed=view.build_embed(), view=view)
@@ -3688,16 +3773,16 @@ class Client(discord.Client):
         # =========================
         if content_lower.startswith("lremovecard "):
             if not has_uploader_role(message.author):
-                return await message.channel.send("You need the **Uploader** role to use this command.")
+                return await reply(message, "You need the **Uploader** role to use this command.")
 
             parts = content.split()
             if len(parts) < 2:
-                return await message.channel.send("Usage: `lremovecard <card_id>`")
+                return await reply(message, "Usage: `lremovecard <card_id>`")
 
             card_id = parts[1]
             card = next((c for c in cards if c.get("id") == card_id), None)
             if not card:
-                return await message.channel.send(f"Card with ID `{card_id}` not found.")
+                return await reply(message, f"Card with ID `{card_id}` not found.")
 
             embed = discord.Embed(
                 color=discord.Color.red(),
@@ -3749,7 +3834,7 @@ class Client(discord.Client):
                 )
             )
 
-            await message.channel.send(embed=embed)
+            await reply(message, embed=embed)
             return
 
         # =========================
@@ -3757,7 +3842,7 @@ class Client(discord.Client):
         # =========================
         if content_lower == "lcd":
             if is_command_spam(user_id, "lcd"):
-                return await message.channel.send(
+                return await reply(message, 
                     "Please wait a few seconds before using this command again."
                 )
 
@@ -3805,7 +3890,7 @@ class Client(discord.Client):
             )
             embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(now))} UTC")
 
-            await message.channel.send(embed=embed)
+            await reply(message, embed=embed)
             return
 
         # =========================
@@ -3829,13 +3914,18 @@ class Client(discord.Client):
                         args = args[len(first_part):].strip()
 
             # `-p`: display-order-only sort by print number ascending.
-            # Extracted as a standalone flag before the s:/c: filters
-            # below so it can never be mistaken for part of a query.
-            # Never changes inventory numbering.
+            # `-untagged`: shows only cards with no tag at all.
+            # Both extracted as standalone flags before the s:/c:/t:/p:
+            # filters below so neither can be mistaken for part of a
+            # query. Never changes inventory numbering.
             arg_tokens = args.split()
             sort_by_print = any(t.lower() == "-p" for t in arg_tokens)
-            if sort_by_print:
-                args = " ".join(t for t in arg_tokens if t.lower() != "-p")
+            show_untagged_only = any(t.lower() == "-untagged" for t in arg_tokens)
+            if sort_by_print or show_untagged_only:
+                args = " ".join(
+                    t for t in arg_tokens
+                    if t.lower() not in ("-p", "-untagged")
+                )
 
             target_inv = get_inventory(target_user.id)
 
@@ -3868,6 +3958,36 @@ class Client(discord.Client):
                     if char_query in owned_card["card"].get("name", "").lower()
                 ]
 
+            elif "t:" in args_lower:
+                # Exact match against the stored tag -- unlike s:/c:
+                # (substring, case-insensitive), the tag must match
+                # exactly what's stored, so case/emoji content is taken
+                # from the original (non-lowercased) args.
+                tag_marker_index = args_lower.index("t:")
+                tag_query = args[tag_marker_index + 2:].strip()
+                filtered_inventory = [
+                    (num, owned_card) for num, owned_card in filtered_inventory
+                    if owned_card.get("tags") == tag_query
+                ]
+
+            elif "p:" in args_lower:
+                print_query_raw = args_lower.split("p:", 1)[1].strip()
+                try:
+                    print_query = int(print_query_raw)
+                    filtered_inventory = [
+                        (num, owned_card) for num, owned_card in filtered_inventory
+                        if owned_card["print"] == print_query
+                    ]
+                except ValueError:
+                    pass  # not a valid number -- same silent no-op as an
+                          # empty/unmatched s:/c: query
+
+            if show_untagged_only:
+                filtered_inventory = [
+                    (num, owned_card) for num, owned_card in filtered_inventory
+                    if not owned_card.get("tags")
+                ]
+
             if sort_by_print:
                 filtered_inventory.sort(key=lambda item: item[1]["print"])
 
@@ -3887,7 +4007,7 @@ class Client(discord.Client):
                 viewer_id=message.author.id
             )
 
-            await message.channel.send(
+            await reply(message, 
                 embed=view.get_embed(),
                 view=view
             )
@@ -3898,24 +4018,24 @@ class Client(discord.Client):
         # =========================
         if content_lower.startswith(("lgift ", "lg ")):
             if is_command_spam(user_id, "lg"):
-                return await message.channel.send(
+                return await reply(message, 
                     "Please wait a few seconds before using this command again."
                 )
 
             if not message.mentions:
-                return await message.channel.send(
+                return await reply(message, 
                     "Usage: `lgift @user <inventory number>`"
                 )
 
             target_user = message.mentions[0]
 
             if target_user.bot:
-                return await message.channel.send(
+                return await reply(message, 
                     "You can't gift cards to bots."
                 )
 
             if target_user.id == message.author.id:
-                return await message.channel.send(
+                return await reply(message, 
                     "You can't gift cards to yourself."
                 )
 
@@ -3924,7 +4044,7 @@ class Client(discord.Client):
             try:
                 requested_num = int(parts[-1])
             except:
-                return await message.channel.send(
+                return await reply(message, 
                     "Please provide a valid inventory number."
                 )
 
@@ -3933,7 +4053,7 @@ class Client(discord.Client):
             card_index = len(inv) - requested_num
 
             if card_index < 0 or card_index >= len(inv):
-                return await message.channel.send(
+                return await reply(message, 
                     "Invalid inventory number."
                 )
 
@@ -3979,7 +4099,7 @@ class Client(discord.Client):
         if content_lower.startswith("ltag "):
             raw_args = content[5:].strip()
             if not raw_args:
-                return await message.channel.send("Usage: `ltag <character> <tags>`")
+                return await reply(message, "Usage: `ltag <character> <tags>`")
 
             words = raw_args.split()
 
@@ -4003,7 +4123,7 @@ class Client(discord.Client):
                 tag_text = " ".join(words[consumed:]).strip()
 
                 if len(tag_text) > 10:
-                    return await message.channel.send("Tags cannot exceed 10 letter limit.")
+                    return await reply(message, "Tags cannot exceed 10 letter limit.")
 
                 target_indexes = []
                 invalid_numbers = []
@@ -4015,7 +4135,7 @@ class Client(discord.Client):
                         target_indexes.append(card_index)
 
                 if not target_indexes:
-                    return await message.channel.send("Invalid inventory number(s).")
+                    return await reply(message, "Invalid inventory number(s).")
 
                 async with inventories_lock:
                     previous_tags = {}
@@ -4032,7 +4152,7 @@ class Client(discord.Client):
                                 inv[i].pop("tags", None)
                             else:
                                 inv[i]["tags"] = old_value
-                        return await message.channel.send(
+                        return await reply(message, 
                             "❌ Something went wrong saving your tags. Please try again."
                         )
 
@@ -4040,7 +4160,7 @@ class Client(discord.Client):
                 note = ""
                 if invalid_numbers:
                     note = f" (skipped invalid number(s): {', '.join(map(str, invalid_numbers))})"
-                return await message.channel.send(f"Updated {updated} card(s) with {tag_text}.{note}")
+                return await reply(message, f"Updated {updated} card(s) with {tag_text}.{note}")
 
             # Character-name mode: "ltag <character> <tags>". Longest-
             # prefix match against character names the user actually
@@ -4060,14 +4180,14 @@ class Client(discord.Client):
                     break
 
             if not match_name:
-                return await message.channel.send(
+                return await reply(message, 
                     f"You don't own any cards matching **{words[0]}**."
                 )
             if not tag_text:
-                return await message.channel.send("Usage: `ltag <character> <tags>`")
+                return await reply(message, "Usage: `ltag <character> <tags>`")
 
             if len(tag_text) > 10:
-                return await message.channel.send("Tags cannot exceed 10 letter limit.")
+                return await reply(message, "Tags cannot exceed 10 letter limit.")
 
             async with inventories_lock:
                 previous_tags = {}
@@ -4089,11 +4209,11 @@ class Client(discord.Client):
                             inv[i].pop("tags", None)
                         else:
                             inv[i]["tags"] = old_value
-                    return await message.channel.send(
+                    return await reply(message, 
                         "❌ Something went wrong saving your tags. Please try again."
                     )
 
-            return await message.channel.send(f"Updated {updated} {match_name} card(s) with {tag_text}.")
+            return await reply(message, f"Updated {updated} {match_name} card(s) with {tag_text}.")
 
         # =========================
         # LUNTAG COMMAND
@@ -4101,7 +4221,7 @@ class Client(discord.Client):
         if content_lower.startswith("luntag "):
             raw_args = content[7:].strip()
             if not raw_args:
-                return await message.channel.send("Usage: `luntag <character>` or `luntag <inventory number(s)>`")
+                return await reply(message, "Usage: `luntag <character>` or `luntag <inventory number(s)>`")
 
             words = raw_args.split()
 
@@ -4132,7 +4252,7 @@ class Client(discord.Client):
                         target_indexes.append(card_index)
 
                 if not target_indexes:
-                    return await message.channel.send("Invalid inventory number(s).")
+                    return await reply(message, "Invalid inventory number(s).")
 
                 async with inventories_lock:
                     previous_tags = {}
@@ -4149,21 +4269,21 @@ class Client(discord.Client):
                     except Exception:
                         for i, old_value in previous_tags.items():
                             inv[i]["tags"] = old_value
-                        return await message.channel.send(
+                        return await reply(message, 
                             "❌ Something went wrong saving your tags. Please try again."
                         )
 
                 note = ""
                 if invalid_numbers:
                     note = f" (skipped invalid number(s): {', '.join(map(str, invalid_numbers))})"
-                return await message.channel.send(f"Updated {updated} card(s).{note}")
+                return await reply(message, f"Updated {updated} card(s).{note}")
 
             # Character-name mode: "luntag <character>" -- unchanged.
             owned_names = {oc["card"].get("name", "") for oc in inv}
             match_name = next((n for n in owned_names if n.lower() == raw_args.lower()), None)
 
             if not match_name:
-                return await message.channel.send(f"You don't own any cards matching **{raw_args}**.")
+                return await reply(message, f"You don't own any cards matching **{raw_args}**.")
 
             async with inventories_lock:
                 previous_tags = {}
@@ -4180,11 +4300,11 @@ class Client(discord.Client):
                 except Exception:
                     for i, old_value in previous_tags.items():
                         inv[i]["tags"] = old_value
-                    return await message.channel.send(
+                    return await reply(message, 
                         "❌ Something went wrong saving your tags. Please try again."
                     )
 
-            return await message.channel.send(f"Updated {updated} {match_name} card(s).")
+            return await reply(message, f"Updated {updated} {match_name} card(s).")
 
         # =========================
         # LPIN COMMAND
@@ -4192,25 +4312,25 @@ class Client(discord.Client):
         if content_lower.startswith("lpin "):
             parts = content.split()
             if len(parts) < 2:
-                return await message.channel.send("Usage: `lpin <inventory number>`")
+                return await reply(message, "Usage: `lpin <inventory number>`")
 
             try:
                 requested_num = int(parts[1])
             except ValueError:
-                return await message.channel.send("Please provide a valid inventory number.")
+                return await reply(message, "Please provide a valid inventory number.")
 
             card_index = len(inv) - requested_num
             if card_index < 0 or card_index >= len(inv):
-                return await message.channel.send("Invalid inventory number.")
+                return await reply(message, "Invalid inventory number.")
 
             owned_card = inv[card_index]
 
             if owned_card.get("pinned"):
-                return await message.channel.send("That card is already pinned.")
+                return await reply(message, "That card is already pinned.")
 
             pinned_count = sum(1 for oc in inv if oc.get("pinned"))
             if pinned_count >= MAX_PINNED_CARDS:
-                return await message.channel.send(
+                return await reply(message, 
                     f"You can only pin up to {MAX_PINNED_CARDS} cards. "
                     f"Unpin one first with `lunpin <inventory number>`."
                 )
@@ -4222,12 +4342,12 @@ class Client(discord.Client):
                     mark_inventories_dirty()
                 except Exception:
                     owned_card.pop("pinned", None)
-                    return await message.channel.send(
+                    return await reply(message, 
                         "❌ Something went wrong saving your pin. Please try again."
                     )
 
             name = owned_card["card"].get("name", "Unknown")
-            return await message.channel.send(f"📌 Pinned **{name}**.")
+            return await reply(message, f"📌 Pinned **{name}**.")
 
         # =========================
         # LUNPIN COMMAND
@@ -4235,21 +4355,21 @@ class Client(discord.Client):
         if content_lower.startswith("lunpin "):
             parts = content.split()
             if len(parts) < 2:
-                return await message.channel.send("Usage: `lunpin <inventory number>`")
+                return await reply(message, "Usage: `lunpin <inventory number>`")
 
             try:
                 requested_num = int(parts[1])
             except ValueError:
-                return await message.channel.send("Please provide a valid inventory number.")
+                return await reply(message, "Please provide a valid inventory number.")
 
             card_index = len(inv) - requested_num
             if card_index < 0 or card_index >= len(inv):
-                return await message.channel.send("Invalid inventory number.")
+                return await reply(message, "Invalid inventory number.")
 
             owned_card = inv[card_index]
 
             if not owned_card.get("pinned"):
-                return await message.channel.send("That card isn't pinned.")
+                return await reply(message, "That card isn't pinned.")
 
             async with inventories_lock:
                 owned_card["pinned"] = False
@@ -4258,19 +4378,19 @@ class Client(discord.Client):
                     mark_inventories_dirty()
                 except Exception:
                     owned_card["pinned"] = True
-                    return await message.channel.send(
+                    return await reply(message, 
                         "❌ Something went wrong saving your unpin. Please try again."
                     )
 
             name = owned_card["card"].get("name", "Unknown")
-            return await message.channel.send(f"Unpinned **{name}**.")
+            return await reply(message, f"Unpinned **{name}**.")
 
         # =========================
         # TRADE COMMAND (lt / ltrade)
         # =========================
         if content_lower.startswith(("ltrade ", "lt")):
             if is_command_spam(user_id, "lt"):
-                return await message.channel.send(
+                return await reply(message, 
                     "Please wait a few seconds before using this command again."
                 )
 
@@ -4288,28 +4408,31 @@ class Client(discord.Client):
                 target_user = message.mentions[0]
 
             if not target_user:
-                return await message.channel.send(
+                return await reply(message, 
                     "Usage: `lt @user` (reply to their message or mention them)"
                 )
 
             if target_user.bot:
-                return await message.channel.send(
+                return await reply(message, 
                     "You can't trade with bots."
                 )
 
             if target_user.id == message.author.id:
-                return await message.channel.send(
+                return await reply(message, 
                     "You can't trade with yourself."
                 )
 
+            if user_has_active_trade(message.author.id) or user_has_active_trade(target_user.id):
+                return await reply(message, "You already have an ongoing trade.")
+
             if len(inv) == 0:
-                return await message.channel.send(
+                return await reply(message, 
                     "You don't have any cards to trade."
                 )
 
             target_inv = get_inventory(target_user.id)
             if len(target_inv) == 0:
-                return await message.channel.send(
+                return await reply(message, 
                     f"{target_user.mention} doesn't have any cards to trade."
                 )
 
@@ -4359,7 +4482,7 @@ class Client(discord.Client):
                 # oldest (1), so convert back to a list index accordingly.
                 pos_idx = len(inv_list) - requested_num
                 if pos_idx < 0 or pos_idx >= len(inv_list):
-                    return await message.channel.send("Invalid card number.")
+                    return await reply(message, "Invalid card number.")
 
                 owned_card = inv_list[pos_idx]
                 card_index = pos_idx
@@ -4376,7 +4499,7 @@ class Client(discord.Client):
                     cards_list = user_trade.user2_cards
                     indices_list = user_trade.user2_card_indices
                 else:
-                    return await message.channel.send("You're not part of this trade.")
+                    return await reply(message, "You're not part of this trade.")
 
                 existing_pos = next(
                     (i for i, c in enumerate(cards_list)
@@ -4389,7 +4512,7 @@ class Client(discord.Client):
                     indices_list.pop(existing_pos)
                     action_text = f"Removed {owned_card['card'].get('name', 'Unknown Character')}"
                 elif len(cards_list) >= MAX_TRADE_CARDS:
-                    return await message.channel.send(f"You can only add up to {MAX_TRADE_CARDS} cards.")
+                    return await reply(message, f"You can only add up to {MAX_TRADE_CARDS} cards.")
                 else:
                     cards_list.append(owned_card)
                     indices_list.append(card_index)
@@ -4418,9 +4541,9 @@ class Client(discord.Client):
                 except Exception:
                     pass
 
-                return await message.channel.send(action_text)
+                return await reply(message, action_text)
             except Exception as e:
-                return await message.channel.send(f"Error: {e}")
+                return await reply(message, f"Error: {e}")
 
         # =========================
         # VIEW CARD COMMAND (lv <num>)
@@ -4442,7 +4565,7 @@ class Client(discord.Client):
                 card = owned_card["card"]
                 print_num = owned_card["print"]
             except:
-                return await message.channel.send("Invalid card number.")
+                return await reply(message, "Invalid card number.")
 
             name = card.get("name", "Unknown Character")
             series = card.get("series", "Unknown Series")
@@ -4464,13 +4587,13 @@ class Client(discord.Client):
             if image_path:
                 file = discord.File(image_path, filename="card.png")
                 embed.set_image(url="attachment://card.png")
-                await message.channel.send(embed=embed, file=file)
+                await reply(message, embed=embed, file=file)
                 try:
                     os.remove(image_path)
                 except:
                     pass
             else:
-                await message.channel.send(embed=embed)
+                await reply(message, embed=embed)
 
             return
 
@@ -4480,14 +4603,14 @@ class Client(discord.Client):
         if content_lower.startswith("lup "):
             query = content[4:].strip().lower()
             if not query:
-                return await message.channel.send(
+                return await reply(message, 
                     "Please provide a name or a number to search."
                 )
 
             # If user sent a number selection after a previous search
             if query.isdigit():
                 if user_id not in user_last_lookup:
-                    return await message.channel.send(
+                    return await reply(message, 
                         "You haven't searched for anything yet! Search using a name first."
                     )
 
@@ -4495,7 +4618,7 @@ class Client(discord.Client):
                 previous_results = user_last_lookup[user_id]
 
                 if selection < 0 or selection >= len(previous_results):
-                    return await message.channel.send(
+                    return await reply(message, 
                         "Invalid number selection from your last search."
                     )
 
@@ -4523,7 +4646,7 @@ class Client(discord.Client):
                 embed = view.build_embed()
                 embed.set_image(url="attachment://card.png")
 
-                await message.channel.send(
+                await reply(message, 
                     embed=embed,
                     file=file,
                     view=view
@@ -4544,7 +4667,7 @@ class Client(discord.Client):
             ]
 
             if not matched_cards:
-                return await message.channel.send("No cards found.")
+                return await reply(message, "No cards found.")
 
             # collapse to unique names for list view
             unique_results = []
@@ -4582,7 +4705,7 @@ class Client(discord.Client):
                 embed = view.build_embed()
                 embed.set_image(url="attachment://card.png")
 
-                await message.channel.send(
+                await reply(message, 
                     embed=embed,
                     file=file,
                     view=view
@@ -4594,7 +4717,7 @@ class Client(discord.Client):
                 return
 
             view = LookupListView(unique_results, message.author, user_id)
-            return await message.channel.send(
+            return await reply(message, 
                 embed=view.get_embed(),
                 view=view
             )
@@ -4604,7 +4727,7 @@ class Client(discord.Client):
         # =========================
         if content_lower == "ld":
             if is_command_spam(user_id, "ld"):
-                return await message.channel.send(
+                return await reply(message, 
                     "Please wait a few seconds before using this command again."
                 )
 
@@ -4614,7 +4737,7 @@ class Client(discord.Client):
                 remaining = int(DROP_COOLDOWN - (now - drop_cooldowns[user_id]))
 
                 if remaining > 0:
-                    return await message.channel.send(
+                    return await reply(message, 
                         f"⏳ You must wait **{format_time(remaining)}** before dropping again."
                     )
 
@@ -4638,7 +4761,7 @@ class Client(discord.Client):
             )
 
             if image_path is None:
-                return await message.channel.send(
+                return await reply(message, 
                     "❌ Failed to render the drop."
                 )
 
@@ -4676,7 +4799,7 @@ class Client(discord.Client):
         if content_lower.startswith("lfindcard "):
             query = content[10:].strip().lower()
             if not query:
-                return await message.channel.send("Usage: lfindcard <card name>")
+                return await reply(message, "Usage: lfindcard <card name>")
 
             # try exact match then substring
             card = next((c for c in cards if c.get("name", "").lower() == query), None)
@@ -4684,7 +4807,7 @@ class Client(discord.Client):
                 card = next((c for c in cards if query in c.get("name", "").lower()), None)
 
             if not card:
-                return await message.channel.send("Card not found.")
+                return await reply(message, "Card not found.")
 
             # Find all versions of this character
             all_versions = [
@@ -4704,7 +4827,7 @@ class Client(discord.Client):
             embed = view.build_embed()
             embed.set_thumbnail(url="attachment://card.png")
 
-            await message.channel.send(embed=embed, file=file, view=view)
+            await reply(message, embed=embed, file=file, view=view)
 
             try:
                 os.remove(image_path)
@@ -4718,7 +4841,7 @@ class Client(discord.Client):
         if content_lower.startswith("lfindseries "):
             query = content[12:].strip().lower()
             if not query:
-                return await message.channel.send("Usage: lfindseries <series name>")
+                return await reply(message, "Usage: lfindseries <series name>")
 
             # try exact match then substring
             matched_cards = [c for c in cards if c.get("series", "").lower() == query]
@@ -4726,7 +4849,7 @@ class Client(discord.Client):
                 matched_cards = [c for c in cards if query in c.get("series", "").lower()]
 
             if not matched_cards:
-                return await message.channel.send("No cards found for that series.")
+                return await reply(message, "No cards found for that series.")
 
             matched_cards.sort(key=lambda c: (c.get("name", "").lower(), c.get("stars", 1)))
 
@@ -4734,7 +4857,7 @@ class Client(discord.Client):
 
             view = FindSeriesView(series_display, matched_cards, message.author, user_id)
 
-            return await message.channel.send(
+            return await reply(message, 
                 embed=view.get_embed(),
                 view=view
             )
