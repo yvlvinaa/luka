@@ -17,7 +17,7 @@ import functools
 import traceback
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
-from PIL import Image, ImageDraw, ImageFont, ImageStat
+from PIL import Image, ImageDraw, ImageFont, ImageStat, ImageFilter
 
 # =========================
 # LOAD CARDS FROM JSON
@@ -126,6 +126,61 @@ MAX_PINNED_CARDS = 3
 # the notification is just skipped, never an error.
 CARD_UPDATES_CHANNEL_ID = 1526133115536539668
 
+# =========================
+# BADGES & SHOWCASE CONFIG
+# =========================
+# Role ID for the "Early Supporter" role, used ONLY for the OG badge.
+# Checked by ID, never by name, per the badge spec.
+EARLY_SUPPORTER_ROLE_ID = 1505590926947651669
+
+MAX_SHOWCASE_CARDS = 3
+BADGES_PER_PAGE = 4
+HELP_COMMANDS_PER_PAGE = 6
+# Small visual divider between the star rating and the description in
+# the `lshowcase` embed.
+SHOWCASE_DIVIDER = "─" * 28
+
+# Showcase image layout (Pillow). Canvas is fixed at 1200x675.
+#
+# BUG FIX: showcased cards previously grew by adding the SAME flat
+# pixel amount to width and height independently
+# (_SHOWCASE_CARD_SIZE_INCREASE = (180, 180) on top of a 210x280 base).
+# Since 210 and 280 aren't equal, adding an identical number of pixels
+# to both shifts the ratio away from 3:4 a little more with every
+# increase -- 390x460 is a 0.848 ratio, not the native 0.75 -- which is
+# exactly why the cards looked stretched. The base render itself
+# (CARD_WIDTH x CARD_HEIGHT = 1536x2048) is untouched and still a
+# perfect 3:4; only the showcase's own resize target had drifted.
+#
+# Fix: derive SHOWCASE_CARD_SIZE from a single uniform SCALE FACTOR
+# applied to the native 210x280 size, instead of two independent
+# deltas. 13/7 is chosen to land on the previous width (390) exactly,
+# so the on-screen footprint stays the same size (not smaller) and the
+# left/right positions below don't need to change -- only the height
+# corrects from 460 to its proportionally-correct 520, restoring the
+# exact 3:4 ratio.
+SHOWCASE_CANVAS_SIZE = (1200, 675)
+_SHOWCASE_CARD_SCALE = 13 / 7
+SHOWCASE_CARD_SIZE = (round(210 * _SHOWCASE_CARD_SCALE), round(280 * _SHOWCASE_CARD_SCALE))
+SHOWCASE_BACKGROUND_PATH = "showcase_background.png"
+SHOWCASE_POSITIONS = {
+    1: [(495, 198)],
+    2: [(330, 198), (660, 198)],
+    # Left moved another ~40px further left (160 -> 120) and right
+    # moved another ~40px further right (830 -> 870), purely so the
+    # even-larger cards (above) don't overlap; the centre card and the
+    # overall centering are untouched.
+    3: [(120, 198), (495, 198), (870, 198)],
+}
+
+# Soft drop-shadow behind each showcased card, so it reads as sitting
+# on the background instead of floating. This is used ONLY inside
+# generate_showcase_image below -- it never touches render_card or any
+# other renderer in the bot.
+SHOWCASE_SHADOW_OFFSET = (8, 8)     # a few px down/right, per spec
+SHOWCASE_SHADOW_BLUR_RADIUS = 14    # slight blur
+SHOWCASE_SHADOW_OPACITY = 80        # low opacity, out of 255
+
 # Global tracking for lookup history sessions
 user_last_lookup = {}
 
@@ -192,6 +247,84 @@ cards_lock = asyncio.Lock()
 # and silently overwrite each other. Local-only for now -- no GitHub
 # sync, no background tasks -- per the incremental rebuild plan.
 inventories_lock = asyncio.Lock()
+
+# =========================
+# SHOWCASE DESCRIPTIONS (showcases.json)
+# =========================
+# Stores ONLY each user's custom showcase description text -- nothing
+# else. Loaded/saved the same way inventories.json is (atomic write,
+# own lock). Card selections themselves stay exactly where they
+# already were (the "showcased" flag on each owned_card entry).
+def _load_showcase_descriptions_json():
+    try:
+        with open('showcases.json', 'r') as f:
+            raw = f.read().strip()
+    except (FileNotFoundError, OSError):
+        return {}
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+showcase_descriptions = _load_showcase_descriptions_json()
+showcase_descriptions_lock = asyncio.Lock()
+
+
+def get_showcase_description(user_id):
+    """Returns the stored description string for user_id, or None if unset."""
+    return showcase_descriptions.get(str(user_id))
+
+
+def save_showcase_descriptions_local() -> None:
+    """Atomically persists showcase_descriptions to showcases.json."""
+    data_bytes = json.dumps(showcase_descriptions, indent=2).encode("utf-8")
+    _atomic_write_bytes("showcases.json", data_bytes)
+
+
+# =========================
+# SHOWCASE VOTES (showcase_votes.json)
+# =========================
+# Stores ONLY {owner_user_id: [voter_user_id, ...]} -- nothing else.
+# A vote count is simply len(that list). Loaded/saved the same way
+# showcases.json is (atomic write, own lock).
+def _load_showcase_votes_json():
+    try:
+        with open('showcase_votes.json', 'r') as f:
+            raw = f.read().strip()
+    except (FileNotFoundError, OSError):
+        return {}
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+showcase_votes = _load_showcase_votes_json()
+showcase_votes_lock = asyncio.Lock()
+
+
+def get_vote_count(user_id) -> int:
+    """Returns the number of showcase votes user_id currently has."""
+    return len(showcase_votes.get(str(user_id), []))
+
+
+def has_voted(owner_id, voter_id) -> bool:
+    """Returns whether voter_id has already voted on owner_id's showcase."""
+    return str(voter_id) in showcase_votes.get(str(owner_id), [])
+
+
+def save_showcase_votes_local() -> None:
+    """Atomically persists showcase_votes to showcase_votes.json."""
+    data_bytes = json.dumps(showcase_votes, indent=2).encode("utf-8")
+    _atomic_write_bytes("showcase_votes.json", data_bytes)
+
 
 # Create card_art directory if it doesn't exist
 if not os.path.exists('card_art'):
@@ -1106,6 +1239,12 @@ COMMON_GRADIENT_BOX_BOTTOM_PADDING = 65
 # uses GRADIENT_COLOR (the gray) above. Any frame name not listed here also
 # falls back to GRADIENT_COLOR. To add a new rare frame's gradient color,
 # just add an entry here -- no rendering logic needs to change.
+#
+# "white" is intentionally absent too: it's a rare-style frame (so it still
+# renders with the rare gradient's box/placement via is_rare()), but its
+# gradient color is meant to match Common's gray exactly, which it gets for
+# free by falling through to GRADIENT_COLOR below. Do not add a "white"
+# entry here, or it will start using its own tint instead of Common's gray.
 FRAME_GRADIENT_COLORS = {
     "blue": (55, 125, 195),
     "red": (175, 55, 50),
@@ -1804,14 +1943,399 @@ def render_drop(card1: dict, print1, card2: dict, print2) -> str:
         d.text((50, 50), f"Render Error: {str(e)[:200]}", font=get_font(40), fill=(255, 255, 255))
 
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    # compress_level=1: same lossless tradeoff as render_card_final -- no
-    # effect on decoded pixels, just faster encoding of the large combined
-    # drop image.
-    combined.save(temp_file.name, compress_level=1)
+    # REGRESSION FIX (413 Payload Too Large on `ld`): this used to be
+    # compress_level=1, which is PNG's near-store-only setting -- almost no
+    # DEFLATE compression happens, so the combined 2-card drop image (already
+    # large: two full cards side by side, then upscaled by DROP_UPSCALE)
+    # came out far bigger than it needs to for pixel-identical output. This
+    # is exactly the setting the original "reduce image size" fix relied on;
+    # it was later loosened to level 1 purely to speed up encoding, and that
+    # silently undid the earlier fix.
+    #
+    # PNG is always lossless regardless of this setting -- compress_level
+    # only trades encode CPU time for file size, it can NEVER change a
+    # single decoded pixel. So restoring full compression here fixes the
+    # 413 error with zero impact on visual quality.
+    combined.save(temp_file.name, format="PNG", optimize=True)
 
     file_size_mb = os.path.getsize(temp_file.name) / 1_000_000
-    print(f"[Drop Render] Final image: {combined.size[0]}x{combined.size[1]}, {file_size_mb:.2f} MB")
+    print(
+        f"[Drop Render] Final image: {combined.size[0]}x{combined.size[1]}px, "
+        f"format=PNG, size={file_size_mb:.2f} MB"
+    )
 
+    return temp_file.name
+
+
+# =========================
+# TARGET USER RESOLUTION (shared by lbadges / lshowcase)
+# =========================
+async def resolve_target_user(message, args: str):
+    """
+    Resolves the target user for a command in the same style as the
+    rest of the bot: an explicit mention, a replied-to message, a raw
+    ID, then a username/display-name fallback, and finally the command
+    author if nothing else matched.
+    """
+    if message.mentions:
+        return message.mentions[0]
+
+    if message.reference and message.reference.resolved:
+        replied_msg = message.reference.resolved
+        if replied_msg and replied_msg.author:
+            return replied_msg.author
+
+    args = (args or "").strip()
+    if args:
+        first_part = args.split()[0]
+
+        if first_part.isdigit() and message.guild:
+            member = message.guild.get_member(int(first_part))
+            if member:
+                return member
+
+        if message.guild:
+            lowered = first_part.lower()
+            for member in message.guild.members:
+                if member.name.lower() == lowered or member.display_name.lower() == lowered:
+                    return member
+            for member in message.guild.members:
+                if lowered in member.name.lower() or lowered in member.display_name.lower():
+                    return member
+
+    return message.author
+
+
+def _as_member(message, target_user):
+    """
+    Best-effort upgrade of a resolved target (which may be a plain
+    discord.User, e.g. from message.mentions in some contexts) into a
+    guild discord.Member, so role-based checks (the OG badge) work.
+    Falls back to returning target_user unchanged if no Member can be
+    found -- role checks on it then simply see no roles.
+    """
+    if isinstance(target_user, discord.Member):
+        return target_user
+    if message.guild:
+        member = message.guild.get_member(target_user.id)
+        if member:
+            return member
+    return target_user
+
+
+# =========================
+# BADGES (computed fresh every time -- NEVER stored)
+# =========================
+
+# Number of distinct series that must be fully completed to earn
+# Completionist (own every card from N different series).
+COMPLETIONIST_SERIES_TARGET = 5
+
+BADGE_DEFINITIONS = [
+    {"id": "collector", "emoji": "🗂️", "name": "Collector", "description": "Own at least 150 cards."},
+    {"id": "hoarder", "emoji": "📦", "name": "Hoarder", "description": "Own at least 40 cards of ONE character."},
+    {"id": "secret_admirer", "emoji": "💕", "name": "Secret Admirer", "description": "Own at least 15 cards of ONE character."},
+    {"id": "completionist", "emoji": "📚", "name": "Completionist", "description": "Own every card from 5 different series."},
+    {"id": "perfectionist", "emoji": "🏷️", "name": "Perfectionist", "description": "Tag at least 50 cards."},
+    {"id": "og", "emoji": "⏳", "name": "OG", "description": "Has the Early Supporter role."},
+    {"id": "hundred_hunter", "emoji": "💯", "name": "Hundred Hunter", "description": "Own at least one Print #100."},
+    {"id": "lucky_pull", "emoji": "1️⃣", "name": "Lucky Pull", "description": "Own at least one Print #1."},
+    {"id": "rarity_hunter", "emoji": "🏆", "name": "Rarity Hunter", "description": "Own 100 four-star cards."},
+    {"id": "explorer", "emoji": "🌍", "name": "Explorer", "description": "Own cards from 100 different characters."},
+    {"id": "crowd_favorite", "emoji": "❤️", "name": "Crowd Favorite", "description": "Receive 15 showcase votes."},
+    {"id": "trendsetter", "emoji": "🔥", "name": "Trendsetter", "description": "Receive 100 showcase votes."},
+]
+
+
+def _series_character_totals() -> dict:
+    """
+    {series: total unique character names in that series}, computed
+    fresh from the live `cards` list every call so a newly-added card
+    (a new character, or the first card of a brand new series) is
+    reflected immediately -- no migration needed.
+    """
+    totals = {}
+    for card in cards:
+        series = card.get("series", "Unknown Series")
+        name = card.get("name", "Unknown")
+        totals.setdefault(series, set()).add(name)
+    return {series: len(names) for series, names in totals.items()}
+
+
+def compute_badge_progress(member, inv: list) -> dict:
+    """
+    Computes every badge's current progress/completion for `member`
+    from their LIVE inventory (plus, for OG, their live roles).
+    Nothing here is ever read from or written to a stored "badge"
+    record -- this always reflects the player's current data/statistics.
+
+    Returns {badge_id: (current, target, completed)}.
+    """
+    total_owned = len(inv)
+
+    per_character_counts = {}
+    per_series_owned = {}
+    tagged_count = 0
+    has_print_100 = False
+    has_print_1 = False
+    four_star_count = 0
+
+    for owned_card in inv:
+        card = owned_card.get("card", {})
+        name = card.get("name", "Unknown")
+        series = card.get("series", "Unknown Series")
+
+        per_character_counts[name] = per_character_counts.get(name, 0) + 1
+        per_series_owned.setdefault(series, set()).add(name)
+
+        if owned_card.get("tags"):
+            tagged_count += 1
+
+        print_num = owned_card.get("print")
+        if print_num == 100:
+            has_print_100 = True
+        if print_num == 1:
+            has_print_1 = True
+
+        if card.get("stars") == 4:
+            four_star_count += 1
+
+    largest_character_count = max(per_character_counts.values(), default=0)
+    # Distinct characters owned, for Explorer -- just the number of keys
+    # per_character_counts already collected above, live every call.
+    distinct_character_count = len(per_character_counts)
+
+    # Completionist: count how many DISTINCT series the player has fully
+    # completed (owns every character in that series), not just the
+    # single closest one.
+    series_totals = _series_character_totals()
+    completed_series_count = sum(
+        1 for series, total in series_totals.items()
+        if total > 0 and len(per_series_owned.get(series, set())) >= total
+    )
+
+    has_og_role = any(role.id == EARLY_SUPPORTER_ROLE_ID for role in getattr(member, "roles", []))
+
+    # Showcase vote count is read live from showcase_votes.json every
+    # call, never stored as part of the badge itself -- same "always
+    # computed fresh" rule as every other badge here.
+    vote_count = get_vote_count(getattr(member, "id", None))
+
+    return {
+        "collector": (total_owned, 150, total_owned >= 150),
+        "hoarder": (largest_character_count, 40, largest_character_count >= 40),
+        "secret_admirer": (largest_character_count, 15, largest_character_count >= 15),
+        "completionist": (
+            min(completed_series_count, COMPLETIONIST_SERIES_TARGET),
+            COMPLETIONIST_SERIES_TARGET,
+            completed_series_count >= COMPLETIONIST_SERIES_TARGET,
+        ),
+        "perfectionist": (tagged_count, 50, tagged_count >= 50),
+        "og": (1 if has_og_role else 0, 1, has_og_role),
+        "hundred_hunter": (1 if has_print_100 else 0, 1, has_print_100),
+        "lucky_pull": (1 if has_print_1 else 0, 1, has_print_1),
+        "rarity_hunter": (min(four_star_count, 100), 100, four_star_count >= 100),
+        "explorer": (min(distinct_character_count, 100), 100, distinct_character_count >= 100),
+        "crowd_favorite": (min(vote_count, 15), 15, vote_count >= 15),
+        "trendsetter": (min(vote_count, 100), 100, vote_count >= 100),
+    }
+
+
+def compute_star_rating(completed_badges: int, total_badges: int) -> str:
+    """
+    Dynamic 0-5 star rating string from completed/total badges. There
+    are no hardcoded badge-count thresholds here -- the ratio is
+    recalculated against whatever `total_badges` currently is, so
+    adding or removing a badge from BADGE_DEFINITIONS automatically
+    adjusts every rating without touching this function.
+    """
+    if total_badges <= 0:
+        filled_stars = 0
+    else:
+        filled_stars = round((completed_badges / total_badges) * 5)
+    filled_stars = max(0, min(5, filled_stars))
+    empty_stars = 5 - filled_stars
+    return ("★" * filled_stars) + ("☆" * empty_stars)
+
+
+def _badge_star_rating_for(target_user, member) -> str:
+    """
+    Convenience wrapper: computes target_user's live badge progress and
+    returns their star rating string (see compute_star_rating). Does
+    not change the calculation itself -- just a shared spot for the
+    places that need it (lshowcase, lbadges, and the showcase's "View
+    Badges" button), so the star rating always reflects the exact same
+    completed/total ratio wherever it's shown.
+    """
+    inv = get_inventory(target_user.id)
+    progress = compute_badge_progress(member, inv)
+    completed = sum(1 for (_, _, c) in progress.values() if c)
+    total = len(BADGE_DEFINITIONS)
+    return compute_star_rating(completed, total)
+
+
+def _ordered_badge_blocks(target_user, member) -> list:
+    """
+    Computes every badge's progress fresh (see compute_badge_progress)
+    and returns one pre-formatted display block per badge -- completed
+    badges first, incomplete underneath -- as the exact text format
+    `lbadges` uses:
+
+        {emoji} **{name}**
+        -# {description}
+        -# **Completed!**  (or)  -# **Progress: current/target**
+
+    Single source of truth shared by both the plain lbadges embed and
+    its pagination, and by the showcase's "View Badges" button.
+    """
+    inv = get_inventory(target_user.id)
+    progress = compute_badge_progress(member, inv)
+
+    completed_blocks = []
+    incomplete_blocks = []
+
+    for badge in BADGE_DEFINITIONS:
+        current, target, completed = progress[badge["id"]]
+        status_line = "-# **Completed!**" if completed else f"-# **Progress: {current}/{target}**"
+        block = (
+            f"{badge['emoji']} **{badge['name']}**\n"
+            f"-# {badge['description']}\n"
+            f"{status_line}"
+        )
+        (completed_blocks if completed else incomplete_blocks).append(block)
+
+    return completed_blocks + incomplete_blocks
+
+
+class BadgesPaginationView(discord.ui.View):
+    """
+    Paginates the already-computed, completed-first-ordered badge
+    blocks for target_user, BADGES_PER_PAGE per page. Title and
+    thumbnail are rebuilt identically on every page; only the
+    description (which 4 badges are shown) changes. Everything is
+    computed once up front (compute_badge_progress is pure/in-memory),
+    so paging back and forth here never does any extra work.
+    """
+    def __init__(self, target_user, blocks, user_id, star_rating: str = ""):
+        super().__init__(timeout=90)
+        self.target_user = target_user
+        self.blocks = blocks
+        self.user_id = user_id
+        self.star_rating = star_rating
+        self.page = 0
+        self.max_page = max(0, (len(blocks) - 1) // BADGES_PER_PAGE) if blocks else 0
+        self._update_button_states()
+
+    def _update_button_states(self):
+        self.previous.disabled = (self.page <= 0)
+        self.next.disabled = (self.page >= self.max_page)
+
+    def build_embed(self) -> discord.Embed:
+        title = f"{self.target_user.display_name}'s Collection Badges"
+        if self.star_rating:
+            title = f"{title}\n{self.star_rating}"
+        embed = discord.Embed(
+            color=THEME_COLOR,
+            title=title,
+        )
+        embed.set_thumbnail(url=self.target_user.display_avatar.url)
+
+        start = self.page * BADGES_PER_PAGE
+        page_blocks = self.blocks[start:start + BADGES_PER_PAGE]
+        embed.description = "\n\n".join(page_blocks)
+
+        if self.max_page > 0:
+            embed.set_footer(text=f"Page {self.page + 1}/{self.max_page + 1}")
+
+        return embed
+
+    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+
+        if self.page > 0:
+            self.page -= 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+
+        if self.page < self.max_page:
+            self.page += 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+
+# =========================
+# SHOWCASE IMAGE (Pillow)
+# =========================
+def _build_showcase_card_shadow(rendered_card: Image.Image) -> Image.Image:
+    """
+    Builds a soft, blurred drop-shadow silhouette matching a rendered
+    card's own shape (via its alpha channel), so it works regardless
+    of the card art's shape. Showcase-only -- render_card and every
+    other renderer in the bot are untouched.
+    """
+    alpha = rendered_card.split()[-1]
+    shadow = Image.new("RGBA", rendered_card.size, (0, 0, 0, 0))
+    black_layer = Image.new("RGBA", rendered_card.size, (0, 0, 0, SHOWCASE_SHADOW_OPACITY))
+    shadow.paste(black_layer, (0, 0), mask=alpha)
+    return shadow.filter(ImageFilter.GaussianBlur(SHOWCASE_SHADOW_BLUR_RADIUS))
+
+
+def generate_showcase_image(showcased_owned_cards: list) -> str:
+    """
+    Renders the showcase image: the fixed background at
+    SHOWCASE_CANVAS_SIZE, with 0-3 already-rendered cards placed at
+    the fixed SHOWCASE_POSITIONS (never calculated dynamically), each
+    with a soft drop-shadow behind it. Saves to a temp PNG and returns
+    its path (same contract as render_card_final / render_drop). With
+    zero showcased cards, only the background is drawn -- no
+    placeholders, no text, no slots.
+    """
+    if os.path.exists(SHOWCASE_BACKGROUND_PATH):
+        background = Image.open(SHOWCASE_BACKGROUND_PATH).convert("RGBA")
+        if background.size != SHOWCASE_CANVAS_SIZE:
+            background = background.resize(SHOWCASE_CANVAS_SIZE, Image.LANCZOS)
+    else:
+        print(f"SHOWCASE BACKGROUND NOT FOUND: {SHOWCASE_BACKGROUND_PATH} - using placeholder")
+        background = Image.new("RGBA", SHOWCASE_CANVAS_SIZE, (20, 20, 20, 255))
+
+    canvas = background.copy()
+
+    count = len(showcased_owned_cards)
+    if count > 0:
+        positions = SHOWCASE_POSITIONS[count]
+        for owned_card, (x, y) in zip(showcased_owned_cards, positions):
+            card = owned_card["card"]
+            rendered = render_card(card, owned_card["print"])
+            # Uniform resize only (same 3:4 aspect ratio as the native
+            # render) -- never a crop or a disproportionate stretch.
+            rendered = rendered.resize(SHOWCASE_CARD_SIZE, Image.LANCZOS)
+            # SHOWCASE_POSITIONS store the top-left corner for the
+            # native 210x280 card size. Shift by half the size
+            # difference in each axis so the card's CENTER lands
+            # exactly where it always has, even though the card itself
+            # is now larger.
+            paste_x = x - (SHOWCASE_CARD_SIZE[0] - 210) // 2
+            paste_y = y - (SHOWCASE_CARD_SIZE[1] - 280) // 2
+
+            # Shadow first (offset down/right, blurred, low opacity),
+            # so the card is pasted on top of it, not the other way
+            # around.
+            shadow = _build_showcase_card_shadow(rendered)
+            shadow_x = paste_x + SHOWCASE_SHADOW_OFFSET[0]
+            shadow_y = paste_y + SHOWCASE_SHADOW_OFFSET[1]
+            canvas.alpha_composite(shadow, (shadow_x, shadow_y))
+
+            canvas.alpha_composite(rendered, (paste_x, paste_y))
+
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    canvas.save(temp_file.name, format="PNG", optimize=True)
     return temp_file.name
 
 
@@ -2419,7 +2943,7 @@ class FindcardVersionView(discord.ui.View):
             pass
 
     @discord.ui.button(
-        emoji="◀️",
+        emoji="◀",
         style=discord.ButtonStyle.secondary
     )
     async def previous(
@@ -2439,7 +2963,7 @@ class FindcardVersionView(discord.ui.View):
         await self.update_message(interaction)
 
     @discord.ui.button(
-        emoji="▶️",
+        emoji="▶",
         style=discord.ButtonStyle.secondary
     )
     async def next(
@@ -2503,7 +3027,7 @@ class FindSeriesView(discord.ui.View):
 
         return embed
 
-    @discord.ui.button(emoji="◀️", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(emoji="◀", style=discord.ButtonStyle.secondary)
     async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn't your search!", ephemeral=True)
@@ -2511,7 +3035,7 @@ class FindSeriesView(discord.ui.View):
             self.page -= 1
         await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
-    @discord.ui.button(emoji="▶️", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(emoji="▶", style=discord.ButtonStyle.secondary)
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             return await interaction.response.send_message("This isn't your search!", ephemeral=True)
@@ -2739,6 +3263,249 @@ class GiftView(discord.ui.View):
                     os.remove(file.fp.name)
                 except Exception:
                     pass
+
+
+# =========================
+# SHOWCASE VIEW
+# =========================
+# =========================
+# HELP PAGINATION
+# =========================
+
+# Exact same category names/command text as before -- only how they're
+# split across pages changed. Splitting a section across pages only
+# happens when it doesn't fit in HELP_COMMANDS_PER_PAGE (currently only
+# "Other", since Cards+Trading together already fit in one page).
+HELP_SECTIONS = [
+    ("𝗖𝗮𝗿𝗱𝘀", [
+        "`ld` ─ Drop 2 random cards.",
+        "`lv <number>` ─ View a card.",
+        "`lc` ─ Look through your collection.",
+        "`lup <name/series>` ─ Search a character or series.",
+    ]),
+    ("𝗧𝗿𝗮𝗱𝗶𝗻𝗴", [
+        "`lg` / `lgift` ─ Gift one of your cards to another player.",
+        "`lt` / `ltrade` ─ Trade cards with another player.",
+    ]),
+    ("𝗢𝘁𝗵𝗲𝗿", [
+        "`lcd` ─ Check your current cooldowns.",
+        "`ltag <name>` OR `<number> <tag>` ─ Tag 1 or multiple cards.",
+        "`lpin <number>` ─ Pin up to 3 cards.",
+        "`lc -untagged` ─ Check untagged cards.",
+        "`lc p:<number>` ─ Check cards by prints.",
+        "`lc -p` ─ Check cards by prints lowest to highest.",
+        "`lc t:<tag>` ─ Check cards with that specific tag.",
+        "`lbadges [user]` ─ View collection badges.",
+        "`lshowcase [user]` ─ View a showcase of top cards.",
+        "`lscadd <number>` ─ Add a card to your showcase.",
+        "`lscremove <number>` ─ Remove a card from your showcase.",
+    ]),
+]
+
+
+def _build_help_pages() -> list:
+    """
+    Flattens HELP_SECTIONS into pages of at most HELP_COMMANDS_PER_PAGE
+    command lines each, keeping a category's commands together on one
+    page whenever they fit. A category is only split across pages if it
+    alone exceeds the per-page limit (currently only "Other"), in which
+    case the continuation page's header is marked "(continued)".
+    """
+    pages = []
+    current_lines = []
+    current_count = 0
+
+    def flush_page():
+        nonlocal current_lines, current_count
+        if current_lines:
+            pages.append("\n".join(current_lines))
+        current_lines = []
+        current_count = 0
+
+    for section_name, commands in HELP_SECTIONS:
+        remaining = commands[:]
+        first_chunk_in_section = True
+        while remaining:
+            space_left = HELP_COMMANDS_PER_PAGE - current_count
+            if space_left <= 0:
+                flush_page()
+                space_left = HELP_COMMANDS_PER_PAGE
+
+            chunk = remaining[:space_left]
+            remaining = remaining[space_left:]
+
+            header = f"### {section_name}" if first_chunk_in_section else f"### {section_name} (continued)"
+            current_lines.append(header)
+            current_lines.extend(chunk)
+            current_lines.append("")
+            current_count += len(chunk)
+            first_chunk_in_section = False
+
+    flush_page()
+    return pages
+
+
+class HelpPaginationView(discord.ui.View):
+    """
+    Paginates the static lhelp command list, HELP_COMMANDS_PER_PAGE (6)
+    commands per page. Pages are pre-built once by _build_help_pages()
+    -- this is static reference text, not per-user data, so there's
+    nothing to recompute when paging back and forth.
+    """
+    def __init__(self, pages, user_id):
+        super().__init__(timeout=90)
+        self.pages = pages
+        self.user_id = user_id
+        self.page = 0
+        self.max_page = max(0, len(pages) - 1)
+        self._update_button_states()
+
+    def _update_button_states(self):
+        self.previous.disabled = (self.page <= 0)
+        self.next.disabled = (self.page >= self.max_page)
+
+    def build_embed(self) -> discord.Embed:
+        embed = discord.Embed(
+            color=THEME_COLOR,
+            title="📖 Luka Commands Helper",
+            description=self.pages[self.page],
+        )
+        if self.max_page > 0:
+            embed.set_footer(text=f"Page {self.page + 1}/{self.max_page + 1}")
+        return embed
+
+    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+
+        if self.page > 0:
+            self.page -= 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+
+        if self.page < self.max_page:
+            self.page += 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+
+class ShowcaseView(discord.ui.View):
+    """
+    View attached to the `lshowcase` embed: "View Badges", the ❤︎ vote
+    button, and "⚙ Edit". All three are always attached to every
+    showcase message, for every viewer -- Discord has no way to show
+    different components to different viewers on the same public
+    message, so "Edit" is restricted by USAGE, not visibility: anyone
+    can see the button, but the click handler only lets the actual
+    owner proceed past it (everyone else gets a short ephemeral
+    rejection and the editing flow never opens for them).
+    """
+    def __init__(self, bot, owner_user, owner_member, is_owner_view: bool):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.owner_user = owner_user
+        self.owner_member = owner_member
+        # Vote button starts labeled with whatever vote count is
+        # currently stored in showcase_votes.json for the owner --
+        # nothing here is guessed or defaulted to zero unnecessarily.
+        self.vote.label = f"❤︎ {get_vote_count(owner_user.id)}"
+
+    @discord.ui.button(label="View Badges", style=discord.ButtonStyle.secondary, emoji="🏅")
+    async def view_badges(self, interaction: discord.Interaction, button: discord.ui.Button):
+        blocks = _ordered_badge_blocks(self.owner_user, self.owner_member)
+        star_rating = _badge_star_rating_for(self.owner_user, self.owner_member)
+        view = BadgesPaginationView(self.owner_user, blocks, interaction.user.id, star_rating)
+        await interaction.response.send_message(embed=view.build_embed(), view=view)
+
+    @discord.ui.button(label="❤︎ 0", style=discord.ButtonStyle.danger)
+    async def vote(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id == self.owner_user.id:
+            return await interaction.response.send_message(
+                "You can't vote on your own showcase!", ephemeral=True
+            )
+
+        owner_id = str(self.owner_user.id)
+        voter_id = str(interaction.user.id)
+
+        async with showcase_votes_lock:
+            voters = showcase_votes.setdefault(owner_id, [])
+            already_voted = voter_id in voters
+
+            if already_voted:
+                voters.remove(voter_id)
+            else:
+                voters.append(voter_id)
+
+            try:
+                save_showcase_votes_local()
+            except Exception:
+                # Roll back the in-memory change so it never drifts
+                # from what's actually on disk.
+                if already_voted:
+                    voters.append(voter_id)
+                else:
+                    voters.remove(voter_id)
+                return await interaction.response.send_message(
+                    "❌ Something went wrong saving your vote. Please try again.",
+                    ephemeral=True
+                )
+
+            new_count = len(voters)
+
+        button.label = f"❤︎ {new_count}"
+        await interaction.response.edit_message(view=self)
+
+        confirmation = "Vote removed!" if already_voted else "Successfully voted!"
+        await interaction.followup.send(confirmation, ephemeral=True)
+
+    @discord.ui.button(label="⚙ Edit", style=discord.ButtonStyle.secondary)
+    async def edit_description(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Always attached, for every viewer -- restricted by usage
+        # here, not by visibility (see class docstring).
+        if interaction.user.id != self.owner_user.id:
+            return await interaction.response.send_message(
+                "Only the owner of this showcase can edit it.", ephemeral=True
+            )
+
+        await interaction.response.send_message(
+            "Send your new showcase description (max 5 lines). It will replace your current one.",
+            ephemeral=True
+        )
+
+        def check(m):
+            return m.author.id == self.owner_user.id and m.channel.id == interaction.channel.id
+
+        try:
+            reply_msg = await self.bot.wait_for("message", check=check, timeout=180)
+        except asyncio.TimeoutError:
+            return await interaction.followup.send("❌ Timed out waiting for a description.", ephemeral=True)
+
+        lines = reply_msg.content.strip("\n").split("\n")
+        if not reply_msg.content.strip() or len(lines) > 5:
+            return await interaction.followup.send(
+                "❌ Description must be 1-5 lines. Please click **⚙ Edit** again to retry.",
+                ephemeral=True
+            )
+
+        new_description = reply_msg.content.strip("\n")
+
+        async with showcase_descriptions_lock:
+            showcase_descriptions[str(self.owner_user.id)] = new_description
+            try:
+                save_showcase_descriptions_local()
+            except Exception:
+                return await interaction.followup.send(
+                    "❌ Something went wrong saving your description. Please try again.",
+                    ephemeral=True
+                )
+
+        await interaction.followup.send("✅ Showcase description updated.", ephemeral=True)
 
 
 # =========================
@@ -3817,24 +4584,9 @@ class Client(discord.Client):
         # HELP COMMAND (lhelp)
         # =========================
         if content_lower == "lhelp":
-            embed = discord.Embed(
-                color=THEME_COLOR,
-                title="📖 Luka Commands Helper",
-                description=(
-                    "### 𝗖𝗮𝗿𝗱𝘀\n"
-                    "`ld` ─ Drop 2 random cards.\n"
-                    "`lv <number>` ─ View a card.\n"
-                    "`lc` ─ Look through your collection.\n"
-                    "`lup <name/series>` ─ Search a character or series.\n\n"
-                    "### 𝗧𝗿𝗮𝗱𝗶𝗻𝗴\n"
-                    "`lg` / `lgift` ─ Gift one of your cards to another player.\n"
-                    "`lt` / `ltrade` ─ Trade cards with another player.\n\n"
-                    "### 𝗢𝘁𝗵𝗲𝗿\n"
-                    "`lcd` ─ Check your current cooldowns."
-                )
-            )
-
-            await reply(message, embed=embed)
+            pages = _build_help_pages()
+            view = HelpPaginationView(pages, message.author.id)
+            await reply(message, embed=view.build_embed(), view=view)
             return
 
         # =========================
@@ -4386,6 +5138,171 @@ class Client(discord.Client):
             return await reply(message, f"Unpinned **{name}**.")
 
         # =========================
+        # LBADGES COMMAND
+        # =========================
+        if content_lower == "lbadges" or content_lower.startswith("lbadges "):
+            args = content[len("lbadges"):].strip()
+            target_user = await resolve_target_user(message, args)
+            member = _as_member(message, target_user)
+
+            blocks = _ordered_badge_blocks(target_user, member)
+            star_rating = _badge_star_rating_for(target_user, member)
+            view = BadgesPaginationView(target_user, blocks, message.author.id, star_rating)
+            return await reply(message, embed=view.build_embed(), view=view)
+
+        # =========================
+        # LSCADD COMMAND (add a card to your showcase)
+        # =========================
+        if content_lower.startswith("lscadd"):
+            parts = content.split()
+            if len(parts) < 2:
+                return await reply(message, "Usage: `lscadd <inventory number>`")
+
+            try:
+                requested_num = int(parts[1])
+            except ValueError:
+                return await reply(message, "Please provide a valid inventory number.")
+
+            card_index = len(inv) - requested_num
+            if card_index < 0 or card_index >= len(inv):
+                return await reply(message, "Invalid inventory number.")
+
+            owned_card = inv[card_index]
+
+            if owned_card.get("showcased"):
+                return await reply(message, "That card is already in your showcase.")
+
+            showcased_count = sum(1 for oc in inv if oc.get("showcased"))
+            if showcased_count >= MAX_SHOWCASE_CARDS:
+                return await reply(message,
+                    f"You can only showcase up to {MAX_SHOWCASE_CARDS} cards. "
+                    f"Remove one first with `lscremove <inventory number>`."
+                )
+
+            async with inventories_lock:
+                owned_card["showcased"] = True
+                try:
+                    save_inventories_local()
+                    mark_inventories_dirty()
+                except Exception:
+                    owned_card.pop("showcased", None)
+                    return await reply(message,
+                        "❌ Something went wrong saving your showcase. Please try again."
+                    )
+
+            name = owned_card["card"].get("name", "Unknown")
+            return await reply(message, f"✅ Added **{name}** to your showcase.")
+
+        # =========================
+        # LSCREMOVE COMMAND (remove a card from your showcase)
+        # =========================
+        if content_lower.startswith("lscremove"):
+            parts = content.split()
+            if len(parts) < 2:
+                return await reply(message, "Usage: `lscremove <inventory number>`")
+
+            try:
+                requested_num = int(parts[1])
+            except ValueError:
+                return await reply(message, "Please provide a valid inventory number.")
+
+            card_index = len(inv) - requested_num
+            if card_index < 0 or card_index >= len(inv):
+                return await reply(message, "Invalid inventory number.")
+
+            owned_card = inv[card_index]
+
+            if not owned_card.get("showcased"):
+                return await reply(message, "That card isn't in your showcase.")
+
+            async with inventories_lock:
+                owned_card["showcased"] = False
+                try:
+                    save_inventories_local()
+                    mark_inventories_dirty()
+                except Exception:
+                    owned_card["showcased"] = True
+                    return await reply(message,
+                        "❌ Something went wrong saving your showcase. Please try again."
+                    )
+
+            name = owned_card["card"].get("name", "Unknown")
+            return await reply(message, f"Removed **{name}** from your showcase.")
+
+        # =========================
+        # LSHOWCASE COMMAND
+        # =========================
+        if content_lower == "lshowcase" or content_lower.startswith("lshowcase "):
+            args = content[len("lshowcase"):].strip()
+            target_user = await resolve_target_user(message, args)
+            member = _as_member(message, target_user)
+            is_owner_view = (target_user.id == message.author.id)
+
+            target_inv = get_inventory(target_user.id)
+            showcased_cards = [oc for oc in target_inv if oc.get("showcased")][:MAX_SHOWCASE_CARDS]
+
+            loop = asyncio.get_running_loop()
+            image_path = await loop.run_in_executor(
+                None,
+                generate_showcase_image,
+                showcased_cards
+            )
+
+            # The player's own custom description (showcases.json)
+            # replaces the old character-info block. Each stored line
+            # is shown in its own backtick "text box"; unset stays
+            # blank rather than showing a placeholder card list.
+            stored_description = get_showcase_description(target_user.id)
+            if stored_description:
+                description_lines = stored_description.split("\n")
+                description_block = "\n".join(f"> ✦ {line}" for line in description_lines)
+            else:
+                description_block = ""
+
+            # Badge progress/star rating, computed live from the same
+            # completed/total ratio as always (see compute_star_rating)
+            # -- needed up front now since the star rating is shown in
+            # the title rather than the footer.
+            progress = compute_badge_progress(member, target_inv)
+            completed_badge_count = sum(1 for (_, _, completed) in progress.values() if completed)
+            total_badge_count = len(BADGE_DEFINITIONS)
+            star_rating = compute_star_rating(completed_badge_count, total_badge_count)
+
+            embed = discord.Embed(color=THEME_COLOR)
+            # Standard author line (avatar + "@user's Showcase"), in
+            # addition to -- not instead of -- the existing "## " title
+            # styling below, per spec.
+            embed.set_author(
+                name=f"@{target_user.display_name}'s Showcase",
+                icon_url=target_user.display_avatar.url
+            )
+            # Embed titles don't render markdown -- the description does
+            # -- so the prominent title lives here as a "## " header,
+            # with the showcase description directly beneath it, all
+            # above the image. The star rating sits on its own line
+            # under the title, separated from the description below it
+            # by a small divider.
+            embed.description = (
+                f"## {target_user.mention}'s Showcase\n{star_rating}\n{SHOWCASE_DIVIDER}\n\n{description_block}"
+            ).rstrip()
+            embed.set_image(url="attachment://showcase.png")
+
+            # Footer is just the badge count now -- the star rating
+            # moved up into the title above.
+            embed.set_footer(text=f"🏅 Badges: {completed_badge_count}/{total_badge_count}")
+
+            file = discord.File(image_path, filename="showcase.png")
+            view = ShowcaseView(self, target_user, member, is_owner_view)
+
+            await reply(message, embed=embed, file=file, view=view)
+
+            try:
+                os.remove(image_path)
+            except:
+                pass
+            return
+
+        # =========================
         # TRADE COMMAND (lt / ltrade)
         # =========================
         if content_lower.startswith(("ltrade ", "lt")):
@@ -4764,6 +5681,20 @@ class Client(discord.Client):
                 return await reply(message, 
                     "❌ Failed to render the drop."
                 )
+
+            # Trace point: exact resolution, format, and encoded size of the
+            # single file about to be uploaded to Discord for `ld`, right
+            # before it's attached/sent (bot upload cap is well under
+            # Discord's normal per-file limit, so this is the number that
+            # actually matters for the 413 error).
+            with Image.open(image_path) as _dbg_img:
+                _dbg_w, _dbg_h = _dbg_img.size
+                _dbg_format = _dbg_img.format
+            _dbg_size_mb = os.path.getsize(image_path) / 1_000_000
+            print(
+                f"[ld] Uploading drop image -> {_dbg_w}x{_dbg_h}px, "
+                f"format={_dbg_format}, size={_dbg_size_mb:.2f} MB"
+            )
 
             file = discord.File(
                 image_path,
