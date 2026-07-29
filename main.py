@@ -292,22 +292,61 @@ def save_showcase_descriptions_local() -> None:
 # A vote count is simply len(that list). Loaded/saved the same way
 # showcases.json is (atomic write, own lock).
 def _load_showcase_votes_json():
+    """
+    Loads and validates the local showcase_votes.json.
+
+    Mirrors _load_inventories_json()'s contract exactly, for the same
+    reason: "the file doesn't exist yet" and "the file exists but is
+    corrupt/wrong shape" are NOT the same situation and must never be
+    silently collapsed into the same "just start with {}" result --
+    that silent collapse (the previous version of this function caught
+    FileNotFoundError, OSError, and JSONDecodeError and returned {} for
+    all three, with no logging at all) is the actual, confirmed root
+    cause of every showcase vote reading as reset to 0: on a redeploy
+    where showcase_votes.json isn't carried over to the new local disk
+    (this bot's inventories.json has an explicit GitHub-backfill step
+    for exactly this "brand-new deploy/container" scenario --
+    showcase_votes.json has no equivalent, so it silently starts over),
+    the plain FileNotFoundError was indistinguishable from "nobody has
+    ever voted" -- no error, no log line, nothing.
+
+    Returns:
+        - the parsed dict (possibly a legitimately empty {}, e.g. a
+          brand new bot with no votes yet) if the file exists and is
+          valid.
+        - None if the file is missing, unreadable, contains malformed
+          JSON, or parses to something other than a dict -- None is
+          the explicit "invalid, do not treat as empty" signal, so the
+          startup loader below can tell a real empty vote set apart
+          from a problem worth reporting.
+    """
     try:
         with open('showcase_votes.json', 'r') as f:
             raw = f.read().strip()
-    except (FileNotFoundError, OSError):
-        return {}
+    except FileNotFoundError:
+        return None
+    except OSError:
+        print("[showcase_votes] Failed to read showcase_votes.json:")
+        traceback.print_exc()
+        return None
+
     if not raw:
-        return {}
+        print("[showcase_votes] showcase_votes.json is empty (not even '{}') -- treating as invalid.")
+        return None
+
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
-        return {}
-    return parsed if isinstance(parsed, dict) else {}
+        print("[showcase_votes] showcase_votes.json contains invalid JSON:")
+        traceback.print_exc()
+        return None
 
+    if not isinstance(parsed, dict):
+        print(f"[showcase_votes] showcase_votes.json did not contain a JSON object "
+              f"(got {type(parsed).__name__}) -- treating as invalid.")
+        return None
 
-showcase_votes = _load_showcase_votes_json()
-showcase_votes_lock = asyncio.Lock()
+    return parsed
 
 
 def get_vote_count(user_id) -> int:
@@ -318,12 +357,6 @@ def get_vote_count(user_id) -> int:
 def has_voted(owner_id, voter_id) -> bool:
     """Returns whether voter_id has already voted on owner_id's showcase."""
     return str(voter_id) in showcase_votes.get(str(owner_id), [])
-
-
-def save_showcase_votes_local() -> None:
-    """Atomically persists showcase_votes to showcase_votes.json."""
-    data_bytes = json.dumps(showcase_votes, indent=2).encode("utf-8")
-    _atomic_write_bytes("showcase_votes.json", data_bytes)
 
 
 # Create card_art directory if it doesn't exist
@@ -1010,6 +1043,176 @@ async def _sync_inventories_from_github_at_startup() -> dict:
 # connects. Nothing later re-triggers it -- no polling, no retry loop.
 inventories.clear()
 inventories.update(asyncio.run(_sync_inventories_from_github_at_startup()))
+
+
+# =========================
+# SHOWCASE VOTES: GitHub persistence (mirrors inventories.json exactly)
+# =========================
+def _showcase_votes_json_bytes() -> bytes:
+    """Serializes the current in-memory `showcase_votes` dict to JSON bytes."""
+    return json.dumps(showcase_votes, indent=2).encode("utf-8")
+
+
+def save_showcase_votes_local() -> None:
+    """
+    Writes the current in-memory `showcase_votes` dict to
+    showcase_votes.json on disk, atomically (via _atomic_write_bytes).
+    Called immediately after every successful vote add/remove -- same
+    role as save_inventories_local() for inventories.
+    """
+    try:
+        _atomic_write_bytes("showcase_votes.json", _showcase_votes_json_bytes())
+    except Exception:
+        print("[showcase_votes] Failed to save showcase_votes.json locally:")
+        traceback.print_exc()
+        raise
+
+
+# Same interval as inventories -- reusing the constant directly (not a
+# separate copy) so the two can never drift out of sync in timing.
+_showcase_votes_sync_task = None
+_showcase_votes_dirty = False
+_showcase_votes_upload_in_progress = False
+
+
+def mark_showcase_votes_dirty() -> None:
+    """
+    Marks that showcase_votes.json has local changes not yet pushed to
+    GitHub. Must be called while holding showcase_votes_lock,
+    immediately after a successful save_showcase_votes_local(). Mirrors
+    mark_inventories_dirty() exactly.
+    """
+    global _showcase_votes_dirty
+    _showcase_votes_dirty = True
+
+
+async def showcase_votes_github_sync_loop():
+    """
+    Background task: wakes up every INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS
+    (the exact same interval inventories.json uses) and, only if
+    showcase_votes.json has unpushed local changes, performs exactly one
+    GitHub commit containing the current votes. Mirrors
+    inventory_github_sync_loop() exactly -- same snapshot-inside-the-lock,
+    push-outside-the-lock pattern, same dirty-flag-restore-on-failure
+    behavior, reusing the identical github_commit_files() helper (no
+    second GitHub system).
+    """
+    global _showcase_votes_dirty, _showcase_votes_upload_in_progress
+    while True:
+        await asyncio.sleep(INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS)
+
+        if not _showcase_votes_dirty or _showcase_votes_upload_in_progress:
+            continue
+
+        async with showcase_votes_lock:
+            if not _showcase_votes_dirty:
+                continue
+            data = _showcase_votes_json_bytes()
+            _showcase_votes_dirty = False
+
+        _showcase_votes_upload_in_progress = True
+        try:
+            await github_commit_files({"showcase_votes.json": data}, "Batched showcase votes sync")
+        except Exception:
+            print("[showcase_votes] Periodic GitHub sync failed (will retry next cycle):")
+            traceback.print_exc()
+            async with showcase_votes_lock:
+                _showcase_votes_dirty = True
+        finally:
+            _showcase_votes_upload_in_progress = False
+
+
+async def flush_showcase_votes_to_github() -> None:
+    """
+    Best-effort final push of any pending showcase vote changes to
+    GitHub, called from Client.close() on graceful shutdown -- same
+    reasoning and same mechanism as flush_inventories_to_github().
+    """
+    global _showcase_votes_dirty
+
+    async with showcase_votes_lock:
+        if not _showcase_votes_dirty:
+            return
+        data = _showcase_votes_json_bytes()
+        _showcase_votes_dirty = False
+
+    try:
+        await github_commit_files({"showcase_votes.json": data}, "Final showcase votes sync (shutdown)")
+        print("[showcase_votes] Flushed pending vote changes to GitHub before shutdown.")
+    except Exception:
+        async with showcase_votes_lock:
+            _showcase_votes_dirty = True
+        print("[showcase_votes] Failed to flush pending vote changes to GitHub on shutdown "
+              "(they remain saved locally):")
+        traceback.print_exc()
+
+
+async def _sync_showcase_votes_from_github_at_startup() -> dict:
+    """
+    Startup-only, single load into memory. Mirrors
+    _sync_inventories_from_github_at_startup()'s exact priority order:
+    local disk is authoritative if valid (every vote is written to disk
+    immediately; GitHub is only ever a periodic mirror -- see
+    showcase_votes_github_sync_loop above), so GitHub is only consulted
+    as a backfill when local is missing, unreadable, malformed, or not a
+    dict. Reuses the exact same GitHub helpers as inventories
+    (github_get_file, github_commit_files) -- no second persistence
+    system.
+
+    Preserves the previous version's local-corruption safety net: if a
+    local file exists but is invalid, it's backed up (never overwritten
+    or deleted) before GitHub is even attempted.
+    """
+    local_votes = _load_showcase_votes_json()
+    if local_votes is not None:
+        print("[showcase_votes] Loaded showcase_votes.json from local disk.")
+        return local_votes
+
+    print("[showcase_votes] Local showcase_votes.json is missing/unreadable/malformed -- trying GitHub as a backfill.")
+
+    if os.path.exists('showcase_votes.json'):
+        backup_path = f"showcase_votes.json.corrupt-{int(time.time())}"
+        try:
+            with open('showcase_votes.json', 'rb') as src, open(backup_path, 'wb') as dst:
+                dst.write(src.read())
+            print(f"[showcase_votes] Backed up the invalid local file to '{backup_path}' before trying GitHub.")
+        except Exception:
+            print("[showcase_votes] Failed to back up the invalid local file (it was NOT modified or deleted):")
+            traceback.print_exc()
+
+    remote_bytes = await github_get_file("showcase_votes.json")
+
+    if remote_bytes is None:
+        print("[showcase_votes] GitHub unavailable or has no showcase_votes.json -- starting with empty votes.")
+        if not os.path.exists('showcase_votes.json'):
+            try:
+                _atomic_write_bytes("showcase_votes.json", b"{}")
+            except Exception:
+                print("[showcase_votes] Failed to create showcase_votes.json:")
+                traceback.print_exc()
+        return {}
+
+    try:
+        remote_votes = json.loads(remote_bytes.decode("utf-8") or "{}")
+        if not isinstance(remote_votes, dict):
+            raise ValueError(f"expected a JSON object, got {type(remote_votes).__name__}")
+    except Exception:
+        print("[showcase_votes] Downloaded showcase_votes.json from GitHub was not a valid JSON object -- starting with empty votes.")
+        traceback.print_exc()
+        return {}
+
+    try:
+        _atomic_write_bytes("showcase_votes.json", remote_bytes)
+        print("[showcase_votes] Local showcase_votes.json was missing/invalid; backfilled from GitHub.")
+    except Exception:
+        print("[showcase_votes] Backfilled from GitHub in memory, but failed to write showcase_votes.json locally:")
+        traceback.print_exc()
+
+    return remote_votes
+
+
+showcase_votes = asyncio.run(_sync_showcase_votes_from_github_at_startup())
+showcase_votes_lock = asyncio.Lock()
 
 
 # One-time migration: every existing card previously had a hardcoded
@@ -3525,6 +3728,7 @@ class ShowcaseView(discord.ui.View):
 
             try:
                 save_showcase_votes_local()
+                mark_showcase_votes_dirty()
             except Exception:
                 # Roll back the in-memory change so it never drifts
                 # from what's actually on disk.
@@ -4256,6 +4460,12 @@ class Client(discord.Client):
         if _inventory_sync_task is None or _inventory_sync_task.done():
             _inventory_sync_task = asyncio.create_task(inventory_github_sync_loop())
 
+        # Same singleton-guard pattern, same reasoning, for showcase
+        # votes' own periodic GitHub sync.
+        global _showcase_votes_sync_task
+        if _showcase_votes_sync_task is None or _showcase_votes_sync_task.done():
+            _showcase_votes_sync_task = asyncio.create_task(showcase_votes_github_sync_loop())
+
         # Registers a SIGTERM handler exactly once so Railway's redeploy
         # signal actually triggers a graceful close() (and therefore the
         # shutdown flush below) -- Python does NOT do this on its own for
@@ -4288,6 +4498,13 @@ class Client(discord.Client):
         except Exception:
             print("[inventories] Failed to flush pending inventory changes on shutdown:")
             traceback.print_exc()
+
+        try:
+            await flush_showcase_votes_to_github()
+        except Exception:
+            print("[showcase_votes] Failed to flush pending vote changes on shutdown:")
+            traceback.print_exc()
+
         await super().close()
 
     async def on_message(self, message):
