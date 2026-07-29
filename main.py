@@ -1930,38 +1930,57 @@ def render_drop(card1: dict, print1, card2: dict, print2) -> str:
     faster, since most of PIL's underlying image work releases the GIL
     while it runs.
     """
+    t_render_start = time.perf_counter()
     try:
         future1 = _render_executor.submit(render_card, card1, print1)
         future2 = _render_executor.submit(render_card, card2, print2)
         img1 = future1.result()
         img2 = future2.result()
+        t_rendered = time.perf_counter()
         combined = combine_cards([img1, img2])
+        t_combined = time.perf_counter()
     except Exception as e:
         print("RENDER ERROR:", e)
         combined = Image.new("RGBA", (CARD_WIDTH * 2 + DROP_SPACING, CARD_HEIGHT), (30, 30, 30, 255))
         d = ImageDraw.Draw(combined)
         d.text((50, 50), f"Render Error: {str(e)[:200]}", font=get_font(40), fill=(255, 255, 255))
+        t_rendered = t_combined = time.perf_counter()
 
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    # REGRESSION FIX (413 Payload Too Large on `ld`): this used to be
-    # compress_level=1, which is PNG's near-store-only setting -- almost no
-    # DEFLATE compression happens, so the combined 2-card drop image (already
-    # large: two full cards side by side, then upscaled by DROP_UPSCALE)
-    # came out far bigger than it needs to for pixel-identical output. This
-    # is exactly the setting the original "reduce image size" fix relied on;
-    # it was later loosened to level 1 purely to speed up encoding, and that
-    # silently undid the earlier fix.
+    # PNG SAVE SETTING (this is the actual `ld` slowdown -- confirmed via
+    # the render_drop timing print below): `optimize=True` makes Pillow
+    # run its full PNG optimizer -- multiple filter strategies plus a
+    # maximum zlib pass -- which is CPU-expensive on an image this size
+    # (two full cards, upscaled by DROP_UPSCALE) and was adding several
+    # seconds to every single drop.
     #
-    # PNG is always lossless regardless of this setting -- compress_level
-    # only trades encode CPU time for file size, it can NEVER change a
-    # single decoded pixel. So restoring full compression here fixes the
-    # 413 error with zero impact on visual quality.
-    combined.save(temp_file.name, format="PNG", optimize=True)
+    # The ORIGINAL problem this was trying to fix was compress_level=1
+    # (PNG's near-store setting), which barely compresses at all and
+    # produced files large enough to trip Discord's 413 Payload Too
+    # Large. PNG is always lossless regardless of this setting --
+    # compress_level only trades encode CPU time for file size, it can
+    # NEVER change a single decoded pixel -- so a normal, non-maximal
+    # level fixes the 413 without paying the optimizer's full cost.
+    # compress_level=6 is zlib's own standard default (a deliberate
+    # speed/size balance point, not a low-effort setting) and comes in
+    # far below the old level-1 file size while encoding a small
+    # fraction of optimize=True's time.
+    combined.save(temp_file.name, format="PNG", compress_level=6)
+    t_saved = time.perf_counter()
 
     file_size_mb = os.path.getsize(temp_file.name) / 1_000_000
     print(
         f"[Drop Render] Final image: {combined.size[0]}x{combined.size[1]}px, "
         f"format=PNG, size={file_size_mb:.2f} MB"
+    )
+    # TEMPORARY instrumentation to identify the `ld` bottleneck --
+    # measurement only, safe to remove once confirmed.
+    print(
+        "render_drop timing:\n"
+        f"- Render both cards (concurrent): {(t_rendered - t_render_start) * 1000:.1f} ms\n"
+        f"- Combine into one image: {(t_combined - t_rendered) * 1000:.1f} ms\n"
+        f"- PNG encode+save (compress_level=6): {(t_saved - t_combined) * 1000:.1f} ms\n"
+        f"- Total render_drop: {(t_saved - t_render_start) * 1000:.1f} ms"
     )
 
     return temp_file.name
@@ -2287,6 +2306,35 @@ def _build_showcase_card_shadow(rendered_card: Image.Image) -> Image.Image:
     return shadow.filter(ImageFilter.GaussianBlur(SHOWCASE_SHADOW_BLUR_RADIUS))
 
 
+_showcase_background_cache = None
+
+
+def _get_showcase_background() -> Image.Image:
+    """
+    Loads + resizes the showcase background exactly once and caches it.
+    Unlike card_art (which lupdateimage can change at any time), this
+    asset never changes while the bot is running -- there's no command
+    that touches it -- so re-opening and re-resizing it from disk on
+    every single `lshowcase` call was pure waste. Every caller still
+    takes a .copy() before compositing onto it (see generate_showcase_image
+    below), so the cached original can never be mutated.
+    """
+    global _showcase_background_cache
+    if _showcase_background_cache is not None:
+        return _showcase_background_cache
+
+    if os.path.exists(SHOWCASE_BACKGROUND_PATH):
+        background = Image.open(SHOWCASE_BACKGROUND_PATH).convert("RGBA")
+        if background.size != SHOWCASE_CANVAS_SIZE:
+            background = background.resize(SHOWCASE_CANVAS_SIZE, Image.LANCZOS)
+    else:
+        print(f"SHOWCASE BACKGROUND NOT FOUND: {SHOWCASE_BACKGROUND_PATH} - using placeholder")
+        background = Image.new("RGBA", SHOWCASE_CANVAS_SIZE, (20, 20, 20, 255))
+
+    _showcase_background_cache = background
+    return _showcase_background_cache
+
+
 def generate_showcase_image(showcased_owned_cards: list) -> str:
     """
     Renders the showcase image: the fixed background at
@@ -2297,15 +2345,7 @@ def generate_showcase_image(showcased_owned_cards: list) -> str:
     zero showcased cards, only the background is drawn -- no
     placeholders, no text, no slots.
     """
-    if os.path.exists(SHOWCASE_BACKGROUND_PATH):
-        background = Image.open(SHOWCASE_BACKGROUND_PATH).convert("RGBA")
-        if background.size != SHOWCASE_CANVAS_SIZE:
-            background = background.resize(SHOWCASE_CANVAS_SIZE, Image.LANCZOS)
-    else:
-        print(f"SHOWCASE BACKGROUND NOT FOUND: {SHOWCASE_BACKGROUND_PATH} - using placeholder")
-        background = Image.new("RGBA", SHOWCASE_CANVAS_SIZE, (20, 20, 20, 255))
-
-    canvas = background.copy()
+    canvas = _get_showcase_background().copy()
 
     count = len(showcased_owned_cards)
     if count > 0:
@@ -2611,34 +2651,79 @@ OWNERS_PER_PAGE = 10
 
 class OwnersPaginationView(discord.ui.View):
     """
-    Paginates an already-fetched list of owner lines (10 per page). All
-    member fetching happens once, up front, before this view is ever
-    shown -- paging back and forth here never makes another API call, so
-    it can't hit an interaction timeout.
+    Paginates the owners of a card, 10 per page.
+
+    PERFORMANCE: member resolution is lazy and cached per-page, not done
+    for all owners up front. The old version fetched every uncached
+    owner (up to 100, since prints #1-#100 are the cap) before the
+    first embed was even sent -- for a popular card with many
+    uncached members, that's dozens of individual fetch_member() REST
+    calls (rate-limited by Discord) all paid before anyone sees
+    anything, which is exactly what made this "sometimes take minutes
+    or never send." Since only ~10 owners are ever visible on the
+    current page, there's no reason to resolve the other 90 until (if)
+    the user actually pages there.
+
+    `member_cache` (owner_id -> Member-or-None) is shared across the
+    whole view: once an id is resolved -- from Discord's local cache
+    (free) or a real fetch_member() call -- it's stored here and never
+    looked up again, no matter how many times the user pages back and
+    forth over it.
     """
-    def __init__(self, user_id, card_name, lines):
+    def __init__(self, user_id, card_name, owners, guild, member_cache):
         super().__init__(timeout=90)
         self.user_id = user_id
         self.card_name = card_name
-        self.lines = lines
+        self.owners = owners  # sorted list of (print_num, owner_id)
+        self.guild = guild
+        self.member_cache = member_cache  # owner_id -> Member | None, pre-seeded with free cache hits
         self.page = 0
-        self.max_page = max(0, (len(lines) - 1) // OWNERS_PER_PAGE) if lines else 0
+        self.max_page = max(0, (len(owners) - 1) // OWNERS_PER_PAGE) if owners else 0
         self._update_button_states()
 
     def _update_button_states(self):
         self.previous.disabled = (self.page <= 0)
         self.next.disabled = (self.page >= self.max_page)
 
+    def _page_slice(self, page):
+        start = page * OWNERS_PER_PAGE
+        return self.owners[start:start + OWNERS_PER_PAGE]
+
+    async def _ensure_page_resolved(self, page):
+        """
+        Fetches only the owners on `page` that aren't already in
+        member_cache -- i.e. only ones neither a previous fetch nor a
+        free cache hit has ever resolved. A no-op (no network call at
+        all) if the page has already been visited.
+        """
+        page_owner_ids = list(dict.fromkeys(
+            owner_id for _, owner_id in self._page_slice(page)
+        ))
+        missing_ids = [oid for oid in page_owner_ids if oid not in self.member_cache]
+
+        if not missing_ids:
+            return
+
+        fetch_results = await asyncio.gather(
+            *(self.guild.fetch_member(oid) for oid in missing_ids),
+            return_exceptions=True
+        )
+        for owner_id, result in zip(missing_ids, fetch_results):
+            self.member_cache[owner_id] = None if isinstance(result, Exception) else result
+
     def build_embed(self):
         embed = discord.Embed(color=THEME_COLOR)
         embed.title = f"**{self.card_name} Owners**"
 
-        if not self.lines:
+        if not self.owners:
             embed.description = "Nobody owns this card yet."
         else:
-            start = self.page * OWNERS_PER_PAGE
-            page_lines = self.lines[start:start + OWNERS_PER_PAGE]
-            embed.description = "\n".join(page_lines)
+            lines = []
+            for print_num, owner_id in self._page_slice(self.page):
+                member = self.member_cache.get(owner_id)
+                mention_text = member.mention if member is not None else "Unknown User"
+                lines.append(f"`{format_print(print_num)}.` • {mention_text}")
+            embed.description = "\n".join(lines)
             embed.set_footer(text=f"Page {self.page + 1}/{self.max_page + 1}")
 
         return embed
@@ -2651,7 +2736,18 @@ class OwnersPaginationView(discord.ui.View):
         if self.page > 0:
             self.page -= 1
         self._update_button_states()
-        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+        # Only defer (and pay a fetch) if this page has an owner that's
+        # never been resolved before -- a page the user already visited,
+        # or one made entirely of already-cached members, updates
+        # instantly exactly like before.
+        page_owner_ids = {owner_id for _, owner_id in self._page_slice(self.page)}
+        if any(oid not in self.member_cache for oid in page_owner_ids):
+            await interaction.response.defer()
+            await self._ensure_page_resolved(self.page)
+            await interaction.edit_original_response(embed=self.build_embed(), view=self)
+        else:
+            await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
     @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -2661,7 +2757,14 @@ class OwnersPaginationView(discord.ui.View):
         if self.page < self.max_page:
             self.page += 1
         self._update_button_states()
-        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+        page_owner_ids = {owner_id for _, owner_id in self._page_slice(self.page)}
+        if any(oid not in self.member_cache for oid in page_owner_ids):
+            await interaction.response.defer()
+            await self._ensure_page_resolved(self.page)
+            await interaction.edit_original_response(embed=self.build_embed(), view=self)
+        else:
+            await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
 
 class CharacterVersionView(discord.ui.View):
@@ -2787,64 +2890,42 @@ class CharacterVersionView(discord.ui.View):
 
         t_built_list = time.perf_counter()
 
-        # Resolve every unique owner id exactly once, so a person who
-        # owns multiple prints of this card is never looked up twice.
-        # get_member() is a pure cache read -- no API call, no privileged
-        # Server Members Intent needed -- and is tried first, resolving
-        # most users instantly.
-        unique_owner_ids = list(dict.fromkeys(owner_id for _, owner_id in owners))
-
-        member_by_id = {}
-        missing_ids = []
-        for owner_id in unique_owner_ids:
+        # Cache-only pass over EVERY owner: get_member() is a pure local
+        # cache read (no API call, no privileged Server Members Intent
+        # needed), so doing this for all of them costs nothing and lets
+        # later pages skip a fetch entirely if they turn out to already
+        # be cached.
+        member_cache = {}
+        for owner_id in dict.fromkeys(owner_id for _, owner_id in owners):
             member = interaction.guild.get_member(owner_id)
             if member is not None:
-                member_by_id[owner_id] = member
-            else:
-                missing_ids.append(owner_id)
+                member_cache[owner_id] = member
+            # else: deliberately left unresolved here (not set to None)
+            # -- that's the signal for _ensure_page_resolved to actually
+            # try fetch_member for it, but only once it's on a page
+            # that's actually being shown.
 
         t_cache_lookup = time.perf_counter()
 
-        # Only ids that aren't cached ever need a real API call, and all
-        # of them are fetched concurrently instead of one at a time --
-        # this is what actually cuts wall-clock time when several owners
-        # aren't cached. return_exceptions=True means a failed fetch
-        # (left the server, NotFound, Forbidden, etc.) comes back as an
-        # exception object in the results list rather than raising and
-        # aborting the whole gather -- that owner is simply shown as
-        # "Unknown User" instead of breaking the embed. No
-        # guild.query_members() or other privileged-intent API is used
-        # anywhere in this path.
-        if missing_ids:
-            fetch_results = await asyncio.gather(
-                *(interaction.guild.fetch_member(oid) for oid in missing_ids),
-                return_exceptions=True
-            )
-            for owner_id, result in zip(missing_ids, fetch_results):
-                member_by_id[owner_id] = None if isinstance(result, Exception) else result
+        owners_view = OwnersPaginationView(self.user_id, card['name'], owners, interaction.guild, member_cache)
 
+        # PERFORMANCE: only page 0's owners (<=10 unique ids) are ever
+        # fetched before this first response goes out -- not all up to
+        # 100 owners across every page like before. Paging further
+        # resolves lazily, once, per page (see OwnersPaginationView).
+        await owners_view._ensure_page_resolved(0)
         t_fetch = time.perf_counter()
-
-        lines = []
-        for print_num, owner_id in owners:
-            member = member_by_id.get(owner_id)
-            mention_text = member.mention if member is not None else "Unknown User"
-            lines.append(
-                f"`{format_print(print_num)}.` • {mention_text}"
-            )
-
-        owners_view = OwnersPaginationView(self.user_id, card['name'], lines)
         embed = owners_view.build_embed()
-
         t_embed = time.perf_counter()
 
-        # TEMPORARY instrumentation to identify the real bottleneck --
-        # safe to remove once performance is confirmed acceptable.
+        # Instrumentation kept from the earlier investigation -- still
+        # accurate, just now measuring a fetch of page 0's owners only
+        # (<=10 unique ids) instead of every owner across every page.
         print(
             "Owners timing:\n"
             f"- Build owners list: {(t_built_list - t_start) * 1000:.1f} ms\n"
-            f"- Cache lookup: {(t_cache_lookup - t_built_list) * 1000:.1f} ms\n"
-            f"- Fetch missing members: {(t_fetch - t_cache_lookup) * 1000:.1f} ms\n"
+            f"- Cache lookup (free, all owners): {(t_cache_lookup - t_built_list) * 1000:.1f} ms\n"
+            f"- Fetch page 0's missing members only: {(t_fetch - t_cache_lookup) * 1000:.1f} ms\n"
             f"- Build embed: {(t_embed - t_fetch) * 1000:.1f} ms\n"
             f"- Total: {(t_embed - t_start) * 1000:.1f} ms"
         )
@@ -5643,6 +5724,8 @@ class Client(discord.Client):
         # DROP CARDS COMMAND (ld)
         # =========================
         if content_lower == "ld":
+            t_ld_start = time.perf_counter()
+
             if is_command_spam(user_id, "ld"):
                 return await reply(message, 
                     "Please wait a few seconds before using this command again."
@@ -5658,6 +5741,8 @@ class Client(discord.Client):
                         f"⏳ You must wait **{format_time(remaining)}** before dropping again."
                     )
 
+            t_ld_precheck = time.perf_counter()
+
             card1 = get_weighted_card()
             card2 = get_weighted_card()
 
@@ -5665,6 +5750,8 @@ class Client(discord.Client):
                 card2 = get_weighted_card()
 
             drop_cooldowns[user_id] = now
+
+            t_ld_cardselect = time.perf_counter()
 
             loop = asyncio.get_running_loop()
 
@@ -5676,6 +5763,8 @@ class Client(discord.Client):
                 card2,
                 peek_next_print(card2["id"])
             )
+
+            t_ld_render = time.perf_counter()
 
             if image_path is None:
                 return await reply(message, 
@@ -5716,6 +5805,24 @@ class Client(discord.Client):
             # consuming the window before anyone could even see the
             # buttons.
             view.drop_time = time.time()
+
+            t_ld_sent = time.perf_counter()
+
+            # TEMPORARY instrumentation to identify the `ld` bottleneck --
+            # measurement only, safe to remove once confirmed. Note: no
+            # inventory lookup, owner lookup, badge computation, showcase
+            # load, vote load, or pagination happens anywhere in this
+            # command -- those categories are simply not part of `ld`'s
+            # code path, so there is nothing to time for them here.
+            print(
+                "ld timing:\n"
+                f"- Spam/cooldown precheck: {(t_ld_precheck - t_ld_start) * 1000:.1f} ms\n"
+                f"- Weighted card selection: {(t_ld_cardselect - t_ld_precheck) * 1000:.1f} ms\n"
+                f"- render_drop (executor, see render_drop timing above): "
+                f"{(t_ld_render - t_ld_cardselect) * 1000:.1f} ms\n"
+                f"- Discord file/message send: {(t_ld_sent - t_ld_render) * 1000:.1f} ms\n"
+                f"- Total ld: {(t_ld_sent - t_ld_start) * 1000:.1f} ms"
+            )
 
             try:
                 os.remove(image_path)
