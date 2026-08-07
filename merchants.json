@@ -1,0 +1,158 @@
+{
+  "merchants": [
+    {
+      "id": "voyager_merchant_1786065498_2071",
+      "template_id": "voyager_merchant",
+      "wants": [
+        {
+          "id": "zhongli_common",
+          "name": "Zhongli",
+          "series": "Genshin Impact",
+          "stars": 1,
+          "frame": "common",
+          "image": "card_art/zhongli_common.png"
+        },
+        {
+          "id": "herta_common",
+          "name": "Herta",
+          "series": "Honkai: Star Rail",
+          "stars": 2,
+          "frame": "common",
+          "image": "card_art/herta_common.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "ororon_common",
+          "name": "Ororon",
+          "series": "Genshin Impact",
+          "stars": 1,
+          "frame": "common",
+          "image": "card_art/ororon_common.png"
+        },
+        {
+          "id": "rosaria_common",
+          "name": "Rosaria",
+          "series": "Genshin Impact",
+          "stars": 1,
+          "frame": "common",
+          "image": "card_art/rosaria_common.png"
+        }
+      ],
+      "stock": 10,
+      "start_ts": 1786065498.3566685,
+      "expires_ts": 1786151898.3566685
+    },
+    {
+      "id": "lucky_merchant_1786065498_6907",
+      "template_id": "lucky_merchant",
+      "wants": [
+        {
+          "id": "mizi_common_3",
+          "name": "Mizi",
+          "series": "Alien Stage",
+          "stars": 2,
+          "frame": "common",
+          "image": "card_art/mizi_common_3.png"
+        },
+        {
+          "id": "kokushibo_common",
+          "name": "Kokushibo",
+          "series": "Kimetsu no Yaiba",
+          "stars": 2,
+          "frame": "common",
+          "image": "card_art/kokushibo_common.png"
+        },
+        {
+          "id": "itadori_common",
+          "name": "Itadori Yuji",
+          "series": "Jujutsu Kaisen",
+          "stars": 1,
+          "frame": "common",
+          "image": "card_art/itadori_common.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "tomura_rare_2",
+          "name": "Tomura Shigaraki",
+          "series": "My Hero Academia",
+          "stars": 4,
+          "frame": "red",
+          "image": "card_art/tomura_rare_2.png"
+        },
+        {
+          "id": "kyouka_common",
+          "name": "Kyouka Jirou",
+          "series": "My Hero Academia",
+          "stars": 1,
+          "frame": "common",
+          "image": "card_art/kyouka_common.png"
+        },
+        {
+          "id": "till_common_2",
+          "name": "Till",
+          "series": "Alien Stage",
+          "stars": 2,
+          "frame": "common",
+          "image": "card_art/till_common_2.png"
+        }
+      ],
+      "stock": 10,
+      "start_ts": 1786065498.3566685,
+      "expires_ts": 1786151898.3566685
+    },
+    {
+      "id": "collector_merchant_1786065498_6402",
+      "template_id": "collector_merchant",
+      "wants": [
+        {
+          "id": "eleven_common",
+          "name": "Eleven",
+          "series": "Path To Nowhere",
+          "stars": 2,
+          "frame": "common",
+          "image": "card_art/eleven_common.png"
+        },
+        {
+          "id": "makoto_common",
+          "name": "Makoto Yuki",
+          "series": "Persona",
+          "stars": 2,
+          "frame": "common",
+          "image": "card_art/makoto_common.png"
+        },
+        {
+          "id": "mcqueen_common",
+          "name": "McQueen",
+          "series": "Path To Nowhere",
+          "stars": 2,
+          "frame": "common",
+          "image": "card_art/mcqueen_common.png"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "leo_common_2",
+          "name": "Leo Kurosagi",
+          "series": "Tokyo Debunker",
+          "stars": 1,
+          "frame": "common",
+          "image": "card_art/leo_common_2.png"
+        },
+        {
+          "id": "rise_rare",
+          "name": "Rise Kujikawa",
+          "series": "Persona",
+          "stars": 4,
+          "frame": "pink",
+          "image": "card_art/rise_rare.png"
+        }
+      ],
+      "stock": 10,
+      "start_ts": 1786065498.3566685,
+      "expires_ts": 1786151898.3566685
+    }
+  ],
+  "next_generation_at": null
+}
