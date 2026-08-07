@@ -381,7 +381,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 29,
+      "progress": 30,
       "id": "5fb8df1b-db0e-4da3-b000-d9afc64ff993",
       "player_a": "787241864892907530",
       "player_b": "1192955009327964180",
@@ -430,38 +430,6 @@
       "started_at": 1786107961.917556,
       "channel_id": 1531327349382058017
     },
-    "1bd017a2-5b7e-4520-8d6c-9f747cbedf82": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Aria",
-        "Hawks",
-        "Shishikuno Mogari",
-        "Lamia",
-        "Cantarella",
-        "Yu Narukami",
-        "Frankenstein",
-        "Cheng Xiaoshi",
-        "Kagamine Rin",
-        "Edward Hart",
-        "Shitou Zen",
-        "Angel Devil",
-        "Himejima Gyomei",
-        "Cha Eui-jae & Lee Sa-young",
-        "Fu Hua & Herrscher of Sentience",
-        "Ouri Sakaguchi",
-        "Rensuke Kunigami",
-        "Nerissa Ravencroft",
-        "Raiden Mei"
-      ],
-      "id": "1bd017a2-5b7e-4520-8d6c-9f747cbedf82",
-      "player_a": "1388187436894523645",
-      "player_b": "871408813624926238",
-      "started_at": 1786111747.4391582,
-      "channel_id": 1533817365060517938
-    },
     "1e5e9ada-a144-40cf-9d58-7a84dadbb3aa": {
       "type": "claim_rarity4",
       "target": 10,
@@ -490,7 +458,8 @@
         "Needy Streamer Overload",
         "Magical Girl Witch Trials",
         "Happy Twogether",
-        "Kimetsu no Yaiba"
+        "Kimetsu no Yaiba",
+        "My Hero Academia"
       ],
       "id": "71ba7db2-eeb0-411f-9d7e-a0ebc1ee7ed6",
       "player_a": "1498786280169935062",
@@ -1458,6 +1427,18 @@
         "timestamp": 1786123908.0043192,
         "partner_id": "1224818851464613952"
       }
+    ],
+    "1388187436894523645": [
+      {
+        "timestamp": 1786128172.7760637,
+        "partner_id": "871408813624926238"
+      }
+    ],
+    "871408813624926238": [
+      {
+        "timestamp": 1786128172.7760637,
+        "partner_id": "1388187436894523645"
+      }
     ]
   },
   "cooldowns": {
@@ -1618,7 +1599,9 @@
     "590230897089839123": 1786122375.1777258,
     "772144591251177503": 1786122375.1777258,
     "1224818851464613952": 1786123908.0043192,
-    "1027686610260738118": 1786123908.0043192
+    "1027686610260738118": 1786123908.0043192,
+    "1388187436894523645": 1786128172.7760637,
+    "871408813624926238": 1786128172.7760637
   },
   "bonus": {
     "777925664358531102": {
@@ -2914,7 +2897,7 @@
       "claim": 0
     },
     "1388187436894523645": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "748667166605443113": {
@@ -5350,6 +5333,10 @@
       "claim": 0
     },
     "1086542678734418010": {
+      "drop": 0,
+      "claim": 0
+    },
+    "816051391503007806": {
       "drop": 0,
       "claim": 0
     }
