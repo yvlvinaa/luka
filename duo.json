@@ -15,7 +15,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 57,
+      "progress": 59,
       "id": "c1990ac9-3b24-4b10-a10c-8b5c1a028814",
       "player_a": "550577262173487104",
       "player_b": "673599163023360036",
@@ -26,7 +26,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 48,
+      "progress": 50,
       "id": "69860484-2ab5-4e8d-9699-5af4e5b4adcd",
       "player_a": "1487041378918858924",
       "player_b": "1468648929783709768",
@@ -59,7 +59,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 27,
+      "progress": 28,
       "id": "2145b6b6-ad5e-4c03-8023-c303eeb40472",
       "player_a": "590230897089839123",
       "player_b": "772144591251177503",
@@ -136,7 +136,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 54,
+      "progress": 55,
       "id": "70c9647b-c9f4-433b-99c0-6d7ada91661a",
       "player_a": "606063258226655235",
       "player_b": "863797671818952754",
@@ -147,7 +147,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 48,
+      "progress": 49,
       "id": "40a1bb26-de0d-41ed-a9df-eb0f4ac3f2ec",
       "player_a": "909551241967861770",
       "player_b": "1232648410662834230",
@@ -246,7 +246,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 1,
+      "progress": 2,
       "id": "3dc150e2-8feb-442b-ad1f-3a6fdf42d8bf",
       "player_a": "768645666851258371",
       "player_b": "749958760532934736",
@@ -268,7 +268,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 39,
+      "progress": 40,
       "id": "b2614d2f-6a46-48e3-a3ca-51fb5c4e4616",
       "player_a": "1489161053798535168",
       "player_b": "1091891524935098378",
@@ -382,33 +382,6 @@
       "started_at": 1786071646.2009118,
       "channel_id": 1532334473910288407
     },
-    "5b3a1302-a3fa-4389-a0d1-299fdb6fc274": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Bungo Stray Dogs",
-        "My Hero Academia",
-        "Wuthering Waves",
-        "Genshin Impact",
-        "Percy Jackson and The Olympians",
-        "BLUELOCK",
-        "Honkai: Star Rail",
-        "Zenless Zone Zero",
-        "Alien Stage",
-        "The Freak Circus",
-        "Wind Breaker",
-        "NU: Carnival",
-        "Project Sekai: Colorful Stage!",
-        "The Disastrous Life of Saiki K"
-      ],
-      "id": "5b3a1302-a3fa-4389-a0d1-299fdb6fc274",
-      "player_a": "475789322478551040",
-      "player_b": "1121901165865611264",
-      "started_at": 1786071686.9468348,
-      "channel_id": 1533523638639395008
-    },
     "958f73c0-46ba-43f9-bf16-84910166ad2d": {
       "type": "claim_rarity4",
       "target": 10,
@@ -446,7 +419,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 16,
+      "progress": 17,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -530,7 +503,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 32,
+      "progress": 33,
       "id": "61c4a873-1ce2-42b7-a75a-356cb2bc1bf4",
       "player_a": "748272021120483439",
       "player_b": "953969404884971521",
@@ -541,7 +514,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 9,
+      "progress": 10,
       "id": "1813526a-6af8-49db-aa68-32c60e589e58",
       "player_a": "885453562631553024",
       "player_b": "756814026968793109",
@@ -560,7 +533,8 @@
         "Path To Nowhere",
         "My Hero Academia",
         "NU: Carnival",
-        "BanG Dream!"
+        "BanG Dream!",
+        "Tokyo Mew Mew"
       ],
       "id": "87ce0f6f-2d08-45b0-9293-25931516d428",
       "player_a": "894445820613644318",
@@ -600,7 +574,9 @@
         "Seele Vollerei & Veliona",
         "Makoto Yuki",
         "Banyue",
-        "Escoffier"
+        "Escoffier",
+        "Hubble",
+        "Taiga Kagami"
       ],
       "id": "584e4c20-36fc-4270-a3e5-e68091c6d8fe",
       "player_a": "771340815289024512",
@@ -619,13 +595,25 @@
         "Xiao",
         "Hua Cheng",
         "Yo Hiori",
-        "Baek Saheon"
+        "Baek Saheon",
+        "Mo Ran"
       ],
       "id": "0c381f16-3d76-4392-b9fe-867c797fd2df",
       "player_a": "735119062585049229",
       "player_b": "910424870985293854",
       "started_at": 1786081176.6171076,
       "channel_id": 1528332364294525058
+    },
+    "adfadbba-4f42-49c1-9e3c-5ad6c4e17165": {
+      "type": "claim_count",
+      "target": 60,
+      "label": "Claim 60 cards together",
+      "progress": 0,
+      "id": "adfadbba-4f42-49c1-9e3c-5ad6c4e17165",
+      "player_a": "1187649058576277571",
+      "player_b": "722139521864433717",
+      "started_at": 1786083008.0247207,
+      "channel_id": 1535127237001486376
     }
   },
   "weekly": {
@@ -1072,6 +1060,18 @@
         "timestamp": 1786081733.0543668,
         "partner_id": "583107073622016022"
       }
+    ],
+    "475789322478551040": [
+      {
+        "timestamp": 1786082840.189979,
+        "partner_id": "1121901165865611264"
+      }
+    ],
+    "1121901165865611264": [
+      {
+        "timestamp": 1786082840.189979,
+        "partner_id": "475789322478551040"
+      }
     ]
   },
   "cooldowns": {
@@ -1148,7 +1148,9 @@
     "1231316819395084340": 1786080813.824134,
     "1064312739150954570": 1786080813.824134,
     "583107073622016022": 1786081733.0543668,
-    "658879787577901068": 1786081733.0543668
+    "658879787577901068": 1786081733.0543668,
+    "475789322478551040": 1786082840.189979,
+    "1121901165865611264": 1786082840.189979
   },
   "bonus": {
     "777925664358531102": {
@@ -1808,7 +1810,7 @@
       "claim": 0
     },
     "1519685122847150156": {
-      "drop": 4,
+      "drop": 3,
       "claim": 5
     },
     "812696195142385664": {
@@ -3433,7 +3435,7 @@
     },
     "1121901165865611264": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "1016890011083350016": {
       "drop": 0,
