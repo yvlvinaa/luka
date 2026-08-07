@@ -305,7 +305,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 34,
+      "progress": 35,
       "id": "b833288c-0a48-4d41-9138-72095de51621",
       "player_a": "1352235126553313360",
       "player_b": "1056864800472313897",
@@ -327,7 +327,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 42,
+      "progress": 43,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -349,7 +349,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 51,
+      "progress": 52,
       "id": "61c4a873-1ce2-42b7-a75a-356cb2bc1bf4",
       "player_a": "748272021120483439",
       "player_b": "953969404884971521",
@@ -446,7 +446,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 28,
+      "progress": 30,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -457,7 +457,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 30,
+      "progress": 32,
       "id": "73404e39-d26d-43e1-9f76-7934e58c61d7",
       "player_a": "909713880694005771",
       "player_b": "897040507539189780",
@@ -580,7 +580,8 @@
       "series_seen": [
         "Zenless Zone Zero",
         "Nijisanji",
-        "Diabolik Lovers"
+        "Diabolik Lovers",
+        "I\u2019m a Young God, Won\u2019t You Raise Me"
       ],
       "id": "0feff1c6-1ff6-452c-b7ff-550098ccab42",
       "player_a": "821574312216756224",
@@ -609,6 +610,18 @@
       "player_b": "1433888427547295918",
       "started_at": 1786094462.8681448,
       "channel_id": 1531103399364526127
+    },
+    "d4b9b6f7-2a09-4568-8d60-e867b07a88e9": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [],
+      "id": "d4b9b6f7-2a09-4568-8d60-e867b07a88e9",
+      "player_a": "307844484618780673",
+      "player_b": "1231983509502164994",
+      "started_at": 1786095121.7832737,
+      "channel_id": 1531082959912829170
     }
   },
   "weekly": {
@@ -1509,8 +1522,8 @@
       "claim": 0
     },
     "1091891524935098378": {
-      "drop": 1,
-      "claim": 1
+      "drop": 0,
+      "claim": 0
     },
     "754066769320214599": {
       "drop": 0,
@@ -1570,7 +1583,7 @@
     },
     "1387460892718792718": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "971877408066125975": {
       "drop": 1,
@@ -1593,7 +1606,7 @@
       "claim": 0
     },
     "667365610748903445": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "1114762657849954396": {
@@ -2054,7 +2067,7 @@
     },
     "837077284845518888": {
       "drop": 0,
-      "claim": 3
+      "claim": 2
     },
     "1207770813059571732": {
       "drop": 0,
@@ -4769,6 +4782,10 @@
       "claim": 0
     },
     "784525233922506802": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1241920314502418467": {
       "drop": 0,
       "claim": 0
     }
