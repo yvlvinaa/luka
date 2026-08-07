@@ -213,7 +213,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 58,
+      "progress": 59,
       "id": "530c3b8c-b61c-4ebb-8adc-e0e6c69a1210",
       "player_a": "1299833889166065743",
       "player_b": "433218038385344532",
@@ -301,7 +301,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 25,
+      "progress": 26,
       "id": "adfadbba-4f42-49c1-9e3c-5ad6c4e17165",
       "player_a": "1187649058576277571",
       "player_b": "722139521864433717",
@@ -323,23 +323,12 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 58,
+      "progress": 59,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
       "started_at": 1786083983.7317984,
       "channel_id": 1529577518250725397
-    },
-    "73404e39-d26d-43e1-9f76-7934e58c61d7": {
-      "type": "claim_count",
-      "target": 60,
-      "label": "Claim 60 cards together",
-      "progress": 59,
-      "id": "73404e39-d26d-43e1-9f76-7934e58c61d7",
-      "player_a": "909713880694005771",
-      "player_b": "897040507539189780",
-      "started_at": 1786086065.48262,
-      "channel_id": 1534807921823715388
     },
     "213053d2-9460-4bef-a2b5-82327907fbaa": {
       "type": "claim_series",
@@ -354,7 +343,8 @@
         "Love And Deepspace",
         "Night of Shadows",
         "Omniscient Reader\u2019s Viewpoint",
-        "Danganronpa"
+        "Danganronpa",
+        "Doki Doki Literature Club!"
       ],
       "id": "213053d2-9460-4bef-a2b5-82327907fbaa",
       "player_a": "938827962571182123",
@@ -410,7 +400,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 29,
+      "progress": 30,
       "id": "f701abe5-90b0-4272-9f4a-bc2e08222029",
       "player_a": "782414692101521428",
       "player_b": "1433888427547295918",
@@ -445,7 +435,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 4,
+      "progress": 5,
       "id": "51ee0532-ba89-40d6-a52f-53b0536c91a7",
       "player_a": "1425782801193631754",
       "player_b": "1035656286039191692",
@@ -456,7 +446,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 18,
+      "progress": 20,
       "id": "7f197f8e-28f3-4a67-9515-691698e00727",
       "player_a": "1251051306177527878",
       "player_b": "975180513394438165",
@@ -528,6 +518,20 @@
       "player_b": "1271018988486524961",
       "started_at": 1786106385.1683013,
       "channel_id": 1534392062454010028
+    },
+    "0dafdd5c-c276-4110-bac2-7bf553978258": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Toge Inumaki"
+      ],
+      "id": "0dafdd5c-c276-4110-bac2-7bf553978258",
+      "player_a": "1071156516167614524",
+      "player_b": "897947147528470568",
+      "started_at": 1786107961.917556,
+      "channel_id": 1531327349382058017
     }
   },
   "weekly": {
@@ -1346,6 +1350,18 @@
         "timestamp": 1786107454.5158646,
         "partner_id": "1070404986057531452"
       }
+    ],
+    "909713880694005771": [
+      {
+        "timestamp": 1786107740.9206393,
+        "partner_id": "897040507539189780"
+      }
+    ],
+    "897040507539189780": [
+      {
+        "timestamp": 1786107740.9206393,
+        "partner_id": "909713880694005771"
+      }
     ]
   },
   "cooldowns": {
@@ -1484,7 +1500,9 @@
     "856393524240711681": 1786106229.005127,
     "725183995893121095": 1786106229.005127,
     "1070404986057531452": 1786107454.5158646,
-    "751661073727225887": 1786107454.5158646
+    "751661073727225887": 1786107454.5158646,
+    "909713880694005771": 1786107740.9206393,
+    "897040507539189780": 1786107740.9206393
   },
   "bonus": {
     "777925664358531102": {
@@ -1604,8 +1622,8 @@
       "claim": 0
     },
     "1310963032016425043": {
-      "drop": 1,
-      "claim": 2
+      "drop": 0,
+      "claim": 1
     },
     "998047189240655942": {
       "drop": 0,
@@ -1861,7 +1879,7 @@
     },
     "1256569950341169155": {
       "drop": 1,
-      "claim": 3
+      "claim": 2
     },
     "1115364773039702116": {
       "drop": 0,
@@ -2881,7 +2899,7 @@
     },
     "725183995893121095": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "1155911168058200104": {
       "drop": 0,
@@ -5124,6 +5142,14 @@
       "claim": 0
     },
     "1209477744845393950": {
+      "drop": 0,
+      "claim": 0
+    },
+    "703260157982801931": {
+      "drop": 0,
+      "claim": 0
+    },
+    "921245094848376914": {
       "drop": 0,
       "claim": 0
     }
