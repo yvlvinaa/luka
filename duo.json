@@ -59,7 +59,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 2,
+      "progress": 3,
       "id": "c1d27a17-8711-4bea-a881-15602097d9ee",
       "player_a": "886247125292306432",
       "player_b": "754066769320214599",
@@ -515,6 +515,21 @@
       "player_b": "897947147528470568",
       "started_at": 1786107961.917556,
       "channel_id": 1531327349382058017
+    },
+    "1bd017a2-5b7e-4520-8d6c-9f747cbedf82": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Aria",
+        "Hawks"
+      ],
+      "id": "1bd017a2-5b7e-4520-8d6c-9f747cbedf82",
+      "player_a": "1388187436894523645",
+      "player_b": "871408813624926238",
+      "started_at": 1786111747.4391582,
+      "channel_id": 1533817365060517938
     }
   },
   "weekly": {
