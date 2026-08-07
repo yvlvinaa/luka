@@ -121,17 +121,6 @@
       "started_at": 1786066469.7963843,
       "channel_id": 1532909619268288704
     },
-    "40a1bb26-de0d-41ed-a9df-eb0f4ac3f2ec": {
-      "type": "claim_count",
-      "target": 60,
-      "label": "Claim 60 cards together",
-      "progress": 58,
-      "id": "40a1bb26-de0d-41ed-a9df-eb0f4ac3f2ec",
-      "player_a": "909551241967861770",
-      "player_b": "1232648410662834230",
-      "started_at": 1786066845.4918094,
-      "channel_id": 1530337135096234137
-    },
     "5fec59f7-58f2-4d7d-a2f1-c23596c05b68": {
       "type": "claim_count",
       "target": 60,
@@ -158,7 +147,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 42,
+      "progress": 43,
       "id": "2478380d-aef5-40b4-b708-afc669821c64",
       "player_a": "1414056833248919552",
       "player_b": "1068689349455122432",
@@ -180,7 +169,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 3,
+      "progress": 4,
       "id": "85293d71-8b0b-43c4-a50c-3f2334a787af",
       "player_a": "960884355805351977",
       "player_b": "989728138219094057",
@@ -235,7 +224,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 46,
+      "progress": 47,
       "id": "b2614d2f-6a46-48e3-a3ca-51fb5c4e4616",
       "player_a": "1489161053798535168",
       "player_b": "1091891524935098378",
@@ -345,7 +334,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 39,
+      "progress": 40,
       "id": "c9a42659-c2ba-4106-8b76-0025878a88fd",
       "player_a": "1152969942820466819",
       "player_b": "851453831350714388",
@@ -367,7 +356,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 23,
+      "progress": 24,
       "id": "b833288c-0a48-4d41-9138-72095de51621",
       "player_a": "1352235126553313360",
       "player_b": "1056864800472313897",
@@ -389,7 +378,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 24,
+      "progress": 26,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -411,7 +400,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 37,
+      "progress": 38,
       "id": "61c4a873-1ce2-42b7-a75a-356cb2bc1bf4",
       "player_a": "748272021120483439",
       "player_b": "953969404884971521",
@@ -445,7 +434,8 @@
         "Tokyo Mew Mew",
         "Love And Deepspace",
         "Cosmic Princess Kaguya",
-        "Castlevania"
+        "Castlevania",
+        "Puella Magi Madoka Magica"
       ],
       "id": "87ce0f6f-2d08-45b0-9293-25931516d428",
       "player_a": "894445820613644318",
@@ -500,37 +490,6 @@
       "player_b": "717208938382229555",
       "started_at": 1786080434.7703667,
       "channel_id": 1535100835011371018
-    },
-    "0c381f16-3d76-4392-b9fe-867c797fd2df": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Sun Wukong",
-        "Du Ruo",
-        "Xiao",
-        "Hua Cheng",
-        "Yo Hiori",
-        "Baek Saheon",
-        "Mo Ran",
-        "Hoshimi Miyabi",
-        "Park Chul-Ho",
-        "Ai Haibara",
-        "Tomoya Okazaki",
-        "Shuraka Loram",
-        "Isha",
-        "Tsubaki",
-        "Levi Ackerman",
-        "Mithrun",
-        "Ryusui Nanami",
-        "Jakurai Jinguji"
-      ],
-      "id": "0c381f16-3d76-4392-b9fe-867c797fd2df",
-      "player_a": "735119062585049229",
-      "player_b": "910424870985293854",
-      "started_at": 1786081176.6171076,
-      "channel_id": 1528332364294525058
     },
     "adfadbba-4f42-49c1-9e3c-5ad6c4e17165": {
       "type": "claim_count",
@@ -593,7 +552,8 @@
         "Lucy",
         "Dewey",
         "Dongdang",
-        "Linnea"
+        "Linnea",
+        "Sou Hiyori"
       ],
       "id": "cb728562-7873-48ee-86e0-74acd8bbe49b",
       "player_a": "1508332965489279146",
@@ -605,7 +565,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 8,
+      "progress": 9,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -1140,6 +1100,30 @@
         "timestamp": 1786085133.0400867,
         "partner_id": "869612237692743751"
       }
+    ],
+    "735119062585049229": [
+      {
+        "timestamp": 1786086291.3408802,
+        "partner_id": "910424870985293854"
+      }
+    ],
+    "910424870985293854": [
+      {
+        "timestamp": 1786086291.3408802,
+        "partner_id": "735119062585049229"
+      }
+    ],
+    "909551241967861770": [
+      {
+        "timestamp": 1786086351.6804554,
+        "partner_id": "1232648410662834230"
+      }
+    ],
+    "1232648410662834230": [
+      {
+        "timestamp": 1786086351.6804554,
+        "partner_id": "909551241967861770"
+      }
     ]
   },
   "cooldowns": {
@@ -1228,7 +1212,11 @@
     "606063258226655235": 1786084452.9571898,
     "863797671818952754": 1786084452.9571898,
     "869612237692743751": 1786085133.0400867,
-    "953472774591111248": 1786085133.0400867
+    "953472774591111248": 1786085133.0400867,
+    "735119062585049229": 1786086291.3408802,
+    "910424870985293854": 1786086291.3408802,
+    "909551241967861770": 1786086351.6804554,
+    "1232648410662834230": 1786086351.6804554
   },
   "bonus": {
     "777925664358531102": {
@@ -2181,7 +2169,7 @@
     },
     "1232648410662834230": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "1035842744591065188": {
       "drop": 0,
@@ -4392,6 +4380,10 @@
       "claim": 0
     },
     "1091059977864618115": {
+      "drop": 0,
+      "claim": 0
+    },
+    "909713880694005771": {
       "drop": 0,
       "claim": 0
     }
