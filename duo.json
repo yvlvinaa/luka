@@ -114,7 +114,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 37,
+      "progress": 38,
       "id": "5fec59f7-58f2-4d7d-a2f1-c23596c05b68",
       "player_a": "716071317987786814",
       "player_b": "466368374490923008",
@@ -213,7 +213,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 51,
       "id": "b2614d2f-6a46-48e3-a3ca-51fb5c4e4616",
       "player_a": "1489161053798535168",
       "player_b": "1091891524935098378",
@@ -367,7 +367,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 30,
+      "progress": 31,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -449,7 +449,8 @@
         "Kasumi Yoshizawa",
         "Soukaku",
         "Cinderella",
-        "Lynae"
+        "Lynae",
+        "Sinclair"
       ],
       "id": "584e4c20-36fc-4270-a3e5-e68091c6d8fe",
       "player_a": "771340815289024512",
@@ -461,7 +462,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 10,
+      "progress": 11,
       "id": "adfadbba-4f42-49c1-9e3c-5ad6c4e17165",
       "player_a": "1187649058576277571",
       "player_b": "722139521864433717",
@@ -472,50 +473,18 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 14,
+      "progress": 15,
       "id": "f96cdea1-2cee-429e-b669-911991d71c6c",
       "player_a": "998047189240655942",
       "player_b": "595084117998043137",
       "started_at": 1786083226.2546594,
       "channel_id": 1527166234150305913
     },
-    "cb728562-7873-48ee-86e0-74acd8bbe49b": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Marcille Donato",
-        "Nazuna Nanakusa",
-        "Miya Chinen",
-        "Taiju Oki",
-        "Vincent Charbonneau",
-        "Otogi Katsura",
-        "Lucy",
-        "Dewey",
-        "Dongdang",
-        "Linnea",
-        "Sou Hiyori",
-        "Nagisa Momoe",
-        "Hwang Mok-yeon",
-        "Hia",
-        "Seth Lowell",
-        "Ivan",
-        "Acheron",
-        "Mika Shimotsuki",
-        "Vanilla"
-      ],
-      "id": "cb728562-7873-48ee-86e0-74acd8bbe49b",
-      "player_a": "1508332965489279146",
-      "player_b": "763350530210267138",
-      "started_at": 1786083273.8174741,
-      "channel_id": 1532111145840934953
-    },
     "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d": {
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 16,
+      "progress": 18,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -1137,6 +1106,18 @@
         "timestamp": 1786088655.8873653,
         "partner_id": "894445820613644318"
       }
+    ],
+    "1508332965489279146": [
+      {
+        "timestamp": 1786088926.4078603,
+        "partner_id": "763350530210267138"
+      }
+    ],
+    "763350530210267138": [
+      {
+        "timestamp": 1786088926.4078603,
+        "partner_id": "1508332965489279146"
+      }
     ]
   },
   "cooldowns": {
@@ -1235,7 +1216,9 @@
     "542089282135785476": 1786088412.641695,
     "793963981270155284": 1786088412.641695,
     "894445820613644318": 1786088655.8873653,
-    "496377185842626561": 1786088655.8873653
+    "496377185842626561": 1786088655.8873653,
+    "1508332965489279146": 1786088926.4078603,
+    "763350530210267138": 1786088926.4078603
   },
   "bonus": {
     "777925664358531102": {
@@ -1463,7 +1446,7 @@
       "claim": 0
     },
     "1387460892718792718": {
-      "drop": 5,
+      "drop": 3,
       "claim": 5
     },
     "971877408066125975": {
@@ -2707,8 +2690,8 @@
       "claim": 0
     },
     "1508332965489279146": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "909551241967861770": {
       "drop": 0,
@@ -3175,8 +3158,8 @@
       "claim": 0
     },
     "763350530210267138": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1131343171520053340": {
       "drop": 0,
