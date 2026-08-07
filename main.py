@@ -15,6 +15,7 @@ import json
 import base64
 import functools
 import traceback
+import uuid
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw, ImageFont, ImageStat, ImageFilter
@@ -133,6 +134,11 @@ CARD_UPDATES_CHANNEL_ID = 1526133115536539668
 # Checked by ID, never by name, per the badge spec.
 EARLY_SUPPORTER_ROLE_ID = 1505590926947651669
 
+# Role ID for the "Finalist" role, the only role allowed to use `lgw`
+# (giveaway cards out of Luka's own recovery inventory). Checked by ID,
+# never by name, per spec.
+FINALIST_ROLE_ID = 1506025540350509177
+
 MAX_SHOWCASE_CARDS = 3
 BADGES_PER_PAGE = 4
 HELP_COMMANDS_PER_PAGE = 6
@@ -187,6 +193,24 @@ user_last_lookup = {}
 # Global tracking for trade and gift sessions
 active_trades = {}
 active_gifts = {}
+
+# Global tracking for open merchant-trade sessions (Accept Trade ->
+# MerchantTradeView). Keyed by user_id, not a trade_id pair, since a
+# merchant trade only ever has one human participant -- the merchant
+# itself isn't a party that needs tracking here the way a second player
+# is for active_trades.
+active_merchant_trades = {}
+
+
+def user_has_active_merchant_trade(user_id) -> bool:
+    """
+    True if user_id currently has an open merchant trade session (an
+    Accept Trade press that hasn't yet been confirmed, cancelled, or
+    timed out). Mirrors user_has_active_trade's role for player-to-
+    player trades, one session per user at a time.
+    """
+    data = active_merchant_trades.get(user_id)
+    return data is not None and data.get("view") is not None
 
 
 def user_has_active_trade(user_id) -> bool:
@@ -349,6 +373,47 @@ def _load_showcase_votes_json():
     return parsed
 
 
+def _load_pending_recovery_json():
+    """
+    Loads and validates the local pending_recovery.json. Same contract,
+    same reasoning, as _load_showcase_votes_json()/_load_inventories_json()
+    -- "missing" and "invalid" are both real, distinct situations, never
+    silently collapsed into "just start empty" without at least a log
+    line, since that's what makes the difference between a countdown
+    that's actually surviving restarts and one that silently resets.
+
+    Returns the parsed dict (possibly a legitimately empty {}) if valid,
+    or None if missing/unreadable/malformed/not a dict.
+    """
+    try:
+        with open('pending_recovery.json', 'r') as f:
+            raw = f.read().strip()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        print("[recovery] Failed to read pending_recovery.json:")
+        traceback.print_exc()
+        return None
+
+    if not raw:
+        print("[recovery] pending_recovery.json is empty (not even '{}') -- treating as invalid.")
+        return None
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        print("[recovery] pending_recovery.json contains invalid JSON:")
+        traceback.print_exc()
+        return None
+
+    if not isinstance(parsed, dict):
+        print(f"[recovery] pending_recovery.json did not contain a JSON object "
+              f"(got {type(parsed).__name__}) -- treating as invalid.")
+        return None
+
+    return parsed
+
+
 def get_vote_count(user_id) -> int:
     """Returns the number of showcase votes user_id currently has."""
     return len(showcase_votes.get(str(user_id), []))
@@ -362,6 +427,15 @@ def has_voted(owner_id, voter_id) -> bool:
 # Create card_art directory if it doesn't exist
 if not os.path.exists('card_art'):
     os.makedirs('card_art')
+
+# Local, permanent home for merchant profile pictures (see MERCHANT_TEMPLATES
+# below) -- these are shipped-in-repo files, never Discord attachment URLs,
+# so a merchant's thumbnail never depends on a CDN link that can expire.
+# Changing a merchant's picture later only ever means replacing the file at
+# this same path/filename -- nothing else needs to change.
+MERCHANT_ASSETS_DIR = "merchant_assets"
+if not os.path.exists(MERCHANT_ASSETS_DIR):
+    os.makedirs(MERCHANT_ASSETS_DIR)
 
 # =========================
 # HELPERS
@@ -1215,6 +1289,2115 @@ showcase_votes = asyncio.run(_sync_showcase_votes_from_github_at_startup())
 showcase_votes_lock = asyncio.Lock()
 
 
+# =========================
+# ABANDONED-INVENTORY RECOVERY (pending_recovery.json)
+# =========================
+# Reserved "owner" key for cards recovered from users who left the
+# server and never returned within RECOVERY_PENDING_DAYS. Deliberately
+# non-numeric (and double-underscored, so it reads unmistakably as a
+# reserved internal slot rather than a real Discord user id -- it never
+# collides with one) and lives in the exact same `inventories`
+# dict/persistence pipeline as every other entry -- no separate storage
+# system. This is not a Discord user; it's the bot's own holding
+# inventory for recovered cards, for future giveaways/events.
+SYSTEM_RECOVERY_USER = "__system__"
+
+# How long a user can stay outside the server, after first being
+# detected as gone, before their inventory is actually transferred.
+RECOVERY_PENDING_DAYS = 15
+
+# How often the background sweep re-checks everyone currently pending
+# recovery (rejoined? still gone but under the window? window elapsed?).
+# Daily is intentionally coarse -- a 15-day threshold doesn't need
+# fine-grained polling, and this keeps fetch_member calls infrequent.
+PENDING_RECOVERY_CHECK_INTERVAL_SECONDS = 86400
+
+
+def _pending_recovery_json_bytes() -> bytes:
+    """Serializes the current in-memory `pending_recovery` dict to JSON bytes."""
+    return json.dumps(pending_recovery, indent=2).encode("utf-8")
+
+
+def save_pending_recovery_local() -> None:
+    """
+    Writes the current in-memory `pending_recovery` dict to
+    pending_recovery.json on disk, atomically. Called immediately after
+    any change to the pending list (a user newly marked, a rejoin
+    removing them, or a completed recovery removing them) -- same role
+    as save_inventories_local()/save_showcase_votes_local().
+    """
+    try:
+        _atomic_write_bytes("pending_recovery.json", _pending_recovery_json_bytes())
+    except Exception:
+        print("[recovery] Failed to save pending_recovery.json locally:")
+        traceback.print_exc()
+        raise
+
+
+_pending_recovery_sync_task = None
+_pending_recovery_check_task = None
+_pending_recovery_dirty = False
+_pending_recovery_upload_in_progress = False
+
+# Guards the one-time immediate recovery sweep in Client.on_ready so a
+# later on_ready (e.g. after a reconnect) never repeats it -- "run once
+# at startup" should mean once per process, not once per connection.
+_startup_recovery_sweep_done = False
+
+
+def mark_pending_recovery_dirty() -> None:
+    """Marks pending_recovery.json as having local changes not yet pushed
+    to GitHub. Must be called while holding pending_recovery_lock,
+    immediately after a successful save_pending_recovery_local()."""
+    global _pending_recovery_dirty
+    _pending_recovery_dirty = True
+
+
+async def pending_recovery_github_sync_loop():
+    """
+    Background task: wakes up every INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS
+    (the same interval inventories.json/showcase_votes.json use) and,
+    only if pending_recovery.json has unpushed local changes, performs
+    exactly one GitHub commit. Mirrors inventory_github_sync_loop()
+    exactly. This durability matters here specifically: the whole point
+    of the 15-day countdown is to survive Railway restarts/redeploys --
+    without it, every restart would silently forget when someone was
+    first detected as gone.
+    """
+    global _pending_recovery_dirty, _pending_recovery_upload_in_progress
+    while True:
+        await asyncio.sleep(INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS)
+
+        if not _pending_recovery_dirty or _pending_recovery_upload_in_progress:
+            continue
+
+        async with pending_recovery_lock:
+            if not _pending_recovery_dirty:
+                continue
+            data = _pending_recovery_json_bytes()
+            _pending_recovery_dirty = False
+
+        _pending_recovery_upload_in_progress = True
+        try:
+            await github_commit_files({"pending_recovery.json": data}, "Batched pending recovery sync")
+        except Exception:
+            print("[recovery] Periodic GitHub sync failed (will retry next cycle):")
+            traceback.print_exc()
+            async with pending_recovery_lock:
+                _pending_recovery_dirty = True
+        finally:
+            _pending_recovery_upload_in_progress = False
+
+
+async def flush_pending_recovery_to_github() -> None:
+    """Best-effort final push of pending_recovery.json to GitHub on
+    graceful shutdown -- same mechanism as flush_inventories_to_github()
+    /flush_showcase_votes_to_github()."""
+    global _pending_recovery_dirty
+
+    async with pending_recovery_lock:
+        if not _pending_recovery_dirty:
+            return
+        data = _pending_recovery_json_bytes()
+        _pending_recovery_dirty = False
+
+    try:
+        await github_commit_files({"pending_recovery.json": data}, "Final pending recovery sync (shutdown)")
+        print("[recovery] Flushed pending recovery changes to GitHub before shutdown.")
+    except Exception:
+        async with pending_recovery_lock:
+            _pending_recovery_dirty = True
+        print("[recovery] Failed to flush pending recovery changes to GitHub on shutdown "
+              "(they remain saved locally):")
+        traceback.print_exc()
+
+
+async def _sync_pending_recovery_from_github_at_startup() -> dict:
+    """
+    Startup-only, single load into memory. Mirrors
+    _sync_showcase_votes_from_github_at_startup()'s exact priority order
+    and corrupt-file backup safety net -- local disk wins if valid,
+    GitHub is only a backfill when local is missing/invalid.
+    """
+    local_data = _load_pending_recovery_json()
+    if local_data is not None:
+        print("[recovery] Loaded pending_recovery.json from local disk.")
+        return local_data
+
+    print("[recovery] Local pending_recovery.json is missing/unreadable/malformed -- trying GitHub as a backfill.")
+
+    if os.path.exists('pending_recovery.json'):
+        backup_path = f"pending_recovery.json.corrupt-{int(time.time())}"
+        try:
+            with open('pending_recovery.json', 'rb') as src, open(backup_path, 'wb') as dst:
+                dst.write(src.read())
+            print(f"[recovery] Backed up the invalid local file to '{backup_path}' before trying GitHub.")
+        except Exception:
+            print("[recovery] Failed to back up the invalid local file (it was NOT modified or deleted):")
+            traceback.print_exc()
+
+    remote_bytes = await github_get_file("pending_recovery.json")
+
+    if remote_bytes is None:
+        print("[recovery] GitHub unavailable or has no pending_recovery.json -- starting with an empty pending list.")
+        if not os.path.exists('pending_recovery.json'):
+            try:
+                _atomic_write_bytes("pending_recovery.json", b"{}")
+            except Exception:
+                print("[recovery] Failed to create pending_recovery.json:")
+                traceback.print_exc()
+        return {}
+
+    try:
+        remote_data = json.loads(remote_bytes.decode("utf-8") or "{}")
+        if not isinstance(remote_data, dict):
+            raise ValueError(f"expected a JSON object, got {type(remote_data).__name__}")
+    except Exception:
+        print("[recovery] Downloaded pending_recovery.json from GitHub was not a valid JSON object -- starting with an empty pending list.")
+        traceback.print_exc()
+        return {}
+
+    try:
+        _atomic_write_bytes("pending_recovery.json", remote_bytes)
+        print("[recovery] Local pending_recovery.json was missing/invalid; backfilled from GitHub.")
+    except Exception:
+        print("[recovery] Backfilled from GitHub in memory, but failed to write pending_recovery.json locally:")
+        traceback.print_exc()
+
+    return remote_data
+
+
+pending_recovery = asyncio.run(_sync_pending_recovery_from_github_at_startup())
+pending_recovery_lock = asyncio.Lock()
+
+
+# =========================
+# MAIL (mail.json)
+# =========================
+# In-app mail, sent between users with `lmail @user` and read with
+# `lmail`. Keyed by receiver ID (str) -> list of letter dicts, so a
+# user's mailbox is just mail[str(user_id)], the same
+# setdefault-a-list-per-user shape get_inventory() already uses for
+# `inventories`. Persisted/synced exactly the way inventories.json,
+# showcase_votes.json, pending_recovery.json, and merchants.json are
+# (local file authoritative, atomic writes, own lock, debounced GitHub
+# mirror, best-effort flush on shutdown) -- no new persistence system,
+# just the existing one reused for a new piece of state.
+#
+# Each letter dict:
+#   id:          str(uuid4()), unique per letter -- lets the "Read"
+#                button target the exact letter being viewed even
+#                though pages are just a list index.
+#   sender_id:   str(sender's Discord user ID)
+#   receiver_id: str(receiver's Discord user ID)
+#   timestamp:   float, time.time() when the letter was sent
+#   message:     str, the letter's body
+#   read:        bool, False until the receiver presses "Read"
+
+def _load_mail_json():
+    """
+    Loads and validates the local mail.json. Same contract, same
+    reasoning, as _load_inventories_json()/_load_pending_recovery_json()
+    -- "missing" and "invalid" are both real, distinct situations, never
+    silently collapsed into "just start empty" without at least a log
+    line.
+
+    Returns the parsed dict (possibly a legitimately empty {}) if valid,
+    or None if missing/unreadable/malformed/not a dict.
+    """
+    try:
+        with open('mail.json', 'r') as f:
+            raw = f.read().strip()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        print("[mail] Failed to read mail.json:")
+        traceback.print_exc()
+        return None
+
+    if not raw:
+        print("[mail] mail.json is empty (not even '{}') -- treating as invalid.")
+        return None
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        print("[mail] mail.json contains invalid JSON:")
+        traceback.print_exc()
+        return None
+
+    if not isinstance(parsed, dict):
+        print(f"[mail] mail.json did not contain a JSON object "
+              f"(got {type(parsed).__name__}) -- treating as invalid.")
+        return None
+
+    return parsed
+
+
+def _mail_json_bytes() -> bytes:
+    """Serializes the current in-memory `mail` dict to JSON bytes."""
+    return json.dumps(mail, indent=2).encode("utf-8")
+
+
+def save_mail_local() -> None:
+    """
+    Writes the current in-memory `mail` dict to mail.json on disk,
+    atomically. Called immediately after any change (a new letter sent,
+    or a letter marked read) -- same role as
+    save_inventories_local()/save_pending_recovery_local().
+    """
+    try:
+        _atomic_write_bytes("mail.json", _mail_json_bytes())
+    except Exception:
+        print("[mail] Failed to save mail.json locally:")
+        traceback.print_exc()
+        raise
+
+
+_mail_sync_task = None
+_mail_dirty = False
+_mail_upload_in_progress = False
+
+
+def mark_mail_dirty() -> None:
+    """Marks mail.json as having local changes not yet pushed to
+    GitHub. Must be called while holding mail_lock, immediately after a
+    successful save_mail_local()."""
+    global _mail_dirty
+    _mail_dirty = True
+
+
+async def mail_github_sync_loop():
+    """
+    Background task: wakes up every INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS
+    and, only if mail.json has unpushed local changes, performs exactly
+    one GitHub commit. Mirrors inventory_github_sync_loop()/
+    pending_recovery_github_sync_loop() exactly.
+    """
+    global _mail_dirty, _mail_upload_in_progress
+    while True:
+        await asyncio.sleep(INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS)
+
+        if not _mail_dirty or _mail_upload_in_progress:
+            continue
+
+        async with mail_lock:
+            if not _mail_dirty:
+                continue
+            data = _mail_json_bytes()
+            _mail_dirty = False
+
+        _mail_upload_in_progress = True
+        try:
+            await github_commit_files({"mail.json": data}, "Batched mail sync")
+        except Exception:
+            print("[mail] Periodic GitHub sync failed (will retry next cycle):")
+            traceback.print_exc()
+            async with mail_lock:
+                _mail_dirty = True
+        finally:
+            _mail_upload_in_progress = False
+
+
+async def flush_mail_to_github() -> None:
+    """Best-effort final push of mail.json to GitHub on graceful
+    shutdown -- same mechanism as flush_inventories_to_github()/
+    flush_pending_recovery_to_github()."""
+    global _mail_dirty
+
+    async with mail_lock:
+        if not _mail_dirty:
+            return
+        data = _mail_json_bytes()
+        _mail_dirty = False
+
+    try:
+        await github_commit_files({"mail.json": data}, "Final mail sync (shutdown)")
+        print("[mail] Flushed mail changes to GitHub before shutdown.")
+    except Exception:
+        async with mail_lock:
+            _mail_dirty = True
+        print("[mail] Failed to flush mail changes to GitHub on shutdown "
+              "(they remain saved locally):")
+        traceback.print_exc()
+
+
+async def _sync_mail_from_github_at_startup() -> dict:
+    """
+    Startup-only, single load into memory. Mirrors
+    _sync_pending_recovery_from_github_at_startup()'s exact priority
+    order and corrupt-file backup safety net -- local disk wins if
+    valid, GitHub is only a backfill when local is missing/invalid.
+    """
+    local_data = _load_mail_json()
+    if local_data is not None:
+        print("[mail] Loaded mail.json from local disk.")
+        return local_data
+
+    print("[mail] Local mail.json is missing/unreadable/malformed -- trying GitHub as a backfill.")
+
+    if os.path.exists('mail.json'):
+        backup_path = f"mail.json.corrupt-{int(time.time())}"
+        try:
+            with open('mail.json', 'rb') as src, open(backup_path, 'wb') as dst:
+                dst.write(src.read())
+            print(f"[mail] Backed up the invalid local file to '{backup_path}' before trying GitHub.")
+        except Exception:
+            print("[mail] Failed to back up the invalid local file (it was NOT modified or deleted):")
+            traceback.print_exc()
+
+    remote_bytes = await github_get_file("mail.json")
+
+    if remote_bytes is None:
+        print("[mail] GitHub unavailable or has no mail.json -- starting with empty mail.")
+        if not os.path.exists('mail.json'):
+            try:
+                _atomic_write_bytes("mail.json", b"{}")
+            except Exception:
+                print("[mail] Failed to create mail.json:")
+                traceback.print_exc()
+        return {}
+
+    try:
+        remote_data = json.loads(remote_bytes.decode("utf-8") or "{}")
+        if not isinstance(remote_data, dict):
+            raise ValueError(f"expected a JSON object, got {type(remote_data).__name__}")
+    except Exception:
+        print("[mail] Downloaded mail.json from GitHub was not a valid JSON object -- starting with empty mail.")
+        traceback.print_exc()
+        return {}
+
+    try:
+        _atomic_write_bytes("mail.json", remote_bytes)
+        print("[mail] Local mail.json was missing/invalid; backfilled from GitHub.")
+    except Exception:
+        print("[mail] Backfilled from GitHub in memory, but failed to write mail.json locally:")
+        traceback.print_exc()
+
+    return remote_data
+
+
+mail = asyncio.run(_sync_mail_from_github_at_startup())
+mail_lock = asyncio.Lock()
+
+
+def get_mailbox(user_id) -> list:
+    """Safely fetches or initializes a user's mailbox (received mail
+    only) -- same setdefault-a-list-per-user shape as get_inventory()."""
+    return mail.setdefault(str(user_id), [])
+
+
+def has_unread_mail(user_id) -> bool:
+    """Whether user_id currently has at least one unread letter."""
+    return any(not letter.get("read") for letter in get_mailbox(user_id))
+
+
+def unread_mail_count(user_id) -> int:
+    """How many unread letters user_id currently has."""
+    return sum(1 for letter in get_mailbox(user_id) if not letter.get("read"))
+
+
+def mark_letter_read(user_id, letter_id) -> bool:
+    """
+    Marks the given letter (by id) in user_id's mailbox as read, in
+    memory. Returns True if a matching, currently-unread letter was
+    found and updated; False if it was already read or no longer
+    exists (e.g. a stale button on an old message).
+    """
+    for letter in get_mailbox(user_id):
+        if letter.get("id") == letter_id:
+            if letter.get("read"):
+                return False
+            letter["read"] = True
+            return True
+    return False
+
+
+async def _resolve_mail_sender_info(client, letters: list) -> list:
+    """
+    Best-effort resolves each letter's sender into a display name and
+    avatar URL for the mailbox paginator. Returns shallow copies of the
+    letter dicts with `_sender_name`/`_sender_avatar` attached -- the
+    real letters in `mail` (and mail.json) are never touched, so this
+    is purely a display-time enrichment step. Caches lookups per sender
+    ID within a single call so a mailbox with many letters from the
+    same person doesn't refetch them repeatedly.
+    """
+    resolved_cache = {}
+    enriched = []
+    for letter in letters:
+        sender_id = letter.get("sender_id")
+        if sender_id not in resolved_cache:
+            user_obj = None
+            try:
+                if sender_id and sender_id.isdigit():
+                    user_obj = client.get_user(int(sender_id))
+                    if user_obj is None:
+                        user_obj = await client.fetch_user(int(sender_id))
+            except Exception:
+                user_obj = None
+            resolved_cache[sender_id] = user_obj
+
+        user_obj = resolved_cache.get(sender_id)
+        enriched_letter = dict(letter)
+        enriched_letter["_sender_name"] = user_obj.display_name if user_obj else "Unknown user"
+        enriched_letter["_sender_avatar"] = user_obj.display_avatar.url if user_obj else None
+        enriched.append(enriched_letter)
+    return enriched
+
+
+def _looks_like_bot_command(content_lower: str) -> bool:
+    """
+    Whether a message looks like an attempt to run one of this bot's
+    commands -- every single command handled in on_message (lbadges,
+    lprogress, lmissing, ldrop, etc.) starts with a lowercase 'l'
+    followed by more letters, so that's the one shared signal available
+    without hand-maintaining a duplicate list of command names here.
+    Used only to decide when to check for/display the unread mail
+    reminder -- it never gates any actual command logic below.
+    """
+    if not content_lower:
+        return False
+    first_word = content_lower.split(maxsplit=1)[0]
+    return len(first_word) > 1 and first_word[0] == "l" and first_word[1].isalpha()
+
+
+# =========================
+# DUO CHALLENGES (duo.json)
+# =========================
+# State for `lduo @user`: pending-invite -> shared challenge -> weekly
+# limits/cooldowns -> bonus drop/claim rewards. Persisted/synced exactly
+# the way mail.json/inventories.json/pending_recovery.json are (local
+# file authoritative, atomic writes, own lock, debounced GitHub mirror,
+# best-effort flush on shutdown) -- no new persistence system, just the
+# existing one reused for a new piece of state.
+#
+# duo = {
+#   "active": { challenge_id: { id, player_a, player_b, type, target,
+#                                label, progress, series_seen?,
+#                                characters_seen?, started_at,
+#                                channel_id } },
+#   "weekly": { user_id: [ {timestamp, partner_id}, ... ] },  # completions,
+#                                                              # trimmed to
+#                                                              # the last
+#                                                              # DUO_WEEKLY_WINDOW_SECONDS
+#   "cooldowns": { user_id: timestamp_of_last_completion },
+#   "bonus": { user_id: {"drop": int, "claim": int} },
+# }
+#
+# NOTE ON SCOPE: only claim-based challenge types are implemented (see
+# DUO_CHALLENGE_POOL below). A trade-based challenge type was
+# deliberately left out, since tracking it would require adding a hook
+# into the trading system, which this task explicitly says not to
+# modify. The only two touch points added outside this block are a
+# single best-effort progress-recording call in CardView.claim (after
+# a claim has already fully succeeded) and the bonus-drop/bonus-claim
+# consumption checks in `ld`/CardView.claim -- both required for this
+# feature to function at all, and neither changes any existing
+# drop/claim behavior, odds, or output.
+
+DUO_WEEKLY_LIMIT = 3
+DUO_WEEKLY_WINDOW_SECONDS = 7 * 24 * 3600
+DUO_COOLDOWN_SECONDS = 2 * 24 * 3600
+
+DUO_CHALLENGE_POOL = [
+    {"type": "claim_count", "target": 60, "label": "Claim {target} cards together"},
+    {"type": "claim_rarity4", "target": 10, "label": "Collect {target} ★★★★ cards together"},
+    {"type": "claim_series", "target": 15, "label": "Claim cards from {target} different series together"},
+    {"type": "claim_characters", "target": 20, "label": "Obtain {target} unique characters together"},
+]
+
+
+def _load_duo_json():
+    """
+    Loads and validates the local duo.json. Same contract, same
+    reasoning, as _load_mail_json()/_load_inventories_json() -- "missing"
+    and "invalid" are both real, distinct situations, never silently
+    collapsed into "just start empty" without at least a log line.
+
+    Returns the parsed dict if valid, or None if
+    missing/unreadable/malformed/not a dict.
+    """
+    try:
+        with open('duo.json', 'r') as f:
+            raw = f.read().strip()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        print("[duo] Failed to read duo.json:")
+        traceback.print_exc()
+        return None
+
+    if not raw:
+        print("[duo] duo.json is empty (not even '{}') -- treating as invalid.")
+        return None
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        print("[duo] duo.json contains invalid JSON:")
+        traceback.print_exc()
+        return None
+
+    if not isinstance(parsed, dict):
+        print(f"[duo] duo.json did not contain a JSON object "
+              f"(got {type(parsed).__name__}) -- treating as invalid.")
+        return None
+
+    return parsed
+
+
+def _duo_default_state() -> dict:
+    return {"active": {}, "weekly": {}, "cooldowns": {}, "bonus": {}, "migrations": {}}
+
+
+def _normalize_duo_state(data: dict) -> dict:
+    """Fills in any top-level keys missing from a loaded/downloaded
+    duo.json (e.g. an older file from before a section existed) without
+    discarding whatever it did have."""
+    defaults = _duo_default_state()
+    for key, default_value in defaults.items():
+        if key not in data or not isinstance(data[key], dict):
+            data[key] = default_value
+    return data
+
+
+def _duo_json_bytes() -> bytes:
+    """Serializes the current in-memory `duo` dict to JSON bytes."""
+    return json.dumps(duo, indent=2).encode("utf-8")
+
+
+def save_duo_local() -> None:
+    """
+    Writes the current in-memory `duo` dict to duo.json on disk,
+    atomically. Called immediately after any change (new active
+    challenge, progress update, completion, bonus consumed/granted) --
+    same role as save_mail_local()/save_inventories_local().
+    """
+    try:
+        _atomic_write_bytes("duo.json", _duo_json_bytes())
+    except Exception:
+        print("[duo] Failed to save duo.json locally:")
+        traceback.print_exc()
+        raise
+
+
+_duo_sync_task = None
+_duo_dirty = False
+_duo_upload_in_progress = False
+
+
+def mark_duo_dirty() -> None:
+    """Marks duo.json as having local changes not yet pushed to GitHub.
+    Must be called while holding duo_lock, immediately after a
+    successful save_duo_local()."""
+    global _duo_dirty
+    _duo_dirty = True
+
+
+async def duo_github_sync_loop():
+    """
+    Background task: wakes up every INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS
+    and, only if duo.json has unpushed local changes, performs exactly
+    one GitHub commit. Mirrors mail_github_sync_loop()/
+    pending_recovery_github_sync_loop() exactly.
+    """
+    global _duo_dirty, _duo_upload_in_progress
+    while True:
+        await asyncio.sleep(INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS)
+
+        if not _duo_dirty or _duo_upload_in_progress:
+            continue
+
+        async with duo_lock:
+            if not _duo_dirty:
+                continue
+            data = _duo_json_bytes()
+            _duo_dirty = False
+
+        _duo_upload_in_progress = True
+        try:
+            await github_commit_files({"duo.json": data}, "Batched duo sync")
+        except Exception:
+            print("[duo] Periodic GitHub sync failed (will retry next cycle):")
+            traceback.print_exc()
+            async with duo_lock:
+                _duo_dirty = True
+        finally:
+            _duo_upload_in_progress = False
+
+
+async def flush_duo_to_github() -> None:
+    """Best-effort final push of duo.json to GitHub on graceful shutdown
+    -- same mechanism as flush_mail_to_github()/
+    flush_pending_recovery_to_github()."""
+    global _duo_dirty
+
+    async with duo_lock:
+        if not _duo_dirty:
+            return
+        data = _duo_json_bytes()
+        _duo_dirty = False
+
+    try:
+        await github_commit_files({"duo.json": data}, "Final duo sync (shutdown)")
+        print("[duo] Flushed duo changes to GitHub before shutdown.")
+    except Exception:
+        async with duo_lock:
+            _duo_dirty = True
+        print("[duo] Failed to flush duo changes to GitHub on shutdown "
+              "(they remain saved locally):")
+        traceback.print_exc()
+
+
+async def _sync_duo_from_github_at_startup() -> dict:
+    """
+    Startup-only, single load into memory. Mirrors
+    _sync_mail_from_github_at_startup()'s exact priority order and
+    corrupt-file backup safety net -- local disk wins if valid, GitHub
+    is only a backfill when local is missing/invalid. Active challenges
+    survive a restart because of this -- they're just whatever was last
+    saved to duo.json.
+    """
+    local_data = _load_duo_json()
+    if local_data is not None:
+        print("[duo] Loaded duo.json from local disk.")
+        return _normalize_duo_state(local_data)
+
+    print("[duo] Local duo.json is missing/unreadable/malformed -- trying GitHub as a backfill.")
+
+    if os.path.exists('duo.json'):
+        backup_path = f"duo.json.corrupt-{int(time.time())}"
+        try:
+            with open('duo.json', 'rb') as src, open(backup_path, 'wb') as dst:
+                dst.write(src.read())
+            print(f"[duo] Backed up the invalid local file to '{backup_path}' before trying GitHub.")
+        except Exception:
+            print("[duo] Failed to back up the invalid local file (it was NOT modified or deleted):")
+            traceback.print_exc()
+
+    remote_bytes = await github_get_file("duo.json")
+
+    if remote_bytes is None:
+        print("[duo] GitHub unavailable or has no duo.json -- starting with empty duo state.")
+        default_state = _duo_default_state()
+        if not os.path.exists('duo.json'):
+            try:
+                _atomic_write_bytes("duo.json", json.dumps(default_state, indent=2).encode("utf-8"))
+            except Exception:
+                print("[duo] Failed to create duo.json:")
+                traceback.print_exc()
+        return default_state
+
+    try:
+        remote_data = json.loads(remote_bytes.decode("utf-8") or "{}")
+        if not isinstance(remote_data, dict):
+            raise ValueError(f"expected a JSON object, got {type(remote_data).__name__}")
+    except Exception:
+        print("[duo] Downloaded duo.json from GitHub was not a valid JSON object -- starting with empty duo state.")
+        traceback.print_exc()
+        return _duo_default_state()
+
+    try:
+        _atomic_write_bytes("duo.json", remote_bytes)
+        print("[duo] Local duo.json was missing/invalid; backfilled from GitHub.")
+    except Exception:
+        print("[duo] Backfilled from GitHub in memory, but failed to write duo.json locally:")
+        traceback.print_exc()
+
+    return _normalize_duo_state(remote_data)
+
+
+duo = asyncio.run(_sync_duo_from_github_at_startup())
+duo_lock = asyncio.Lock()
+
+
+# ---- Duo: bonus drop/claim helpers -----------------------------------
+
+def get_bonus(user_id) -> dict:
+    """Safely fetches or initializes a user's bonus-use counters."""
+    return duo["bonus"].setdefault(str(user_id), {"drop": 0, "claim": 0})
+
+
+def add_bonus(user_id, kind: str, amount: int = 1) -> None:
+    """Grants `amount` additional bonus uses of `kind` ('drop' or
+    'claim') to user_id -- purely additive, on top of the existing
+    cooldown system, never replacing it."""
+    bonus = get_bonus(user_id)
+    bonus[kind] = bonus.get(kind, 0) + amount
+
+
+def consume_bonus(user_id, kind: str) -> bool:
+    """Spends one bonus use of `kind` if available. Returns True if one
+    was spent, False if none were banked."""
+    bonus = get_bonus(user_id)
+    if bonus.get(kind, 0) > 0:
+        bonus[kind] -= 1
+        return True
+    return False
+
+
+# ---- One-time migration: launch bonus for existing players ------------
+
+EXTRA_BONUS_MIGRATION_ID = "extra_bonus_launch_2026_08"
+EXTRA_BONUS_MIGRATION_AMOUNT = 5
+
+
+async def _run_extra_bonus_migration_once() -> None:
+    """
+    One-time migration: grants EXTRA_BONUS_MIGRATION_AMOUNT bonus drops
+    and claims (via the existing add_bonus() helper, same storage as
+    normal bonus drops/claims) to every user_id already present in
+    `inventories` at the moment this runs. Guarded by
+    EXTRA_BONUS_MIGRATION_ID in duo["migrations"], so this can only ever
+    apply once regardless of restarts, and any player created after it
+    has already run is never touched.
+    """
+    async with duo_lock:
+        if duo["migrations"].get(EXTRA_BONUS_MIGRATION_ID):
+            return
+
+        for user_id in list(inventories.keys()):
+            add_bonus(user_id, "drop", EXTRA_BONUS_MIGRATION_AMOUNT)
+            add_bonus(user_id, "claim", EXTRA_BONUS_MIGRATION_AMOUNT)
+
+        duo["migrations"][EXTRA_BONUS_MIGRATION_ID] = True
+
+        try:
+            save_duo_local()
+            mark_duo_dirty()
+        except Exception:
+            print("[duo] Failed to save the one-time extra bonus migration:")
+            traceback.print_exc()
+            raise
+
+
+# ---- Duo: weekly limit / cooldown helpers -----------------------------
+
+def _duo_recent_completions(user_id, now=None) -> list:
+    """This user's Duo completions within the last
+    DUO_WEEKLY_WINDOW_SECONDS -- the rolling window that "weekly limits
+    reset automatically every week" is implemented as, so it's always
+    correct with no separate reset job needed."""
+    now = now if now is not None else time.time()
+    entries = duo["weekly"].get(str(user_id), [])
+    return [e for e in entries if now - e.get("timestamp", 0) < DUO_WEEKLY_WINDOW_SECONDS]
+
+
+def duo_weekly_count(user_id) -> int:
+    """How many Duo challenges user_id has completed in the last 7 days."""
+    return len(_duo_recent_completions(user_id))
+
+
+def duo_weekly_partners(user_id) -> set:
+    """The set of partner IDs (str) user_id has already completed a Duo
+    with in the last 7 days -- "each completed Duo must be with a
+    different player" is enforced against this set."""
+    return {e.get("partner_id") for e in _duo_recent_completions(user_id)}
+
+
+def duo_cooldown_remaining(user_id) -> int:
+    """Seconds left on user_id's post-completion Duo cooldown (0 if
+    none/expired) -- same dict[user_id]=timestamp cooldown architecture
+    as DROP_COOLDOWN/CLAIM_COOLDOWN."""
+    ts = duo["cooldowns"].get(str(user_id))
+    if not ts:
+        return 0
+    return max(0, int(DUO_COOLDOWN_SECONDS - (time.time() - ts)))
+
+
+# ---- Duo: active-challenge helpers ------------------------------------
+
+def find_active_duo(user_id):
+    """Returns (challenge_id, challenge) for user_id's current active
+    Duo challenge, or (None, None) if they're not in one."""
+    uid = str(user_id)
+    for challenge_id, challenge in duo.get("active", {}).items():
+        if challenge.get("player_a") == uid or challenge.get("player_b") == uid:
+            return challenge_id, challenge
+    return None, None
+
+
+def generate_duo_challenge() -> dict:
+    """Picks one random challenge template from DUO_CHALLENGE_POOL and
+    returns a fresh, zeroed-out challenge dict (still missing id/
+    player_a/player_b/started_at/channel_id -- the caller fills those
+    in once both players are confirmed)."""
+    template = random.choice(DUO_CHALLENGE_POOL)
+    challenge = {
+        "type": template["type"],
+        "target": template["target"],
+        "label": template["label"].format(target=template["target"]),
+        "progress": 0,
+    }
+    if template["type"] == "claim_series":
+        challenge["series_seen"] = []
+    elif template["type"] == "claim_characters":
+        challenge["characters_seen"] = []
+    return challenge
+
+
+def _duo_progress_value(challenge: dict) -> int:
+    """The current progress count for `challenge`, regardless of which
+    of the 4 challenge types it is."""
+    ctype = challenge.get("type")
+    if ctype in ("claim_count", "claim_rarity4"):
+        return challenge.get("progress", 0)
+    if ctype == "claim_series":
+        return len(challenge.get("series_seen", []))
+    if ctype == "claim_characters":
+        return len(challenge.get("characters_seen", []))
+    return 0
+
+
+def build_duo_challenge_embed(challenge: dict, user_a, user_b) -> discord.Embed:
+    """The shared embed shown right after a Duo invite is accepted, and
+    reused wherever a Duo challenge's current state needs to be
+    displayed."""
+    progress = _duo_progress_value(challenge)
+    target = challenge.get("target", 0)
+    embed = discord.Embed(
+        color=THEME_COLOR,
+        title="🤝 Duo Challenge",
+        description=(
+            f"**{user_a.mention} & {user_b.mention}**\n\n"
+            f"> {challenge.get('label', 'Duo Challenge')}\n"
+            f"Progress: **{progress}/{target}**"
+        ),
+    )
+    return embed
+
+
+async def _fetch_duo_users(client, challenge: dict):
+    """Best-effort resolves both players in `challenge` into discord
+    User objects (cache first, then a fetch), for display purposes
+    only. Returns (user_a, user_b), either of which may be None if
+    resolution fails."""
+    async def _get(uid):
+        if not uid:
+            return None
+        try:
+            user_obj = client.get_user(int(uid))
+            if user_obj is None:
+                user_obj = await client.fetch_user(int(uid))
+            return user_obj
+        except Exception:
+            return None
+
+    return await _get(challenge.get("player_a")), await _get(challenge.get("player_b"))
+
+
+async def _finalize_completed_duo(client, challenge_id: str, challenge: dict) -> None:
+    """
+    Finalizes a just-completed Duo challenge: removes it from `active`,
+    grants both players their (random, non-rerollable) reward as bonus
+    drop/claim uses, records the completion for both players' weekly
+    limit / distinct-partner tracking, starts each player's 2-day Duo
+    cooldown, persists all of it in one save, and announces completion
+    in the channel the Duo was started in.
+
+    Must be called while already holding duo_lock (the caller that
+    detects completion is always the one already holding it while
+    updating progress).
+    """
+    player_a = challenge.get("player_a")
+    player_b = challenge.get("player_b")
+    now = time.time()
+
+    reward = random.choice(["drop", "claim", "both"])
+    for uid in (player_a, player_b):
+        if reward in ("drop", "both"):
+            add_bonus(uid, "drop", 1)
+        if reward in ("claim", "both"):
+            add_bonus(uid, "claim", 1)
+
+    duo["weekly"].setdefault(player_a, []).append({"timestamp": now, "partner_id": player_b})
+    duo["weekly"].setdefault(player_b, []).append({"timestamp": now, "partner_id": player_a})
+    duo["cooldowns"][player_a] = now
+    duo["cooldowns"][player_b] = now
+    duo["active"].pop(challenge_id, None)
+
+    try:
+        save_duo_local()
+        mark_duo_dirty()
+    except Exception:
+        print("[duo] Failed to persist a completed Duo challenge:")
+        traceback.print_exc()
+
+    channel = client.get_channel(challenge.get("channel_id"))
+    if channel:
+        user_a, user_b = await _fetch_duo_users(client, challenge)
+        reward_text = {
+            "drop": "+1 bonus drop",
+            "claim": "+1 bonus claim",
+            "both": "+1 bonus drop and +1 bonus claim",
+        }[reward]
+        name_a = user_a.mention if user_a else f"<@{player_a}>"
+        name_b = user_b.mention if user_b else f"<@{player_b}>"
+        embed = discord.Embed(
+            color=THEME_COLOR,
+            title="🎉 Duo Challenge Complete!",
+            description=(
+                f"{name_a} & {name_b} completed **{challenge.get('label', 'their Duo Challenge')}**!\n\n"
+                f"Reward: **{reward_text}** each."
+            ),
+        )
+        try:
+            await channel.send(embed=embed)
+        except Exception:
+            traceback.print_exc()
+
+
+async def _record_duo_claim_progress(client, user_id, card: dict) -> None:
+    """
+    Best-effort hook, called once right after a claim has already fully
+    succeeded and saved: if `user_id` is part of an active Duo
+    challenge, applies this single claim toward it, persists the
+    update, and finalizes the challenge if it's now complete. Never
+    raises -- a failure here can never undo or block the claim that
+    already happened.
+    """
+    try:
+        async with duo_lock:
+            challenge_id, challenge = find_active_duo(user_id)
+            if not challenge:
+                return
+
+            ctype = challenge.get("type")
+            changed = False
+
+            if ctype == "claim_count":
+                challenge["progress"] = challenge.get("progress", 0) + 1
+                changed = True
+            elif ctype == "claim_rarity4":
+                if card.get("stars") == 4:
+                    challenge["progress"] = challenge.get("progress", 0) + 1
+                    changed = True
+            elif ctype == "claim_series":
+                series = card.get("series")
+                seen = challenge.setdefault("series_seen", [])
+                if series and series not in seen:
+                    seen.append(series)
+                    changed = True
+            elif ctype == "claim_characters":
+                name = card.get("name")
+                seen = challenge.setdefault("characters_seen", [])
+                if name and name not in seen:
+                    seen.append(name)
+                    changed = True
+
+            if not changed:
+                return
+
+            if _duo_progress_value(challenge) >= challenge.get("target", 0):
+                await _finalize_completed_duo(client, challenge_id, challenge)
+            else:
+                try:
+                    save_duo_local()
+                    mark_duo_dirty()
+                except Exception:
+                    traceback.print_exc()
+    except Exception:
+        print("[duo] Failed to record claim progress toward an active Duo challenge:")
+        traceback.print_exc()
+
+
+class DuoRequestView(discord.ui.View):
+    """
+    Accept/Decline Duo invitation -- same shape as TradeRequestView
+    (90s timeout, only the invited player can respond, disables itself
+    on timeout). Not persisted, same as trade requests: an unaccepted
+    invite is only ever in-memory, and simply expiring on restart is
+    the same behavior a pending trade request already has.
+    """
+    def __init__(self, user1, user2, user1_id, user2_id):
+        super().__init__(timeout=90)
+        self.user1 = user1
+        self.user2 = user2
+        self.user1_id = user1_id
+        self.user2_id = user2_id
+        self.message = None
+        self.responded = False
+
+    def get_embed(self) -> discord.Embed:
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.description = (
+            f"{self.user2.mention}, {self.user1.mention} wants to start a "
+            f"**Duo Challenge** with you!"
+        )
+        return embed
+
+    @discord.ui.button(emoji="<:accept:1515633292605657088>", style=discord.ButtonStyle.success, label="Accept")
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user2_id:
+            return await interaction.response.send_message(
+                "This isn't your Duo invitation!", ephemeral=True
+            )
+
+        # Re-validate at accept time -- state (weekly count, cooldowns,
+        # an already-active challenge) may have changed since the
+        # invite was sent.
+        async with duo_lock:
+            if find_active_duo(self.user1_id)[0] or find_active_duo(self.user2_id)[0]:
+                self.responded = True
+                self.stop()
+                embed = discord.Embed(color=THEME_COLOR)
+                embed.description = "This Duo invitation is no longer available -- one of you is already in an active Duo challenge."
+                return await interaction.response.edit_message(embed=embed, view=None)
+
+            if (duo_weekly_count(self.user1_id) >= DUO_WEEKLY_LIMIT
+                    or duo_weekly_count(self.user2_id) >= DUO_WEEKLY_LIMIT):
+                self.responded = True
+                self.stop()
+                embed = discord.Embed(color=THEME_COLOR)
+                embed.description = "This Duo invitation is no longer available -- one of you has already completed 3 Duos this week."
+                return await interaction.response.edit_message(embed=embed, view=None)
+
+            if (duo_cooldown_remaining(self.user1_id) > 0
+                    or duo_cooldown_remaining(self.user2_id) > 0):
+                self.responded = True
+                self.stop()
+                embed = discord.Embed(color=THEME_COLOR)
+                embed.description = "This Duo invitation is no longer available -- one of you is still on Duo cooldown."
+                return await interaction.response.edit_message(embed=embed, view=None)
+
+            if str(self.user2_id) in duo_weekly_partners(self.user1_id):
+                self.responded = True
+                self.stop()
+                embed = discord.Embed(color=THEME_COLOR)
+                embed.description = "This Duo invitation is no longer available -- you've already completed a Duo together this week."
+                return await interaction.response.edit_message(embed=embed, view=None)
+
+            challenge = generate_duo_challenge()
+            challenge_id = str(uuid.uuid4())
+            challenge.update({
+                "id": challenge_id,
+                "player_a": str(self.user1_id),
+                "player_b": str(self.user2_id),
+                "started_at": time.time(),
+                "channel_id": interaction.channel.id,
+            })
+            duo["active"][challenge_id] = challenge
+            try:
+                save_duo_local()
+                mark_duo_dirty()
+            except Exception:
+                duo["active"].pop(challenge_id, None)
+                self.responded = True
+                self.stop()
+                embed = discord.Embed(color=THEME_COLOR)
+                embed.description = "❌ Something went wrong starting your Duo challenge. Please try again."
+                return await interaction.response.edit_message(embed=embed, view=None)
+
+        self.responded = True
+        self.stop()
+
+        embed = build_duo_challenge_embed(challenge, self.user1, self.user2)
+        await interaction.response.edit_message(embed=embed, view=None)
+
+    @discord.ui.button(emoji="<:decline:1515633309953163344>", style=discord.ButtonStyle.danger, label="Decline")
+    async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user2_id:
+            return await interaction.response.send_message(
+                "This isn't your Duo invitation!", ephemeral=True
+            )
+
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.description = "Duo invitation has been declined."
+
+        self.responded = True
+        self.stop()
+
+        await interaction.response.edit_message(embed=embed, view=None)
+
+    async def on_timeout(self):
+        if self.responded:
+            return
+
+        for item in self.children:
+            item.disabled = True
+
+        embed = discord.Embed(color=THEME_COLOR)
+        embed.description = "Duo invitation has expired."
+
+        if self.message:
+            try:
+                await self.message.edit(embed=embed, view=self)
+            except Exception:
+                pass
+
+
+# =========================
+# MERCHANTS (merchants.json)
+# =========================
+# Stores the currently-active (or currently-cooling-down) set of
+# traveling merchants: who they are, which series they deal in, the
+# fixed offers they generated (wants / rewards), remaining stock, and
+# their start/expiration timestamps -- plus, once a full set has gone
+# away, the timestamp at which a brand new set is allowed to appear.
+#
+# Persisted/synced exactly the way showcase_votes.json and
+# pending_recovery.json are (local file is authoritative, atomic
+# writes, own lock, debounced GitHub mirror, best-effort flush on
+# shutdown) -- no new persistence system, just the existing one reused
+# for a new piece of state.
+#
+# NOTE: this file only covers merchant *generation* and *persistence*.
+# Trading against a merchant (the Accept button / trade flow, actually
+# spending a wanted card and receiving reward(s), decrementing stock on
+# a completed trade) is intentionally NOT implemented here -- that's a
+# later part. The small stock/print helpers below exist purely as
+# infrastructure for that later part and are not wired into any
+# command yet.
+
+MERCHANT_DURATION_SECONDS = 24 * 60 * 60           # merchants stay for 24 hours...
+MERCHANT_STARTING_STOCK = 10                        # ...or until stock hits 0, whichever first.
+MERCHANT_COOLDOWN_SECONDS = 2 * 24 * 60 * 60        # wait 2 days after a full set disappears.
+MERCHANT_MAX_REWARD_CARDS_PER_TRADE = 2             # a completed trade grants 1 or 2 cards, never more.
+
+# How often the background loop re-checks expiration/stock/cooldown.
+# Deliberately much shorter than MERCHANT_DURATION_SECONDS /
+# MERCHANT_COOLDOWN_SECONDS so a set that just expired (or a cooldown
+# that just elapsed) doesn't sit unnoticed for anywhere near as long as
+# the thing it's waiting on.
+MERCHANT_CHECK_INTERVAL_SECONDS = 900
+
+# ---- Merchant templates (configuration -- lives in code, NOT in merchants.json) ----
+#
+# Each template is a fixed, named merchant "personality": identity/flavor
+# (name, description, avatar placeholder, embed colour) plus the exact
+# series it's allowed to deal in. merchants.json only ever stores the
+# *runtime* result of instantiating a template (stock, timestamps,
+# snapshotted offers) -- never this configuration itself. Adding a new
+# merchant later means adding a template here, nothing more.
+#
+# Series names are copied EXACTLY as they must appear in cards.json's
+# "series" field -- these are matched with a plain equality check, not
+# fuzzy/case-insensitive, so any drift here silently empties that
+# merchant's offer pool.
+MERCHANT_TEMPLATES = [
+    {
+        "id": "voyager_merchant",
+        "name": "Voyager Merchant",
+        "description": "Found a few interesting people on my travel.",
+        "avatar": "merchant_assets/voyager.png",  # local file -- see get_merchant_avatar_file()
+        "color": 0x3B82F6,  # embed colour (blue)
+        "allowed_series": [
+            "Genshin Impact",
+            "Honkai: Star Rail",
+            "Project Sekai: Colorful Stage!",
+            "Honkai Impact 3rd",
+            "Ensemble Stars!",
+        ],
+    },
+    {
+        "id": "lucky_merchant",
+        "name": "Lucky Merchant",
+        "description": "Let's see if luck's on your side today.",
+        "avatar": "merchant_assets/lucky.png",
+        "color": 0xF59E0B,  # embed colour (amber)
+        "allowed_series": [
+            "Jujutsu Kaisen",
+            "Kimetsu no Yaiba",
+            "Alien Stage",
+            "My Hero Academia",
+            "BLUELOCK",
+        ],
+    },
+    {
+        "id": "collector_merchant",
+        "name": "Collector Merchant",
+        "description": "Every collection has room for one more.",
+        "avatar": "merchant_assets/collector.png",
+        "color": 0x8B5CF6,  # embed colour (purple)
+        "allowed_series": [
+            "Omniscient Reader's Viewpoint",
+            "Tokyo Debunker",
+            "Tokyo Revengers",
+            "Persona",
+            "Path To Nowhere",
+        ],
+    },
+]
+
+
+def get_merchant_template(template_id: str):
+    """Looks up a merchant template (config) by its id. Returns None if unknown."""
+    for t in MERCHANT_TEMPLATES:
+        if t["id"] == template_id:
+            return t
+    return None
+
+
+# Derived, not hardcoded separately -- one merchant is instantiated per
+# template each cycle, so the active-merchant count always tracks
+# MERCHANT_TEMPLATES automatically as templates are added/removed.
+MERCHANT_COUNT = len(MERCHANT_TEMPLATES)
+
+
+def _load_merchants_json():
+    """
+    Loads and validates the local merchants.json.
+
+    Mirrors _load_showcase_votes_json()/_load_pending_recovery_json()'s
+    exact contract: "missing" and "invalid" are both real, distinct
+    situations that must never be silently collapsed into "just start
+    fresh" without at least a log line -- that's what makes the
+    difference between merchants actually surviving a restart and them
+    silently regenerating every time.
+
+    Returns:
+        - the parsed dict (with "merchants" and "next_generation_at"
+          keys, tolerating either being absent/malformed by falling
+          back to safe defaults for just that key) if the file exists,
+          parses, and is a JSON object.
+        - None if the file is missing, unreadable, contains malformed
+          JSON, or parses to something other than a dict -- the
+          explicit "invalid, do not treat as empty" signal.
+    """
+    try:
+        with open('merchants.json', 'r') as f:
+            raw = f.read().strip()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        print("[merchants] Failed to read merchants.json:")
+        traceback.print_exc()
+        return None
+
+    if not raw:
+        print("[merchants] merchants.json is empty (not even '{}') -- treating as invalid.")
+        return None
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        print("[merchants] merchants.json contains invalid JSON:")
+        traceback.print_exc()
+        return None
+
+    if not isinstance(parsed, dict):
+        print(f"[merchants] merchants.json did not contain a JSON object "
+              f"(got {type(parsed).__name__}) -- treating as invalid.")
+        return None
+
+    merchants_list = parsed.get("merchants")
+    if not isinstance(merchants_list, list):
+        merchants_list = []
+
+    next_gen = parsed.get("next_generation_at")
+    if next_gen is not None and not isinstance(next_gen, (int, float)):
+        next_gen = None
+
+    return {"merchants": merchants_list, "next_generation_at": next_gen}
+
+
+def _merchants_json_bytes() -> bytes:
+    """Serializes the current in-memory `merchants` dict to JSON bytes."""
+    return json.dumps(merchants, indent=2).encode("utf-8")
+
+
+def save_merchants_local() -> None:
+    """
+    Writes the current in-memory `merchants` dict to merchants.json on
+    disk, atomically (via _atomic_write_bytes). Same role as
+    save_inventories_local()/save_showcase_votes_local() for their
+    respective stores.
+    """
+    try:
+        _atomic_write_bytes("merchants.json", _merchants_json_bytes())
+    except Exception:
+        print("[merchants] Failed to save merchants.json locally:")
+        traceback.print_exc()
+        raise
+
+
+_merchants_sync_task = None
+_merchant_check_task = None
+_merchants_dirty = False
+_merchants_upload_in_progress = False
+
+
+def mark_merchants_dirty() -> None:
+    """
+    Marks that merchants.json has local changes not yet pushed to
+    GitHub. Must be called while holding merchants_lock, immediately
+    after a successful save_merchants_local(). Mirrors
+    mark_inventories_dirty()/mark_showcase_votes_dirty() exactly.
+    """
+    global _merchants_dirty
+    _merchants_dirty = True
+
+
+async def merchants_github_sync_loop():
+    """
+    Background task: wakes up every INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS
+    (the same shared interval every other store uses) and, only if
+    merchants.json has unpushed local changes, performs exactly one
+    GitHub commit containing the current merchant state. Mirrors
+    inventory_github_sync_loop()/showcase_votes_github_sync_loop()
+    exactly -- same snapshot-inside-the-lock, push-outside-the-lock
+    pattern, same dirty-flag-restore-on-failure behavior, reusing the
+    identical github_commit_files() helper.
+    """
+    global _merchants_dirty, _merchants_upload_in_progress
+    while True:
+        await asyncio.sleep(INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS)
+
+        if not _merchants_dirty or _merchants_upload_in_progress:
+            continue
+
+        async with merchants_lock:
+            if not _merchants_dirty:
+                continue
+            data = _merchants_json_bytes()
+            _merchants_dirty = False
+
+        _merchants_upload_in_progress = True
+        try:
+            await github_commit_files({"merchants.json": data}, "Batched merchant state sync")
+        except Exception:
+            print("[merchants] Periodic GitHub sync failed (will retry next cycle):")
+            traceback.print_exc()
+            async with merchants_lock:
+                _merchants_dirty = True
+        finally:
+            _merchants_upload_in_progress = False
+
+
+async def flush_merchants_to_github() -> None:
+    """
+    Best-effort final push of any pending merchant state changes to
+    GitHub, called from Client.close() on graceful shutdown -- same
+    reasoning and same mechanism as flush_inventories_to_github()/
+    flush_showcase_votes_to_github().
+    """
+    global _merchants_dirty
+
+    async with merchants_lock:
+        if not _merchants_dirty:
+            return
+        data = _merchants_json_bytes()
+        _merchants_dirty = False
+
+    try:
+        await github_commit_files({"merchants.json": data}, "Final merchant state sync (shutdown)")
+        print("[merchants] Flushed pending merchant state changes to GitHub before shutdown.")
+    except Exception:
+        async with merchants_lock:
+            _merchants_dirty = True
+        print("[merchants] Failed to flush pending merchant state changes to GitHub on shutdown "
+              "(they remain saved locally):")
+        traceback.print_exc()
+
+
+async def _sync_merchants_from_github_at_startup() -> dict:
+    """
+    Startup-only, single load into memory. Mirrors
+    _sync_showcase_votes_from_github_at_startup()'s exact priority
+    order: local disk is authoritative if valid (every change is
+    written to disk immediately; GitHub is only ever a periodic
+    mirror), so GitHub is only consulted as a backfill when local is
+    missing, unreadable, malformed, or not a dict.
+
+    This is what makes "merchant state must survive bot restarts, do
+    not regenerate merchants every restart" actually true across a
+    Railway redeploy (where local disk isn't carried over to the new
+    container) and not just across an in-place restart.
+    """
+    local_state = _load_merchants_json()
+    if local_state is not None:
+        print("[merchants] Loaded merchants.json from local disk.")
+        return local_state
+
+    print("[merchants] Local merchants.json is missing/unreadable/malformed -- trying GitHub as a backfill.")
+
+    if os.path.exists('merchants.json'):
+        backup_path = f"merchants.json.corrupt-{int(time.time())}"
+        try:
+            with open('merchants.json', 'rb') as src, open(backup_path, 'wb') as dst:
+                dst.write(src.read())
+            print(f"[merchants] Backed up the invalid local file to '{backup_path}' before trying GitHub.")
+        except Exception:
+            print("[merchants] Failed to back up the invalid local file (it was NOT modified or deleted):")
+            traceback.print_exc()
+
+    default_state = {"merchants": [], "next_generation_at": None}
+    remote_bytes = await github_get_file("merchants.json")
+
+    if remote_bytes is None:
+        print("[merchants] GitHub unavailable or has no merchants.json -- starting with no merchants (one will be generated on the next check).")
+        if not os.path.exists('merchants.json'):
+            try:
+                _atomic_write_bytes("merchants.json", json.dumps(default_state, indent=2).encode("utf-8"))
+            except Exception:
+                print("[merchants] Failed to create merchants.json:")
+                traceback.print_exc()
+        return default_state
+
+    try:
+        remote_parsed = json.loads(remote_bytes.decode("utf-8") or "{}")
+        if not isinstance(remote_parsed, dict):
+            raise ValueError(f"expected a JSON object, got {type(remote_parsed).__name__}")
+        remote_state = {
+            "merchants": remote_parsed.get("merchants") if isinstance(remote_parsed.get("merchants"), list) else [],
+            "next_generation_at": remote_parsed.get("next_generation_at")
+            if isinstance(remote_parsed.get("next_generation_at"), (int, float)) else None,
+        }
+    except Exception:
+        print("[merchants] Downloaded merchants.json from GitHub was not a valid JSON object -- starting with no merchants.")
+        traceback.print_exc()
+        return default_state
+
+    try:
+        _atomic_write_bytes("merchants.json", json.dumps(remote_state, indent=2).encode("utf-8"))
+        print("[merchants] Local merchants.json was missing/invalid; backfilled from GitHub.")
+    except Exception:
+        print("[merchants] Backfilled from GitHub in memory, but failed to write merchants.json locally:")
+        traceback.print_exc()
+
+    return remote_state
+
+
+merchants = asyncio.run(_sync_merchants_from_github_at_startup())
+merchants_lock = asyncio.Lock()
+
+
+# ---- Offer generation ----
+
+def _serialize_merchant_card(card: dict) -> dict:
+    """
+    Snapshots the fields of a card that a merchant offer needs, so the
+    offer stays exactly as it was generated even if cards.json is later
+    edited (leditcard/lupdateimage) -- "these offers remain fixed until
+    the merchant leaves" applies to the snapshot, not a live reference.
+    """
+    return {
+        "id": card.get("id"),
+        "name": card.get("name"),
+        "series": card.get("series"),
+        "stars": card.get("stars"),
+        "frame": card.get("frame"),
+        "image": card.get("image"),
+    }
+
+
+def _cards_for_template(template: dict) -> list:
+    """
+    Every card in cards.json belonging to one of this template's
+    allowed_series -- and ONLY those series. This is the sole pool
+    "Looking For" requirements and rewards are ever drawn from for this
+    merchant; there is deliberately no fallback that widens to other
+    series if this pool is small, since a merchant must never offer or
+    request a card outside its allowed series.
+    """
+    allowed = template.get("allowed_series", [])
+    return [c for c in cards if c.get("series") in allowed]
+
+
+def _generate_merchant_for_template(template: dict, now: float):
+    """
+    Instantiates one runtime merchant from a template: rolls its fixed
+    "Looking For" list and its fixed reward pool, both drawn strictly
+    from template["allowed_series"] via _cards_for_template(). Returns
+    None only if that template's allowed series currently have no cards
+    at all in cards.json (nothing to offer yet) -- in which case this
+    template is simply skipped for this cycle rather than reaching into
+    other series to fill the gap.
+    """
+    pool = _cards_for_template(template)
+    if not pool:
+        print(f"[merchants] Template '{template['id']}' has no cards in its allowed_series -- skipping this cycle.")
+        return None
+
+    want_count = min(len(pool), random.randint(2, 3))
+    wants = random.sample(pool, want_count)
+
+    remaining_pool = [c for c in pool if c not in wants]
+    if not remaining_pool:
+        # Still constrained to this template's own series-only pool --
+        # never falls back to the full card list.
+        remaining_pool = pool
+    reward_count = min(len(remaining_pool), random.randint(2, 3))
+    rewards = random.sample(remaining_pool, reward_count)
+
+    return {
+        # Runtime instance id -- distinct from template["id"], since the
+        # same template gets a fresh instance (fresh offers, fresh
+        # stock, fresh timestamps) every time the set regenerates.
+        "id": f"{template['id']}_{int(now)}_{random.randint(1000, 9999)}",
+        "template_id": template["id"],
+        "wants": [_serialize_merchant_card(c) for c in wants],
+        "rewards": [_serialize_merchant_card(c) for c in rewards],
+        "stock": MERCHANT_STARTING_STOCK,
+        "start_ts": now,
+        "expires_ts": now + MERCHANT_DURATION_SECONDS,
+    }
+
+
+def _generate_merchant_batch(now: float) -> list:
+    """
+    Instantiates exactly one merchant per entry in MERCHANT_TEMPLATES
+    (currently 3: Voyager, Lucky, and Collector Merchant) with
+    freshly-rolled, fixed offers. Called only from the regeneration
+    check below -- never on a plain restart, and never while any
+    merchant from the current set is still active.
+    """
+    batch = []
+    for template in MERCHANT_TEMPLATES:
+        m = _generate_merchant_for_template(template, now)
+        if m is not None:
+            batch.append(m)
+    return batch
+
+
+# ---- Lifecycle / regeneration ----
+
+def _merchant_is_active(m: dict, now: float) -> bool:
+    """A merchant is available to trade with as long as it has stock left and hasn't expired."""
+    return m.get("stock", 0) > 0 and now < m.get("expires_ts", 0)
+
+
+def _all_merchants_inactive(state: dict, now: float) -> bool:
+    merchants_list = state.get("merchants") or []
+    return not any(_merchant_is_active(m, now) for m in merchants_list)
+
+
+def _apply_merchant_regeneration_check(state: dict, now: float) -> bool:
+    """
+    Applies the regeneration rule to `state` in place:
+
+        - No merchants have ever been generated yet -> generate the
+          first set immediately (this is initial creation, not a
+          replacement, so no cooldown applies).
+        - Every current merchant is out of stock or expired, and no
+          cooldown is running yet -> start the 2-day cooldown, right
+          now, from this moment.
+        - The cooldown has fully elapsed -> generate a brand new set of
+          3, with brand new offers, and clear the cooldown.
+        - Otherwise (something is still active, or the cooldown hasn't
+          elapsed yet) -> leave state untouched entirely, including the
+          existing (possibly now-inactive) merchants -- they are never
+          rerolled or cleared early.
+
+    Returns True if `state` was modified (so the caller knows to
+    persist it), False otherwise.
+    """
+    merchants_list = state.get("merchants") or []
+
+    if not merchants_list:
+        state["merchants"] = _generate_merchant_batch(now)
+        state["next_generation_at"] = None
+        return True
+
+    if _all_merchants_inactive(state, now):
+        if state.get("next_generation_at") is None:
+            state["next_generation_at"] = now + MERCHANT_COOLDOWN_SECONDS
+            return True
+        if now >= state["next_generation_at"]:
+            state["merchants"] = _generate_merchant_batch(now)
+            state["next_generation_at"] = None
+            return True
+
+    return False
+
+
+# Channel where merchant arrival/departure announcements are posted.
+# Set to 0 to disable; if the channel can't be found (or the bot isn't
+# actually connected yet -- see below), the announcement is simply
+# skipped, never an error, and never affects the merchant system itself.
+MERCHANT_ANNOUNCEMENT_CHANNEL_ID = 1535051733464776796
+
+# Arrival/departure announcements detected before the client is ready
+# (see the "not ready yet" branch in _announce_merchant_event below)
+# are queued here, in order, instead of being dropped -- and sent as
+# soon as the client becomes ready (_flush_pending_merchant_announcements(),
+# called from on_ready). This is what makes a brand-new bot's very
+# first merchant arrival -- detected at import time, well before login
+# -- still get announced instead of being permanently skipped.
+_pending_merchant_announcements = []
+
+
+async def _announce_merchant_event(arrived: bool) -> None:
+    """
+    Sends a single embed announcement when the merchants arrive or
+    leave. Called only from check_and_update_merchants() below, right
+    after it detects that exact transition in the existing merchant
+    lifecycle state -- this has no timer or scheduling of its own, so
+    it can never fire on its own or drift out of sync with the real
+    merchant state.
+
+    Defensively checks for a connected `client` before doing anything:
+    check_and_update_merchants() also runs once at import time (see the
+    module-level asyncio.run() call below), before the bot has actually
+    logged in -- on a brand-new bot with no prior merchants.json, that
+    very first call could detect an "arrival" before there's any
+    gateway connection to send an announcement over at all. In that
+    case the announcement is queued in _pending_merchant_announcements
+    (not dropped) and sent as soon as the client becomes ready -- see
+    _flush_pending_merchant_announcements(). A missing/unconfigured
+    announcement channel, on the other hand, is still skipped outright
+    below -- that's a config state waiting can't fix.
+    """
+    client_obj = globals().get("client")
+    if client_obj is None or not client_obj.is_ready():
+        _pending_merchant_announcements.append(arrived)
+        return
+
+    channel = client_obj.get_channel(MERCHANT_ANNOUNCEMENT_CHANNEL_ID)
+    if channel is None:
+        return
+
+    if arrived:
+        embed = discord.Embed(
+            color=THEME_COLOR,
+            title="🧭 The Merchants have arrived!",
+            description=(
+                "New trades are now available from all three merchants. "
+                "They'll be around for a limited time, so make sure to "
+                "check what they're offering before they move on. "
+                "View everything with `lmerchants`."
+            ),
+        )
+    else:
+        embed = discord.Embed(
+            color=THEME_COLOR,
+            title="🧭 The Merchants have continued their journey.",
+            description=(
+                "Their time here has come to an end. They'll return in "
+                "a few days with a brand new selection of trades."
+            ),
+        )
+
+    try:
+        await channel.send(embed=embed)
+    except Exception:
+        print("[merchants] Failed to send a merchant arrival/departure announcement:")
+        traceback.print_exc()
+
+
+async def _flush_pending_merchant_announcements() -> None:
+    """
+    Sends any merchant arrival/departure announcements that were
+    detected while the client wasn't ready yet (queued by
+    _announce_merchant_event above), in the order they originally
+    happened. Called from on_ready -- safe to call on every on_ready
+    (including reconnects), since the queue is drained as each entry
+    is sent and is simply empty on later calls.
+    """
+    while _pending_merchant_announcements:
+        arrived = _pending_merchant_announcements.pop(0)
+        await _announce_merchant_event(arrived=arrived)
+
+
+async def check_and_update_merchants() -> bool:
+    """
+    The single entry point for merchant lifecycle progression: call
+    this at startup and periodically (see merchant_check_loop below).
+    Safe to call as often as desired -- it's a no-op unless a
+    regeneration or a cooldown-start is actually due.
+
+    Also detects, from the exact same state transition, whether this
+    call was the moment merchants just arrived (a fresh batch was just
+    generated) or just departed (the post-sellout/expiry cooldown was
+    just started) -- reusing the existing regeneration state
+    (`next_generation_at`/`merchants`) rather than any separate
+    scheduling of its own -- and fires at most one announcement for
+    whichever happened (see _announce_merchant_event above).
+    """
+    global merchants
+    now = time.time()
+
+    async with merchants_lock:
+        had_any_merchants = bool(merchants.get("merchants"))
+        had_next_generation_at = merchants.get("next_generation_at") is not None
+
+        changed = _apply_merchant_regeneration_check(merchants, now)
+
+        # Arrival: the merchants list was just (re)populated -- either
+        # the very first-ever generation, or a fresh rotation after a
+        # completed cooldown.
+        arrived = (
+            changed
+            and bool(merchants.get("merchants"))
+            and merchants.get("next_generation_at") is None
+            and (not had_any_merchants or had_next_generation_at)
+        )
+        # Departure: the cooldown was just started this call (it was
+        # None a moment ago, and is now set) -- the exact moment all
+        # three merchants have left.
+        departed = (
+            changed
+            and had_any_merchants
+            and not had_next_generation_at
+            and merchants.get("next_generation_at") is not None
+        )
+
+        if changed:
+            try:
+                save_merchants_local()
+                mark_merchants_dirty()
+            except Exception:
+                print("[merchants] Failed to persist merchant state after a regeneration check:")
+                traceback.print_exc()
+
+    if arrived:
+        await _announce_merchant_event(arrived=True)
+    if departed:
+        await _announce_merchant_event(arrived=False)
+
+    return changed
+
+
+# Applies once, immediately, at import time -- so a brand new bot (or
+# one whose merchants.json never made it into this container) gets its
+# very first set of merchants right away, instead of waiting up to
+# MERCHANT_CHECK_INTERVAL_SECONDS for the background loop's first tick.
+# A bot with an existing, still-valid merchants.json is unaffected by
+# this call (see _apply_merchant_regeneration_check above): it changes
+# nothing unless a regeneration/cooldown-start is actually due.
+asyncio.run(check_and_update_merchants())
+
+
+async def merchant_check_loop():
+    """
+    Background task: re-runs check_and_update_merchants() every
+    MERCHANT_CHECK_INTERVAL_SECONDS so an expiring/depleted set of
+    merchants (or an elapsed cooldown) is noticed and acted on while
+    the bot is running, not just at startup.
+    """
+    while True:
+        await asyncio.sleep(MERCHANT_CHECK_INTERVAL_SECONDS)
+        try:
+            await check_and_update_merchants()
+        except Exception:
+            print("[merchants] Periodic merchant check failed (will retry next cycle):")
+            traceback.print_exc()
+
+
+def get_active_merchants() -> list:
+    """
+    Returns the currently-tradeable merchants (in stock and not
+    expired) from the in-memory state. Read-only convenience helper for
+    later parts (listing merchants, trade UI) -- not used by any
+    command yet.
+    """
+    now = time.time()
+    return [m for m in (merchants.get("merchants") or []) if _merchant_is_active(m, now)]
+
+
+def get_merchant_by_id(merchant_id: str):
+    """Looks up a merchant (active or not) by its id. Returns None if not found."""
+    for m in (merchants.get("merchants") or []):
+        if m.get("id") == merchant_id:
+            return m
+    return None
+
+
+def get_merchant_display_info(m: dict):
+    """
+    Joins a runtime merchant record (from merchants.json) with its
+    template (name/description/avatar/colour/allowed_series, from code)
+    for anything that needs to *display* a merchant. Runtime data and
+    configuration are only ever merged at read time like this -- never
+    persisted together. Returns None if the merchant's template_id
+    doesn't match a known template (shouldn't happen unless a template
+    was renamed/removed after merchants.json was written).
+
+    Not called from anywhere yet -- provided for the trade flow / any
+    future merchant-listing command to use.
+    """
+    template = get_merchant_template(m.get("template_id"))
+    if template is None:
+        return None
+    return {**template, **m}
+
+
+def get_merchant_avatar_file(template_or_info: dict):
+    """
+    Loads a merchant's local avatar (merchant_assets/<file>.png, per
+    MERCHANT_TEMPLATES) as a fresh discord.File, so it can be sent as a
+    message attachment and referenced with an "attachment://" thumbnail
+    URL -- never a Discord CDN URL that can expire. Returns
+    (discord.File, attachment_url), or (None, None) if this template has
+    no avatar configured or the file is missing/unreadable, so a caller
+    can gracefully render the embed with no thumbnail instead of
+    crashing.
+
+    A brand-new discord.File is created on every call, since File
+    objects are single-use (consumed once actually sent/edited).
+    Swapping a merchant's picture later only ever requires replacing the
+    file at that same path -- this function, and the templates that
+    point to it, never need to change.
+    """
+    avatar_path = template_or_info.get("avatar") if template_or_info else None
+    if not avatar_path or not os.path.exists(avatar_path):
+        return None, None
+
+    try:
+        filename = os.path.basename(avatar_path)
+        return discord.File(avatar_path, filename=filename), f"attachment://{filename}"
+    except Exception:
+        print(f"[merchants] Failed to load avatar file '{avatar_path}':")
+        traceback.print_exc()
+        return None, None
+
+
+# ---- Infrastructure for the trade flow ----
+#
+# Used by MerchantTradeView's trade-finalize step below. Kept here,
+# next to the rest of the merchant persistence code, per spec:
+# "Merchant prints ... ONLY applies to merchant rewards. Every other
+# command ... must continue showing L exactly as before. Do not change
+# global print logic." The existing get_next_print()/format_print()
+# above are therefore left completely untouched; merchant rewards will
+# use the two helpers below instead, once the trade flow exists.
+
+def get_next_merchant_print(card_id: str) -> int:
+    """
+    Assigns the next print number for a merchant-rewarded card, using
+    the exact same shared `card_prints` counter get_next_print() uses
+    for every other command (claims/gifts/drops) -- so merchant rewards
+    still consume real, sequential print numbers and never collide with
+    or duplicate a print number issued anywhere else. The ONLY
+    difference from get_next_print() is what happens at display time
+    (see format_merchant_print below): merchant rewards are shown with
+    their real number even past 100, instead of "L".
+    """
+    return get_next_print(card_id)
+
+
+def format_merchant_print(print_num: int) -> str:
+    """
+    Display formatting for a merchant-rewarded card's print number.
+    Unlike format_print() (used everywhere else), this never collapses
+    to "L" -- merchant rewards show the real number (e.g. #101, #145,
+    #273) even once a series has passed the normal 100-print cap.
+    """
+    return f"#{print_num}"
+
+
+async def decrement_merchant_stock(merchant_id: str):
+    """
+    Reduces a merchant's remaining stock by 1 after a completed trade
+    and persists the change. Returns the updated merchant dict, or None
+    if that merchant id doesn't exist. A merchant whose stock reaches 0
+    here simply stops being returned by get_active_merchants() from
+    that point on (per _merchant_is_active) -- it is not removed from
+    `merchants["merchants"]`, since the whole set only gets replaced
+    once every merchant in it is inactive (see
+    _apply_merchant_regeneration_check).
+
+    Note: MerchantTradeView finalizes a trade by mutating the merchant
+    dict directly under merchants_lock (so the stock decrement and the
+    inventory/reward changes commit together as one atomic operation)
+    rather than calling this function -- this helper is kept for any
+    other, non-trade caller that needs to drop stock by exactly one.
+    """
+    global merchants
+    async with merchants_lock:
+        target = None
+        for m in (merchants.get("merchants") or []):
+            if m.get("id") == merchant_id:
+                target = m
+                break
+        if target is None:
+            return None
+
+        target["stock"] = max(0, target.get("stock", 0) - 1)
+
+        try:
+            save_merchants_local()
+            mark_merchants_dirty()
+        except Exception:
+            print("[merchants] Failed to persist merchant state after a stock decrement:")
+            traceback.print_exc()
+
+        return target
+
+
+
+async def mark_user_pending_recovery(user_id) -> None:
+    """
+    Records that `user_id` was just confirmed (discord.NotFound) to no
+    longer be in the server. Does NOT transfer any cards -- only starts
+    the RECOVERY_PENDING_DAYS countdown, or leaves it running unchanged
+    if they're already tracked (their original first-detected timestamp
+    is never reset just because another Owners lookup happens to see
+    them again). The actual transfer only ever happens from
+    pending_recovery_check_loop, after the full window elapses with no
+    rejoin.
+    """
+    user_key = str(user_id)
+
+    async with pending_recovery_lock:
+        if user_key in pending_recovery:
+            return
+
+        pending_recovery[user_key] = time.time()
+        try:
+            save_pending_recovery_local()
+            mark_pending_recovery_dirty()
+        except Exception:
+            del pending_recovery[user_key]
+            print(f"[recovery] Failed to save after marking user {user_id} pending recovery:")
+            traceback.print_exc()
+
+
+async def _perform_full_recovery(user_id) -> int:
+    """
+    Transfers user_id's ENTIRE inventory into SYSTEM_RECOVERY_USER's
+    inventory -- every card they owned, not just one -- preserving each
+    entry's "print" field exactly (cards are only ever reassigned, never
+    modified or deleted). Uses the exact same `inventories` dict, the
+    exact same inventories_lock, and the exact same
+    save_inventories_local()/mark_inventories_dirty() every other
+    inventory mutation (claim/gift/trade) already goes through -- no
+    separate persistence path for the transfer itself. On any save
+    failure, the entire move is rolled back so the departed user's
+    inventory is only ever actually cleared once the transfer has fully
+    succeeded (in memory AND on local disk).
+
+    Each card entry that lands in SYSTEM_RECOVERY_USER's inventory also
+    gets two extra fields added to it: "original_owner" (the departed
+    user's Discord id, as a string) and "recovered_at" (a Unix
+    timestamp, shared by every card from this same transfer) -- so a
+    future giveaway/admin-recovery command can tell where a recovered
+    card came from and when. Both are purely informational and don't
+    affect any current behavior. This is a NEW dict per card --
+    moved_cards (the untagged originals, kept for a possible rollback
+    below) is never mutated, so neither field can ever leak onto a
+    card still sitting in a normal player's inventory.
+
+    Returns the number of cards transferred (0 if they had none).
+    """
+    user_key = str(user_id)
+
+    async with inventories_lock:
+        user_inv = inventories.get(user_key)
+        if not user_inv:
+            return 0
+
+        moved_cards = list(user_inv)
+        recovered_inv = inventories.setdefault(SYSTEM_RECOVERY_USER, [])
+
+        # Fresh dict copies for the recovery inventory only -- moved_cards
+        # itself (used to restore the user's inventory exactly as it was
+        # if the save below fails) is left completely untouched.
+        recovery_timestamp = time.time()
+        tagged_cards = [
+            dict(owned_card, original_owner=user_key, recovered_at=recovery_timestamp)
+            for owned_card in moved_cards
+        ]
+
+        recovered_inv.extend(tagged_cards)
+        inventories[user_key] = []
+
+        try:
+            save_inventories_local()
+            mark_inventories_dirty()
+        except Exception:
+            # Roll back completely -- the departed user's inventory is
+            # only actually cleared once this has fully succeeded. The
+            # restored entries are the original, untagged ones, since
+            # the recovery never actually completed.
+            del recovered_inv[len(recovered_inv) - len(tagged_cards):]
+            inventories[user_key] = moved_cards
+            print(f"[recovery] Failed to recover departed user {user_id}'s inventory:")
+            traceback.print_exc()
+            raise
+
+    print(f"[recovery] Recovered {len(moved_cards)} card(s) from departed user {user_id} "
+          f"into '{SYSTEM_RECOVERY_USER}' after {RECOVERY_PENDING_DAYS} days outside the server "
+          f"(tagged with original_owner={user_key}).")
+    return len(moved_cards)
+
+
+async def _run_pending_recovery_sweep(guild) -> None:
+    """
+    Runs exactly one pass over the current pending-recovery list: for
+    every user pending recovery, checks whether they've rejoined (if
+    so, removes them from the pending list -- their inventory is never
+    touched) or, if RECOVERY_PENDING_DAYS have elapsed since they were
+    first detected as gone AND they're still not a member, performs the
+    full transfer via _perform_full_recovery.
+
+    This is the exact body pending_recovery_check_loop below used to
+    run inline; it's factored out, unchanged, so the same logic can
+    also be run once immediately at startup (see Client.on_ready)
+    without duplicating it.
+    """
+    async with pending_recovery_lock:
+        pending_snapshot = dict(pending_recovery)
+
+    for user_key, first_detected in pending_snapshot.items():
+        try:
+            user_id = int(user_key)
+        except ValueError:
+            continue
+
+        try:
+            await guild.fetch_member(user_id)
+            # Rejoined -- remove from pending, inventory untouched.
+            async with pending_recovery_lock:
+                if pending_recovery.pop(user_key, None) is not None:
+                    try:
+                        save_pending_recovery_local()
+                        mark_pending_recovery_dirty()
+                    except Exception:
+                        print(f"[recovery] Failed to save after {user_id} rejoined:")
+                        traceback.print_exc()
+            continue
+        except discord.NotFound:
+            pass  # still gone -- fall through to the elapsed-time check
+        except Exception:
+            # Any other fetch failure is inconclusive -- don't act
+            # on it, just retry next cycle.
+            continue
+
+        elapsed_days = (time.time() - first_detected) / 86400
+        if elapsed_days < RECOVERY_PENDING_DAYS:
+            continue
+
+        try:
+            await _perform_full_recovery(user_id)
+        except Exception:
+            continue  # already logged inside; stays pending, retried next cycle
+
+        async with pending_recovery_lock:
+            if pending_recovery.pop(user_key, None) is not None:
+                try:
+                    save_pending_recovery_local()
+                    mark_pending_recovery_dirty()
+                except Exception:
+                    print(f"[recovery] Failed to save after recovering {user_id}'s inventory:")
+                    traceback.print_exc()
+
+
+async def pending_recovery_check_loop():
+    """
+    Runs once every PENDING_RECOVERY_CHECK_INTERVAL_SECONDS, performing
+    one _run_pending_recovery_sweep() pass (see that function for what
+    a sweep actually does). This loop is the ONLY place a full
+    inventory transfer periodically happens on an ongoing basis --
+    never as a side effect of an Owners lookup (see
+    OwnersPaginationView, which only ever calls
+    mark_user_pending_recovery). An identical sweep is also run once,
+    immediately, at startup -- see Client.on_ready -- so a
+    RECOVERY_PENDING_DAYS deadline that passed while the bot was
+    offline is caught right away instead of waiting for this loop's
+    first sleep to elapse.
+    """
+    while True:
+        await asyncio.sleep(PENDING_RECOVERY_CHECK_INTERVAL_SECONDS)
+
+        if not client.guilds:
+            continue
+        guild = client.guilds[0]
+
+        await _run_pending_recovery_sweep(guild)
+
+
 # One-time migration: every existing card previously had a hardcoded
 # "weight": 10 regardless of its star rating, so rarity never actually
 # affected drop odds. This corrects each card's weight to match
@@ -1900,7 +4083,7 @@ def draw_series_text(draw: ImageDraw.ImageDraw, series_text: str, font, center_x
 # CARD RENDERING
 # ---------------------------------------------------------------------------
 
-def render_card(card: dict, print_num, hide_print: bool = False) -> Image.Image:
+def render_card(card: dict, print_num, hide_print: bool = False, force_real_print: bool = False) -> Image.Image:
     """
     Renders a single full card and returns a PIL Image (in memory).
 
@@ -1912,6 +4095,13 @@ def render_card(card: dict, print_num, hide_print: bool = False) -> Image.Image:
         5. Print number (skipped entirely if hide_print=True)
         6. Character name
         7. Series
+
+    force_real_print: merchant-reward-card-only. When True, the print
+    number is drawn via format_merchant_print() (real number, e.g.
+    #237) instead of format_print() (which collapses anything past 100
+    to "L"). Defaults to False, so every existing caller's output is
+    byte-for-byte unchanged. See get_next_merchant_print/
+    format_merchant_print above for why merchant rewards need this.
     """
     frame_name = card.get("frame", "common")
     rare = is_rare(frame_name)
@@ -1958,7 +4148,8 @@ def render_card(card: dict, print_num, hide_print: bool = False) -> Image.Image:
     # Card art shows just the number (no "#"); format_print() itself is left
     # untouched since it's still used with the "#" elsewhere in the bot.
     if not hide_print:
-        print_text = format_print(print_num).lstrip("#")
+        print_source = format_merchant_print(print_num) if force_real_print else format_print(print_num)
+        print_text = print_source.lstrip("#")
         print_font = get_font(PRINT_FONT_SIZE)
         base_x, base_y = PRINT_POS_RARE if rare else PRINT_POS_COMMON
 
@@ -1983,16 +4174,17 @@ def render_card(card: dict, print_num, hide_print: bool = False) -> Image.Image:
     return canvas
 
 
-def render_card_final(card: dict, print_num, hide_print: bool = False) -> str:
+def render_card_final(card: dict, print_num, hide_print: bool = False, force_real_print: bool = False) -> str:
     """
     Drop-in replacement for the old render_card_final().
     Same contract: renders one card, saves it to a temp PNG, and returns
     the file path. Existing callers don't need to change at all -- pass
     hide_print=True to render the card without its print number (used only
-    by the lup command).
+    by the lup command), or force_real_print=True for a merchant-reward
+    owned card (see render_card above).
     """
     try:
-        final = render_card(card, print_num, hide_print=hide_print)
+        final = render_card(card, print_num, hide_print=hide_print, force_real_print=force_real_print)
     except Exception as e:
         print("RENDER ERROR:", e)
         final = Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (30, 30, 30, 255))
@@ -2429,6 +4621,365 @@ def _ordered_badge_blocks(target_user, member) -> list:
     return completed_blocks + incomplete_blocks
 
 
+# =========================
+# COLLECTION PROGRESS (lprogress / lmissing)
+# =========================
+# Divider matching the exact style requested for these two commands.
+# Distinct from SHOWCASE_DIVIDER (a different character/length already
+# used elsewhere) rather than repurposing it, since these commands
+# specify their own visual layout.
+PROGRESS_DIVIDER = "━" * 18
+
+# How many series to list in lprogress's "Highest Completion" section.
+PROGRESS_TOP_SERIES_COUNT = 3
+
+
+def _series_character_name_sets() -> dict:
+    """
+    {series: set of every unique character name in that series},
+    computed fresh from the live `cards` list every call -- the same
+    grouping _series_character_totals() already does for the badge
+    system, just keeping the actual name sets instead of collapsing
+    them to a count, since lmissing needs the real missing names, not
+    just how many there are.
+    """
+    result = {}
+    for card in cards:
+        series = card.get("series", "Unknown Series")
+        name = card.get("name", "Unknown")
+        result.setdefault(series, set()).add(name)
+    return result
+
+
+def _series_max_stars() -> dict:
+    """
+    {series: highest 'stars' value among any card in that series} --
+    purely cosmetic, used to prefix a series name with the right
+    number of ★ in lprogress's Highest Completion list, using the same
+    filled-only star convention already used for individual cards
+    elsewhere (e.g. lfindseries) rather than the badge system's
+    padded-to-5 rating.
+    """
+    result = {}
+    for card in cards:
+        series = card.get("series", "Unknown Series")
+        stars = card.get("stars", 1)
+        if stars > result.get(series, 0):
+            result[series] = stars
+    return result
+
+
+def _compute_collection_progress(inv: list) -> dict:
+    """
+    Shared collection-progress computation for both lprogress and
+    lmissing.
+
+    Series completion (series_completed/series_in_progress, and every
+    per-series set below) is character-based, same as the Completionist
+    badge: owning at least one copy of a name -- regardless of which
+    rarity/frame version it came from -- counts as "collecting" that
+    character, so a series is "complete" once every unique character
+    name in it has been collected at least once.
+
+    The overall owned_card_count/total_card_count pair below is
+    DIFFERENT on purpose: it counts actual card ENTRIES (unique "id"
+    values, e.g. Common and Rare versions of the same character are two
+    separate entries) rather than unique characters -- this is what
+    lprogress's "Cards Collected" line uses. A card is "collected" here
+    once the player owns at least one copy of that specific id;
+    duplicate copies of the same id don't count extra, since this is
+    still a completion-style stat, not a raw inventory size.
+
+    Returns a dict with:
+        series_totals      -- {series: total unique character names}
+        series_name_sets   -- {series: set of every character name in it}
+        per_series_owned   -- {series: set of character names THIS inventory owns}
+        owned_characters   -- total unique characters owned across all series
+        total_characters   -- total unique characters that exist
+        series_completed   -- count of series fully owned
+        series_in_progress -- count of series with >=1 owned but not complete
+        owned_card_count   -- distinct card ids (versions) this inventory owns
+        total_card_count   -- distinct card ids (versions) that exist, from cards.json
+    """
+    series_totals = _series_character_totals()
+    series_name_sets = _series_character_name_sets()
+    total_characters = sum(series_totals.values())
+
+    per_series_owned = {}
+    owned_card_ids = set()
+    for owned_card in inv:
+        card = owned_card.get("card", {})
+        series = card.get("series", "Unknown Series")
+        name = card.get("name", "Unknown")
+        per_series_owned.setdefault(series, set()).add(name)
+        owned_card_ids.add(card.get("id"))
+
+    owned_characters = sum(len(names) for names in per_series_owned.values())
+
+    # Distinct by "id" so Common/Rare (or any other alternate version)
+    # are never collapsed into a single entry, per spec.
+    total_card_ids = {c.get("id") for c in cards}
+    owned_card_count = len(owned_card_ids)
+    total_card_count = len(total_card_ids)
+
+    series_completed = 0
+    series_in_progress = 0
+    for series, total in series_totals.items():
+        if total <= 0:
+            continue
+        owned_count = len(per_series_owned.get(series, set()))
+        if owned_count >= total:
+            series_completed += 1
+        elif owned_count > 0:
+            series_in_progress += 1
+
+    return {
+        "series_totals": series_totals,
+        "series_name_sets": series_name_sets,
+        "per_series_owned": per_series_owned,
+        "owned_characters": owned_characters,
+        "total_characters": total_characters,
+        "series_completed": series_completed,
+        "series_in_progress": series_in_progress,
+        "owned_card_count": owned_card_count,
+        "total_card_count": total_card_count,
+    }
+
+
+def _match_series(query: str):
+    """
+    Resolves a user-typed series name to the canonical series string as
+    stored on cards -- exact match (case-insensitive) preferred,
+    falling back to a substring match. Mirrors the exact two-tier
+    matching lfindseries already uses, so series lookups behave
+    identically everywhere in the bot. Returns None if nothing matches.
+    """
+    query = (query or "").strip().lower()
+    if not query:
+        return None
+
+    for card in cards:
+        if card.get("series", "").lower() == query:
+            return card.get("series")
+
+    for card in cards:
+        if query in card.get("series", "").lower():
+            return card.get("series")
+
+    return None
+
+
+async def _parse_missing_args(message, raw_args: str):
+    """
+    lmissing's argument grammar is `[series name] [other user]`, which
+    is different from every other command's `[other user]` grammar
+    (see resolve_target_user) -- the user reference here is optional
+    AND comes after a free-text series name that can itself contain
+    spaces/colons, so it can't reuse resolve_target_user's "args IS the
+    user token" assumption directly. It still reuses the same
+    underlying resolution mechanics -- reply author, a real mention,
+    guild.get_member() (cache) falling back to guild.fetch_member()
+    (API) for a raw id -- just applied at a different position in the
+    string. The fetch fallback is what makes all three forms (reply,
+    mention, raw id) actually behave the same: a mention/reply always
+    resolves to a real member object regardless of cache state, so a
+    raw id that's simply not cached shouldn't silently fail either.
+
+    Returns (series_query, other_user_or_None).
+    """
+    if message.reference and message.reference.resolved:
+        replied_msg = message.reference.resolved
+        if replied_msg and replied_msg.author:
+            return raw_args.strip(), replied_msg.author
+
+    if message.mentions:
+        other_user = message.mentions[0]
+        # Strip the mention token itself back out, so it's not left
+        # sitting inside the series name text.
+        series_query = re.sub(r"<@!?\d+>", "", raw_args).strip()
+        return series_query, other_user
+
+    parts = raw_args.split()
+    if parts and parts[-1].isdigit() and len(parts[-1]) >= 15 and message.guild:
+        user_id_candidate = int(parts[-1])
+        member = message.guild.get_member(user_id_candidate)
+        if member is None:
+            # Not cached -- fetch it, same as a mention/reply would
+            # always resolve regardless of cache state. A genuinely
+            # invalid id (left the server, typo, wrong guild) just
+            # falls through to treating the whole string as a series
+            # name below, same as before.
+            try:
+                member = await message.guild.fetch_member(user_id_candidate)
+            except (discord.NotFound, discord.HTTPException):
+                member = None
+        if member:
+            series_query = " ".join(parts[:-1]).strip()
+            return series_query, member
+
+    return raw_args.strip(), None
+
+
+def _build_progress_embed(target_user, stats: dict) -> discord.Embed:
+    """
+    Builds the (non-paginated) lprogress embed from an already-computed
+    stats dict. "Cards Collected"/"Cards Remaining" use the card-entry
+    counts (owned_card_count/total_card_count -- distinct by "id", so
+    alternate versions like Common/Rare are never collapsed together).
+    Series Completed/In Progress and Highest Completion below are
+    unchanged and stay character-based, exactly as before.
+    """
+    owned = stats["owned_card_count"]
+    total = stats["total_card_count"]
+    percent = (owned / total * 100) if total else 0.0
+    remaining = total - owned
+
+    series_max_stars = _series_max_stars()
+    ranked_series = []
+    for series, series_total in stats["series_totals"].items():
+        if series_total <= 0:
+            continue
+        owned_count = len(stats["per_series_owned"].get(series, set()))
+        if owned_count <= 0:
+            continue
+        ranked_series.append((series, owned_count / series_total * 100))
+    ranked_series.sort(key=lambda pair: pair[1], reverse=True)
+
+    lines = [
+        f"## {target_user.mention}'s Collection Progress",
+        PROGRESS_DIVIDER,
+        "**Cards Collected**",
+        f"> {owned} / {total} • {percent:.1f}%",
+        PROGRESS_DIVIDER,
+        "**Series Completed**",
+        f"> {stats['series_completed']}",
+        "**Series In Progress**",
+        f"> {stats['series_in_progress']}",
+        PROGRESS_DIVIDER,
+        "**Cards Remaining**",
+        f"> {remaining}",
+        PROGRESS_DIVIDER,
+        "**Highest Completion**",
+        "",
+    ]
+
+    if ranked_series:
+        for series, series_percent in ranked_series[:PROGRESS_TOP_SERIES_COUNT]:
+            star_str = "★" * series_max_stars.get(series, 1)
+            lines.append(f"{star_str} {series} • {series_percent:.0f}%")
+    else:
+        lines.append("*No cards collected yet.*")
+
+    embed = discord.Embed(color=THEME_COLOR, description="\n".join(lines))
+    embed.set_author(name=f"@{target_user.display_name}", icon_url=target_user.display_avatar.url)
+    embed.set_thumbnail(url=target_user.display_avatar.url)
+    return embed
+
+
+def _build_missing_overview_embed(target_user, incomplete_series: list, total_pages: int) -> discord.Embed:
+    """Page 1 of lmissing: every incomplete series, fewest-remaining first."""
+    lines = ["## Missing Cards", "", "**Nearly Complete**", PROGRESS_DIVIDER]
+
+    if incomplete_series:
+        for series, remaining in incomplete_series:
+            lines.append(f"- {series}\n-# {remaining} remaining\n")
+    else:
+        lines.append("*Every series is fully complete!*")
+
+    embed = discord.Embed(color=THEME_COLOR, description="\n".join(lines).rstrip())
+    embed.set_author(name=f"@{target_user.display_name}", icon_url=target_user.display_avatar.url)
+    embed.set_footer(text=f"Page 1/{total_pages}")
+    return embed
+
+
+def _build_missing_series_embed(target_user, series: str, stats: dict, page_num=None, total_pages=None) -> discord.Embed:
+    """One full page for a single series: its missing character names, plus a collected/remaining summary."""
+    total = stats["series_totals"].get(series, 0)
+    owned_set = stats["per_series_owned"].get(series, set())
+    all_names = stats["series_name_sets"].get(series, set())
+    missing_names = sorted(all_names - owned_set)
+    owned_count = len(owned_set)
+    remaining = len(missing_names)
+
+    lines = [f"**{series}**", PROGRESS_DIVIDER, ""]
+    if missing_names:
+        code_block = "\n".join(f"X {name}" for name in missing_names)
+        lines.append(f"```{code_block}```")
+    else:
+        lines.append("*Nothing missing here -- fully collected!*")
+    lines += [
+        PROGRESS_DIVIDER,
+        "**Collected**",
+        f"-# {owned_count} / {total}",
+        "Remaining",
+        f"**{remaining}**",
+    ]
+
+    embed = discord.Embed(color=THEME_COLOR, description="\n".join(lines))
+    embed.set_author(name=f"@{target_user.display_name}", icon_url=target_user.display_avatar.url)
+    if page_num is not None and total_pages is not None:
+        embed.set_footer(text=f"Page {page_num}/{total_pages}")
+    return embed
+
+
+def _build_missing_comparison_embed(series: str, other_user, missing_names: list) -> discord.Embed:
+    """
+    Comparison mode: only the character names that belong to `series`,
+    that other_user owns, and that the requester does not.
+    """
+    embed = discord.Embed(color=THEME_COLOR)
+    embed.title = series
+    if missing_names:
+        embed.description = "\n\n".join(missing_names)
+    else:
+        embed.description = f"You already own every card from this series that {other_user.mention} has."
+    return embed
+
+
+class MissingCardsPaginationView(discord.ui.View):
+    """
+    Generic "list of already-built pages" pagination view for
+    lmissing. Unlike BadgesPaginationView/OwnersPaginationView (which
+    slice ONE flat list into uniform per-page chunks), lmissing's pages
+    are heterogeneous -- one overview page, then one full page per
+    series -- so each embed is built once up front and this view just
+    flips between them. Same button style/emoji and same
+    "only the requester can page" rule as every other pagination view
+    in the bot.
+    """
+    def __init__(self, embeds: list, user_id: int):
+        super().__init__(timeout=90)
+        self.embeds = embeds
+        self.user_id = user_id
+        self.page = 0
+        self._update_button_states()
+
+    def _update_button_states(self):
+        self.previous.disabled = (self.page <= 0)
+        self.next.disabled = (self.page >= len(self.embeds) - 1)
+
+    def current_embed(self) -> discord.Embed:
+        return self.embeds[self.page]
+
+    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+        if self.page > 0:
+            self.page -= 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.current_embed(), view=self)
+
+    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your search!", ephemeral=True)
+        if self.page < len(self.embeds) - 1:
+            self.page += 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.current_embed(), view=self)
+
+
 class BadgesPaginationView(discord.ui.View):
     """
     Paginates the already-computed, completed-first-ordered badge
@@ -2488,6 +5039,110 @@ class BadgesPaginationView(discord.ui.View):
 
         if self.page < self.max_page:
             self.page += 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+
+class MailboxPaginationView(discord.ui.View):
+    """
+    Paginates a user's mail, one letter per page -- same prev/next
+    pagination row and button-state pattern as BadgesPaginationView,
+    just with one letter instead of a chunk of badge blocks per page.
+    Adds a single "Read" button below the pagination row that marks the
+    currently-viewed letter as read; read letters stay visible (still
+    paginated through normally) but no longer count toward the unread
+    mail reminder.
+    """
+    def __init__(self, letters: list, user_id: int):
+        super().__init__(timeout=90)
+        # `letters` are already enriched with _sender_name/_sender_avatar
+        # by _resolve_mail_sender_info() -- this view never fetches
+        # users itself, it's purely presentational.
+        self.letters = letters
+        self.user_id = user_id
+        self.page = 0
+        self.max_page = max(0, len(letters) - 1)
+        self._update_button_states()
+
+    def _update_button_states(self):
+        self.previous.disabled = (self.page <= 0)
+        self.next.disabled = (self.page >= self.max_page)
+        self.mark_read.disabled = bool(self.letters[self.page].get("read"))
+
+    def build_embed(self) -> discord.Embed:
+        letter = self.letters[self.page]
+        status = "⚪ Read" if letter.get("read") else "🟢 Unread"
+
+        embed = discord.Embed(
+            color=THEME_COLOR,
+            title=f"✉️ Mail from {letter.get('_sender_name', 'Unknown user')}",
+            description=f"### {letter.get('message')}" if letter.get("message") else "*(empty message)*",
+        )
+        if letter.get("_sender_avatar"):
+            embed.set_thumbnail(url=letter["_sender_avatar"])
+
+        timestamp = letter.get("timestamp")
+        if timestamp:
+            embed.add_field(name="Sent", value=f"<t:{int(timestamp)}:F>", inline=True)
+        embed.add_field(name="Status", value=status, inline=True)
+
+        if self.max_page > 0:
+            embed.set_footer(text=f"Page {self.page + 1}/{self.max_page + 1}")
+
+        return embed
+
+    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary, row=0)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your mailbox!", ephemeral=True)
+
+        if self.page > 0:
+            self.page -= 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary, row=0)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your mailbox!", ephemeral=True)
+
+        if self.page < self.max_page:
+            self.page += 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(label="Read", style=discord.ButtonStyle.primary, row=1)
+    async def mark_read(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your mailbox!", ephemeral=True)
+
+        letter = self.letters[self.page]
+        if letter.get("read"):
+            return await interaction.response.send_message(
+                "This letter is already marked as read.", ephemeral=True
+            )
+
+        async with mail_lock:
+            updated = mark_letter_read(self.user_id, letter.get("id"))
+            if not updated:
+                return await interaction.response.send_message(
+                    "This letter no longer exists.", ephemeral=True
+                )
+            try:
+                save_mail_local()
+                mark_mail_dirty()
+            except Exception:
+                # Roll back the in-memory change so mail.json and the
+                # `mail` dict stay consistent with each other.
+                for real_letter in get_mailbox(self.user_id):
+                    if real_letter.get("id") == letter.get("id"):
+                        real_letter["read"] = False
+                        break
+                return await interaction.response.send_message(
+                    "❌ Something went wrong saving your mail. Please try again.", ephemeral=True
+                )
+
+        letter["read"] = True
         self._update_button_states()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
@@ -2629,7 +5284,27 @@ class CardView(discord.ui.View):
 
         if user_id in claim_cooldowns:
             remaining = int(CLAIM_COOLDOWN - (now - claim_cooldowns[user_id]))
-            if remaining > 0:
+        else:
+            remaining = 0
+
+        # Duo bonus claims: same "only spent when actually needed" rule
+        # as bonus drops in `ld` -- only touched when the normal
+        # cooldown would otherwise block this claim, never on an
+        # already-off-cooldown claim. Doesn't change claiming's own
+        # logic/odds/behavior otherwise.
+        used_bonus_claim = False
+        if remaining > 0:
+            async with duo_lock:
+                if consume_bonus(user_id, "claim"):
+                    used_bonus_claim = True
+                    try:
+                        save_duo_local()
+                        mark_duo_dirty()
+                    except Exception:
+                        add_bonus(user_id, "claim", 1)
+                        used_bonus_claim = False
+
+            if not used_bonus_claim:
                 return await interaction.response.send_message(
                     f"Wait {format_time(remaining)} before claiming again.", ephemeral=True
                 )
@@ -2647,7 +5322,10 @@ class CardView(discord.ui.View):
             self.card2_claimed = True
 
         button.disabled = True
-        claim_cooldowns[user_id] = now
+        # A bonus-claim never resets/restarts the normal cooldown -- the
+        # normal cooldown only resumes once every bonus has been spent.
+        if not used_bonus_claim:
+            claim_cooldowns[user_id] = now
 
         async with inventories_lock:
             add_card(user_id, card)
@@ -2668,7 +5346,18 @@ class CardView(discord.ui.View):
                 else:
                     self.card2_claimed = False
                 button.disabled = False
-                claim_cooldowns.pop(user_id, None)
+                if not used_bonus_claim:
+                    claim_cooldowns.pop(user_id, None)
+                else:
+                    # Refund the bonus claim that was spent, since the
+                    # claim it was spent on never actually went through.
+                    async with duo_lock:
+                        add_bonus(user_id, "claim", 1)
+                        try:
+                            save_duo_local()
+                            mark_duo_dirty()
+                        except Exception:
+                            traceback.print_exc()
                 return await interaction.response.send_message(
                     "❌ Something went wrong saving your claim. Please try again.",
                     ephemeral=True
@@ -2681,6 +5370,12 @@ class CardView(discord.ui.View):
         await interaction.channel.send(
             f"{interaction.user.mention} claimed **{name}**! {stars(star_val)} from the Stage."
         )
+
+        # Duo progress hook: best-effort only. If `user_id` is part of an
+        # active Duo challenge, this claim counts toward it. Never
+        # affects whether the claim above succeeded -- it already has,
+        # by this point -- and never changes claiming's own behavior.
+        await _record_duo_claim_progress(interaction.client, user_id, card)
 
     @discord.ui.button(emoji="1️⃣", style=discord.ButtonStyle.primary)
     async def pick1(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -2708,7 +5403,7 @@ class CardView(discord.ui.View):
 # =========================
 
 class InventoryView(discord.ui.View):
-    def __init__(self, user, inventory, viewer_id=None):
+    def __init__(self, user, inventory, viewer_id=None, title_override=None):
         super().__init__(timeout=60)
         self.user = user
         # self.inventory is a list of (display_number, owned_card) tuples.
@@ -2717,12 +5412,17 @@ class InventoryView(discord.ui.View):
         # filtering/searching never changes what number a card shows.
         self.inventory = inventory
         self.viewer_id = viewer_id
+        # Optional literal title override (used only by `lc @Luka` to show
+        # "🤖 Luka's Collection" instead of "{user.name}'s Collection").
+        # None for every other caller, which reproduces the exact previous
+        # title -- nothing else about this view changes for them.
+        self.title_override = title_override
         self.page = 0
 
     def get_embed(self):
         embed = discord.Embed(color=THEME_COLOR)
         embed.set_author(
-            name=f"{self.user.name}'s Collection",
+            name=self.title_override or f"{self.user.name}'s Collection",
             icon_url=self.user.display_avatar.url
         )
 
@@ -2873,10 +5573,11 @@ class OwnersPaginationView(discord.ui.View):
     looked up again, no matter how many times the user pages back and
     forth over it.
     """
-    def __init__(self, user_id, card_name, owners, guild, member_cache):
+    def __init__(self, user_id, card_name, card_id, owners, guild, member_cache):
         super().__init__(timeout=90)
         self.user_id = user_id
         self.card_name = card_name
+        self.card_id = card_id
         self.owners = owners  # sorted list of (print_num, owner_id)
         self.guild = guild
         self.member_cache = member_cache  # owner_id -> Member | None, pre-seeded with free cache hits
@@ -2898,6 +5599,17 @@ class OwnersPaginationView(discord.ui.View):
         member_cache -- i.e. only ones neither a previous fetch nor a
         free cache hit has ever resolved. A no-op (no network call at
         all) if the page has already been visited.
+
+        If a fetch fails specifically because the user is no longer in
+        the guild (discord.NotFound -- not a rate limit, network hiccup,
+        or any other transient error), they're marked pending recovery
+        (see mark_user_pending_recovery) -- this does NOT transfer any
+        cards and does NOT change what's displayed here; the entry
+        keeps showing "Unknown User" exactly as before. The actual
+        transfer, of their ENTIRE inventory, only ever happens later,
+        automatically, from pending_recovery_check_loop, after
+        RECOVERY_PENDING_DAYS with no rejoin -- never as a side effect
+        of viewing an Owners list.
         """
         page_owner_ids = list(dict.fromkeys(
             owner_id for _, owner_id in self._page_slice(page)
@@ -2911,8 +5623,23 @@ class OwnersPaginationView(discord.ui.View):
             *(self.guild.fetch_member(oid) for oid in missing_ids),
             return_exceptions=True
         )
+
         for owner_id, result in zip(missing_ids, fetch_results):
-            self.member_cache[owner_id] = None if isinstance(result, Exception) else result
+            if isinstance(result, discord.NotFound):
+                # Confirmed: genuinely no longer a member of this guild
+                # -- not merely a fetch that failed for some other
+                # reason. Starts (or leaves running, if already
+                # started) their recovery countdown; never transfers
+                # anything here.
+                self.member_cache[owner_id] = None
+                await mark_user_pending_recovery(owner_id)
+            elif isinstance(result, Exception):
+                # Rate limit, network hiccup, missing permissions, etc.
+                # -- do NOT assume they left; just couldn't resolve them
+                # right now. Never treated as a departure.
+                self.member_cache[owner_id] = None
+            else:
+                self.member_cache[owner_id] = result
 
     def build_embed(self):
         embed = discord.Embed(color=THEME_COLOR)
@@ -3110,7 +5837,7 @@ class CharacterVersionView(discord.ui.View):
 
         t_cache_lookup = time.perf_counter()
 
-        owners_view = OwnersPaginationView(self.user_id, card['name'], owners, interaction.guild, member_cache)
+        owners_view = OwnersPaginationView(self.user_id, card['name'], card['id'], owners, interaction.guild, member_cache)
 
         # PERFORMANCE: only page 0's owners (<=10 unique ids) are ever
         # fetched before this first response goes out -- not all up to
@@ -3341,6 +6068,10 @@ class GiftView(discord.ui.View):
         self.owned_card = owned_card
         self.card = owned_card["card"]
         self.print_num = owned_card["print"]
+        # Merchant-reward cards keep their real print number (text +
+        # rendered image) instead of collapsing to "L" past 100 -- see
+        # render_card's force_real_print. False for every normal gift.
+        self.is_merchant_reward = bool(owned_card.get("merchant_reward"))
         self.from_id = from_id
         self.to_id = to_id
         self.card_index = card_index
@@ -3351,6 +6082,10 @@ class GiftView(discord.ui.View):
     def build_embed(self, owner_user, status_text=None):
         card = self.card
         star_val = card.get("stars", 1)
+        print_display = (
+            format_merchant_print(self.print_num) if self.is_merchant_reward
+            else format_print(self.print_num)
+        )
 
         embed = discord.Embed(color=THEME_COLOR)
 
@@ -3370,11 +6105,11 @@ class GiftView(discord.ui.View):
             f"✦ **Series:** **{card.get('series', 'Unknown Series')}**\n"
             f"───\n"
             f"✦ **Owner:** {owner_user.mention}\n"
-            f"✦ **Print:** **{format_print(self.print_num)}**\n"
+            f"✦ **Print:** **{print_display}**\n"
             f"✦ **Level:** **{stars(star_val)}**\n"
         )
 
-        image_path = render_card_final(card, self.print_num)
+        image_path = render_card_final(card, self.print_num, force_real_print=self.is_merchant_reward)
         if image_path:
             file = discord.File(image_path, filename="card.png")
             embed.set_image(url="attachment://card.png")
@@ -3583,6 +6318,11 @@ HELP_SECTIONS = [
         "`lshowcase [user]` ─ View a showcase of top cards.",
         "`lscadd <number>` ─ Add a card to your showcase.",
         "`lscremove <number>` ─ Remove a card from your showcase.",
+        "`lprogress [user]` ─ View collection progress.",
+        "`lmissing [series] [user]` ─ View missing cards, or compare with another user.",
+        "`lmail` ─ View your mailbox.",
+        "`lmail @user` ─ Send someone mail.",
+        "`lduo @user` ─ Invite someone to a Duo Challenge.",
     ]),
 ]
 
@@ -4139,6 +6879,536 @@ class TradeView(discord.ui.View):
 
 
 # =========================
+# MERCHANT LIST VIEW (lmerchant)
+# =========================
+
+# Presentation-only: emoji shown next to each merchant's name in the
+# lmerchants embed. Kept separate from MERCHANT_TEMPLATES (rather than
+# added as a field there) so this purely visual addition never touches
+# that template/backend data structure.
+MERCHANT_DISPLAY_EMOJI = {
+    "voyager_merchant": "🧭",
+    "lucky_merchant": "🍀",
+    "collector_merchant": "📦",
+}
+
+
+class MerchantListView(discord.ui.View):
+    """
+    Paginated, read-only browser over the currently active merchants --
+    one merchant per page, navigated with the same prev/next button
+    pattern InventoryView uses. Every page render re-reads
+    get_active_merchants() live, so if stock/expiry changed (e.g.
+    someone else just finished a trade with this merchant) that's
+    reflected the next time a page is drawn, per "merchants are global
+    state." The Accept Trade button hands off to a fresh
+    MerchantTradeView for the merchant currently on screen.
+    """
+
+    def __init__(self, viewer_id):
+        super().__init__(timeout=120)
+        self.viewer_id = viewer_id
+        self.page = 0
+        self.message = None
+
+    def build_embed_and_file(self):
+        active = get_active_merchants()
+
+        if not active:
+            embed = discord.Embed(
+                color=THEME_COLOR,
+                description="No merchants are around right now. Check back later!"
+            )
+            self.accept.disabled = True
+            self.previous.disabled = True
+            self.next.disabled = True
+            return embed, None
+
+        self.page = max(0, min(self.page, len(active) - 1))
+        m = active[self.page]
+        info = get_merchant_display_info(m)
+
+        if info is None:
+            embed = discord.Embed(color=THEME_COLOR, description="This merchant is unavailable.")
+            self.accept.disabled = True
+            self.previous.disabled = True
+            self.next.disabled = True
+            return embed, None
+
+        separator = "━" * 20
+        emoji = MERCHANT_DISPLAY_EMOJI.get(info.get("template_id"), "🛒")
+
+        lines = [
+            f"## {emoji} {info.get('name', 'Merchant')}",
+            "",
+            f'`"{info.get("description", "")}"`',
+            separator,
+            "**- Looking For**",
+        ]
+
+        wants = info.get("wants", [])
+        if wants:
+            for c in wants:
+                star_str = "★" * int(c.get("stars", 1))
+                lines.append(f"{star_str} {c.get('name', 'Unknown')} • *{c.get('series', 'Unknown Series')}*")
+        else:
+            lines.append("Nothing right now.")
+
+        lines.append(separator)
+        lines.append("**- Rewards**")
+
+        rewards = info.get("rewards", [])
+        if rewards:
+            for i, c in enumerate(rewards):
+                star_str = "★" * int(c.get("stars", 1))
+                lines.append(f"{star_str} {c.get('name', 'Unknown')}")
+                # NOTE: the reward pool shown here doesn't have a print
+                # number yet -- one is only ever generated per-player at
+                # actual trade completion (see the trade-finalize logic),
+                # never reserved/fixed at listing time. Showing the
+                # series here instead of a fabricated print number, so
+                # this stays accurate to what's actually been generated
+                # so far.
+                lines.append(f"-# {c.get('series', 'Unknown Series')}")
+                if i != len(rewards) - 1:
+                    lines.append("")
+        else:
+            lines.append("Nothing right now.")
+
+        lines.append(separator)
+
+        stock = info.get("stock", 0)
+        lines.append(f"**Stock: {stock} / {MERCHANT_STARTING_STOCK}**")
+        lines.append("")
+        # Discord's own relative-timestamp markdown -- renders and keeps
+        # counting down client-side on its own, so this is always
+        # accurate at the moment someone looks at it rather than frozen
+        # at whatever it said when the embed was built.
+        expires_ts = int(info.get("expires_ts", 0))
+        lines.append(f"Leaves In: <t:{expires_ts}:R>")
+
+        embed = discord.Embed(
+            description="\n".join(lines),
+            color=info.get("color", THEME_COLOR)
+        )
+
+        file, attach_url = get_merchant_avatar_file(info)
+        if attach_url:
+            embed.set_thumbnail(url=attach_url)
+
+        self.accept.disabled = stock <= 0
+        self.previous.disabled = len(active) <= 1
+        self.next.disabled = len(active) <= 1
+
+        return embed, file
+
+    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.viewer_id:
+            return await interaction.response.send_message("This isn't your merchant menu!", ephemeral=True)
+
+        active = get_active_merchants()
+        if active:
+            self.page = (self.page - 1) % len(active)
+
+        embed, file = self.build_embed_and_file()
+        await interaction.response.edit_message(embed=embed, view=self, attachments=[file] if file else [])
+
+    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.viewer_id:
+            return await interaction.response.send_message("This isn't your merchant menu!", ephemeral=True)
+
+        active = get_active_merchants()
+        if active:
+            self.page = (self.page + 1) % len(active)
+
+        embed, file = self.build_embed_and_file()
+        await interaction.response.edit_message(embed=embed, view=self, attachments=[file] if file else [])
+
+    @discord.ui.button(label="Accept Trade", emoji="<:accept:1515633292605657088>", style=discord.ButtonStyle.success)
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.viewer_id:
+            return await interaction.response.send_message("This isn't your merchant menu!", ephemeral=True)
+
+        active = get_active_merchants()
+        if not active:
+            return await interaction.response.send_message("No merchants are around right now.", ephemeral=True)
+
+        self.page = max(0, min(self.page, len(active) - 1))
+        m = active[self.page]
+
+        if user_has_active_merchant_trade(interaction.user.id):
+            return await interaction.response.send_message(
+                "You already have an open trade with a merchant. Finish or cancel that one first.",
+                ephemeral=True
+            )
+
+        if m.get("stock", 0) <= 0:
+            return await interaction.response.send_message(
+                "That merchant is out of stock.", ephemeral=True
+            )
+
+        trade_view = MerchantTradeView(interaction.user, interaction.user.id, m["id"])
+        embed, file = trade_view.build_embed_and_file()
+
+        if embed is None:
+            return await interaction.response.send_message(
+                "That merchant is no longer available.", ephemeral=True
+            )
+
+        await interaction.response.edit_message(embed=embed, view=trade_view, attachments=[file] if file else [])
+
+        active_merchant_trades[interaction.user.id] = {
+            "time": time.time(),
+            "view": trade_view,
+            "message": interaction.message,
+        }
+        trade_view.message = interaction.message
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except Exception:
+                pass
+
+
+# =========================
+# MERCHANT TRADE VIEW (Accept Trade -> trade interface)
+# =========================
+
+class MerchantTradeView(discord.ui.View):
+    """
+    A single player's own trade session against ONE fixed merchant,
+    opened by MerchantListView's Accept Trade button. Reuses the same
+    manual, command-driven card-selection pattern as the player-to-
+    player TradeView/"add <number>" flow (see `madd` below): the player
+    always picks their own cards by hand, one at a time, from their
+    existing `lc` inventory numbering -- the merchant NEVER reaches into
+    a player's inventory itself. Only Confirm Trade actually mutates
+    inventories.json/merchants.json, and only after full validation,
+    atomically.
+    """
+
+    def __init__(self, user, user_id, merchant_id):
+        super().__init__(timeout=180)
+        self.user = user
+        self.user_id = user_id
+        self.merchant_id = merchant_id
+        # want_index -> owned_card dict, as currently offered. Re-verified
+        # by id+print against the live inventory at confirm time, exactly
+        # like TradeView's finalize step -- so this is just a display/
+        # intent record, never treated as a guarantee of ownership.
+        self.selections = {}
+        self.message = None
+
+    def _merchant(self):
+        return get_merchant_by_id(self.merchant_id)
+
+    def _info(self):
+        m = self._merchant()
+        if m is None:
+            return None
+        return get_merchant_display_info(m)
+
+    def build_embed_and_file(self):
+        info = self._info()
+        if info is None:
+            for item in self.children:
+                item.disabled = True
+            return None, None
+
+        if not _merchant_is_active(self._merchant(), time.time()):
+            for item in self.children:
+                item.disabled = True
+            embed = discord.Embed(color=THEME_COLOR, description="This merchant is no longer available.")
+            return embed, None
+
+        embed = discord.Embed(title=f"Trading with {info.get('name', 'the Merchant')}", color=info.get("color", THEME_COLOR))
+
+        wants = info.get("wants", [])
+        lines = []
+        for i, want in enumerate(wants):
+            offered = self.selections.get(i)
+            if offered:
+                oc = offered["card"]
+                status = f"✅ offering `{format_print(offered['print'])}` **{oc.get('name', 'Unknown')}**"
+            else:
+                status = "❌ not yet offered"
+            lines.append(
+                f"`★{want.get('stars', 1)}` **{want.get('name', 'Unknown')}** • *{want.get('series', 'Unknown Series')}* — {status}"
+            )
+        embed.add_field(name="Looking For", value="\n".join(lines) if lines else "Nothing right now.", inline=False)
+
+        rewards_text = "\n".join(
+            f"• `★{c.get('stars', 1)}` **{c.get('name', 'Unknown')}** • *{c.get('series', 'Unknown Series')}*"
+            for c in info.get("rewards", [])
+        ) or "Nothing right now."
+        embed.add_field(name="Possible Rewards (1-2 granted)", value=rewards_text, inline=False)
+
+        embed.set_footer(
+            text=f"Stock remaining: {info.get('stock', 0)} • Use `madd <card number>` from your `lc` list to offer a card."
+        )
+
+        file, attach_url = get_merchant_avatar_file(info)
+        if attach_url:
+            embed.set_thumbnail(url=attach_url)
+
+        all_filled = len(wants) > 0 and all(i in self.selections for i in range(len(wants)))
+        self.confirm.disabled = not all_filled
+
+        return embed, file
+
+    async def refresh_message(self):
+        if not self.message:
+            return
+        embed, file = self.build_embed_and_file()
+        if embed is None:
+            return
+        try:
+            await self.message.edit(embed=embed, view=self, attachments=[file] if file else [])
+        except Exception:
+            pass
+
+    def toggle_card(self, owned_card) -> str:
+        """
+        Called from the `madd` command below. Adds `owned_card` to
+        whichever "Looking For" slot it satisfies, or removes it if it's
+        already offered there. Never touches the player's actual
+        inventory -- purely an in-memory change to this session's
+        intended offer, which only becomes real on Confirm Trade.
+        """
+        info = self._info()
+        if info is None:
+            return "That merchant is no longer available."
+
+        wants = info.get("wants", [])
+        card_id = owned_card["card"].get("id")
+        print_num = owned_card["print"]
+
+        # Toggle off if this exact card (id + print) is already offered
+        # for some want slot.
+        for i, sel in list(self.selections.items()):
+            if sel["card"].get("id") == card_id and sel["print"] == print_num:
+                del self.selections[i]
+                return f"Removed **{owned_card['card'].get('name', 'Unknown')}** from your offer."
+
+        # Otherwise, fill the first unfulfilled want slot this card matches.
+        for i, want in enumerate(wants):
+            if i in self.selections:
+                continue
+            if want.get("id") == card_id:
+                self.selections[i] = owned_card
+                return f"Offered **{owned_card['card'].get('name', 'Unknown')}** for the merchant's request."
+
+        return "The merchant isn't looking for that card (or you've already offered it)."
+
+    @discord.ui.button(label="Confirm Trade", style=discord.ButtonStyle.success)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your trade!", ephemeral=True)
+
+        result = await self._execute_trade()
+
+        for item in self.children:
+            item.disabled = True
+        active_merchant_trades.pop(self.user_id, None)
+
+        if result["ok"]:
+            reward_names = ", ".join(
+                f"{c.get('name', 'Unknown')} ({format_merchant_print(p)})" for c, p in result["rewards"]
+            ) or "nothing (empty reward pool)"
+            embed = discord.Embed(
+                title="Trade Completed!",
+                description=f"You received: **{reward_names}**",
+                color=THEME_COLOR
+            )
+        else:
+            embed = discord.Embed(
+                title="Trade Failed",
+                description=result["reason"],
+                color=discord.Color.red()
+            )
+
+        await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your trade!", ephemeral=True)
+
+        active_merchant_trades.pop(self.user_id, None)
+        for item in self.children:
+            item.disabled = True
+
+        embed = discord.Embed(color=THEME_COLOR, description="Trade cancelled. No cards were taken.")
+        await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+
+    async def on_timeout(self):
+        active_merchant_trades.pop(self.user_id, None)
+        for item in self.children:
+            item.disabled = True
+        if self.message:
+            try:
+                embed = discord.Embed(color=THEME_COLOR, description="Trade expired. No cards were taken.")
+                await self.message.edit(embed=embed, view=self, attachments=[])
+            except Exception:
+                pass
+
+    async def _execute_trade(self) -> dict:
+        """
+        Validates, then -- only if every check passes -- atomically
+        executes the trade: removes exactly the player-selected cards
+        (nothing else), grants 1-2 merchant-exclusive-print reward
+        cards, and decrements the merchant's stock by exactly 1,
+        regardless of whether 1 or 2 reward cards were granted.
+
+        If ANY step after validation fails (a save error, most notably),
+        every mutation made during this call -- the inventory removals
+        AND additions, the merchant's stock, and the shared card_prints
+        counter used for merchant-print numbers -- is rolled back in
+        full, so a failure can never partially remove/duplicate/lose
+        cards or leave merchant stock out of sync with what was actually
+        granted.
+        """
+        merchant = self._merchant()
+        if merchant is None:
+            return {"ok": False, "reason": "This merchant no longer exists."}
+
+        if not _merchant_is_active(merchant, time.time()):
+            return {"ok": False, "reason": "This merchant is no longer available."}
+
+        info = get_merchant_display_info(merchant)
+        if info is None:
+            return {"ok": False, "reason": "This merchant is no longer available."}
+
+        wants = info.get("wants", [])
+
+        # Stock check.
+        if info.get("stock", 0) <= 0:
+            return {"ok": False, "reason": "This merchant is out of stock."}
+
+        # Every "Looking For" slot must have an offered card.
+        if not wants or len(self.selections) != len(wants) or any(i not in self.selections for i in range(len(wants))):
+            return {"ok": False, "reason": "You haven't offered a card for every request yet."}
+
+        # Duplicate-selection check: every offered card must be distinct
+        # (no offering the same physical card for two slots).
+        keys = [(sel["card"].get("id"), sel["print"]) for sel in self.selections.values()]
+        if len(set(keys)) != len(keys):
+            return {"ok": False, "reason": "You can't offer the same card twice."}
+
+        # Requirement check: each slot's offered card must match that
+        # slot's id/series/rarity exactly, against the merchant's fixed,
+        # snapshotted requirement -- never live cards.json, since a
+        # merchant's requirements stay fixed until it leaves.
+        for i, want in enumerate(wants):
+            sel = self.selections[i]
+            oc = sel["card"]
+            if oc.get("id") != want.get("id"):
+                return {"ok": False, "reason": f"{oc.get('name', 'That card')} doesn't match what the merchant is looking for."}
+            if oc.get("series") != want.get("series"):
+                return {"ok": False, "reason": "One of your offered cards doesn't match the required series."}
+            if oc.get("stars") != want.get("stars"):
+                return {"ok": False, "reason": "One of your offered cards doesn't match the required rarity."}
+
+        async with inventories_lock:
+            inv = get_inventory(self.user_id)
+
+            # Ownership check: resolve each selection to its CURRENT
+            # index by id + print (robust against any index drift since
+            # selection time), exactly like TradeView's finalize step.
+            idx_list = []
+            for sel in self.selections.values():
+                idx = next(
+                    (i for i, c in enumerate(inv)
+                     if c["card"].get("id") == sel["card"].get("id") and c["print"] == sel["print"]),
+                    None
+                )
+                if idx is None:
+                    return {"ok": False, "reason": "You no longer own one of the cards you offered."}
+                idx_list.append(idx)
+
+            if len(set(idx_list)) != len(idx_list):
+                return {"ok": False, "reason": "You can't offer the same card twice."}
+
+            async with merchants_lock:
+                # Re-resolve the live merchant dict and re-check
+                # stock/activity right before mutating anything -- covers
+                # another trade completing against this same merchant in
+                # the window between the checks above and now.
+                live_merchant = None
+                for m in (merchants.get("merchants") or []):
+                    if m.get("id") == self.merchant_id:
+                        live_merchant = m
+                        break
+
+                if live_merchant is None or not _merchant_is_active(live_merchant, time.time()):
+                    return {"ok": False, "reason": "This merchant is no longer available."}
+
+                inv_backup = list(inv)
+                stock_backup = live_merchant.get("stock", 0)
+                prints_backup = dict(card_prints)
+
+                try:
+                    # Remove ONLY the selected cards -- highest index
+                    # first so earlier indices stay valid mid-removal.
+                    for i in sorted(idx_list, reverse=True):
+                        inv.pop(i)
+
+                    reward_pool = info.get("rewards", [])
+                    reward_count = (
+                        min(len(reward_pool), random.randint(1, MERCHANT_MAX_REWARD_CARDS_PER_TRADE))
+                        if reward_pool else 0
+                    )
+                    chosen_rewards = random.sample(reward_pool, reward_count) if reward_count else []
+
+                    granted = []
+                    for reward_card in chosen_rewards:
+                        print_num = get_next_merchant_print(reward_card.get("id"))
+                        owned_card = {
+                            "card": reward_card,
+                            "print": print_num,
+                            "claimed_at": time.time(),
+                            # Marks this specific owned card as merchant-
+                            # granted, so any later render of it (lv,
+                            # lgift/lgw's GiftView) knows to show its real
+                            # print number instead of collapsing to "L"
+                            # past 100 -- see render_card's force_real_print.
+                            # Never set anywhere else, so every other
+                            # command's cards are completely unaffected.
+                            "merchant_reward": True,
+                        }
+                        inv.insert(0, owned_card)
+                        granted.append((reward_card, print_num))
+
+                    # Stock drops by exactly 1 per trade, regardless of
+                    # whether 1 or 2 reward cards were granted.
+                    live_merchant["stock"] = max(0, live_merchant.get("stock", 0) - 1)
+
+                    save_inventories_local()
+                    save_merchants_local()
+                    mark_inventories_dirty()
+                    mark_merchants_dirty()
+                except Exception:
+                    # Roll back EVERYTHING -- inventory, merchant stock,
+                    # and the shared print counter -- so a failed save
+                    # never leaves a half-completed trade in any form.
+                    inv[:] = inv_backup
+                    live_merchant["stock"] = stock_backup
+                    card_prints.clear()
+                    card_prints.update(prints_backup)
+                    print("[merchants] Trade finalize failed, rolled back:")
+                    traceback.print_exc()
+                    return {"ok": False, "reason": "Something went wrong completing the trade. No cards were taken."}
+
+                return {"ok": True, "rewards": granted}
+
+
+# =========================
 # EDIT CARD VIEW (leditcard)
 # =========================
 class EditCardView(discord.ui.View):
@@ -4466,6 +7736,88 @@ class Client(discord.Client):
         if _showcase_votes_sync_task is None or _showcase_votes_sync_task.done():
             _showcase_votes_sync_task = asyncio.create_task(showcase_votes_github_sync_loop())
 
+        # Same pattern again, for pending_recovery.json's own periodic
+        # GitHub sync.
+        global _pending_recovery_sync_task
+        if _pending_recovery_sync_task is None or _pending_recovery_sync_task.done():
+            _pending_recovery_sync_task = asyncio.create_task(pending_recovery_github_sync_loop())
+
+        # One-time immediate sweep, run once at startup (guarded so a
+        # later on_ready from a reconnect never repeats it) and BEFORE
+        # the periodic loop task below is created. Without this, a user
+        # whose RECOVERY_PENDING_DAYS deadline passed while the bot was
+        # offline would sit fully elapsed but unrecovered for up to a
+        # further PENDING_RECOVERY_CHECK_INTERVAL_SECONDS (a day) after
+        # the bot comes back, since the loop's first action is always
+        # to sleep. Uses the exact same _run_pending_recovery_sweep()
+        # the periodic loop calls -- not a second implementation.
+        global _startup_recovery_sweep_done
+        if not _startup_recovery_sweep_done and client.guilds:
+            _startup_recovery_sweep_done = True
+            try:
+                await _run_pending_recovery_sweep(client.guilds[0])
+                print("[recovery] Completed immediate startup recovery sweep.")
+            except Exception:
+                print("[recovery] Immediate startup recovery sweep failed "
+                      "(the periodic loop will retry on its own schedule):")
+                traceback.print_exc()
+
+        # The actual rejoin/15-day-elapsed sweep -- separate task from
+        # the GitHub sync above (that one just persists whatever the
+        # pending list currently is; this one is what actually changes
+        # it over time).
+        global _pending_recovery_check_task
+        if _pending_recovery_check_task is None or _pending_recovery_check_task.done():
+            _pending_recovery_check_task = asyncio.create_task(pending_recovery_check_loop())
+
+        # Same singleton-guard pattern, same reasoning, for mail.json's
+        # own periodic GitHub sync.
+        global _mail_sync_task
+        if _mail_sync_task is None or _mail_sync_task.done():
+            _mail_sync_task = asyncio.create_task(mail_github_sync_loop())
+
+        # Same singleton-guard pattern, same reasoning, for duo.json's
+        # own periodic GitHub sync.
+        global _duo_sync_task
+        if _duo_sync_task is None or _duo_sync_task.done():
+            _duo_sync_task = asyncio.create_task(duo_github_sync_loop())
+
+        # One-time migration: existing players get +5 extra drops/claims.
+        # See _run_extra_bonus_migration_once() -- guarded so it can
+        # never run twice and never applies to players created later.
+        try:
+            await _run_extra_bonus_migration_once()
+        except Exception:
+            print("[duo] Extra bonus migration failed (will retry next startup):")
+            traceback.print_exc()
+
+        # Same singleton-guard pattern, same reasoning, for merchants.json's
+        # own periodic GitHub sync.
+        global _merchants_sync_task
+        if _merchants_sync_task is None or _merchants_sync_task.done():
+            _merchants_sync_task = asyncio.create_task(merchants_github_sync_loop())
+
+        # Separate task from the GitHub sync above (that one just persists
+        # whatever the merchant state currently is; this one is what
+        # actually progresses it over time -- expiring/depleting the
+        # current set, starting the 2-day cooldown, and eventually
+        # generating a new set).
+        global _merchant_check_task
+        if _merchant_check_task is None or _merchant_check_task.done():
+            _merchant_check_task = asyncio.create_task(merchant_check_loop())
+
+        # Sends any merchant arrival/departure announcement that was
+        # detected before the client was ready (most commonly: a
+        # brand-new bot's very first-ever merchant batch, generated at
+        # import time before login) -- see _announce_merchant_event /
+        # _flush_pending_merchant_announcements above. Never permanently
+        # skipped; just deferred until this point.
+        try:
+            await _flush_pending_merchant_announcements()
+        except Exception:
+            print("[merchants] Failed to flush a deferred merchant announcement:")
+            traceback.print_exc()
+
         # Registers a SIGTERM handler exactly once so Railway's redeploy
         # signal actually triggers a graceful close() (and therefore the
         # shutdown flush below) -- Python does NOT do this on its own for
@@ -4505,6 +7857,30 @@ class Client(discord.Client):
             print("[showcase_votes] Failed to flush pending vote changes on shutdown:")
             traceback.print_exc()
 
+        try:
+            await flush_pending_recovery_to_github()
+        except Exception:
+            print("[recovery] Failed to flush pending recovery changes on shutdown:")
+            traceback.print_exc()
+
+        try:
+            await flush_mail_to_github()
+        except Exception:
+            print("[mail] Failed to flush pending mail changes on shutdown:")
+            traceback.print_exc()
+
+        try:
+            await flush_duo_to_github()
+        except Exception:
+            print("[duo] Failed to flush pending duo changes on shutdown:")
+            traceback.print_exc()
+
+        try:
+            await flush_merchants_to_github()
+        except Exception:
+            print("[merchants] Failed to flush pending merchant state changes on shutdown:")
+            traceback.print_exc()
+
         await super().close()
 
     async def on_message(self, message):
@@ -4516,6 +7892,23 @@ class Client(discord.Client):
         content_lower = content.lower()
         user_id = message.author.id
         inv = get_inventory(user_id)
+
+        # =========================
+        # UNREAD MAIL REMINDER
+        # =========================
+        # Fires on every recognized command (see _looks_like_bot_command's
+        # docstring for what "recognized" means here), not just `lmail`
+        # itself, and only while unread mail actually exists -- once
+        # everything's been marked read via the mailbox's Read button,
+        # this simply stops firing on its own. Sent as its own reply
+        # alongside whatever the command below does; never blocks or
+        # replaces that command's own response.
+        if _looks_like_bot_command(content_lower) and has_unread_mail(user_id):
+            unread_count = unread_mail_count(user_id)
+            letter_word = "letter" if unread_count == 1 else "letters"
+            await reply(message,
+                f"📬 You have {unread_count} unread {letter_word}! Use `lmail` to open your mailbox."
+            )
 
         # =========================
         # LUPDATEIMAGE COMMAND
@@ -4898,29 +8291,38 @@ class Client(discord.Client):
 
             now = time.time()
 
-            def _cooldown_status(seconds_remaining, ready_text):
+            def _cooldown_status(seconds_remaining, ready_text, bonus_count=0):
                 if seconds_remaining <= 0:
-                    return f"**{ready_text}**"
-                minutes = seconds_remaining // 60
-                secs = seconds_remaining % 60
-                if minutes > 0:
-                    return f"**{minutes}m {secs}s remaining**"
+                    status = f"**{ready_text}**"
                 else:
-                    return f"**{secs}s remaining**"
+                    minutes = seconds_remaining // 60
+                    secs = seconds_remaining % 60
+                    if minutes > 0:
+                        status = f"**{minutes}m {secs}s remaining**"
+                    else:
+                        status = f"**{secs}s remaining**"
+                # Duo bonus uses: only shown once 2+ are banked -- with
+                # exactly 1 remaining, the cooldown displays normally
+                # (it's still there, just silently spent on the next use).
+                if bonus_count >= 2:
+                    status = f"{status} (x{bonus_count})"
+                return status
 
             # Drop status
             if user_id in drop_cooldowns:
                 remaining = int(DROP_COOLDOWN - (now - drop_cooldowns[user_id]))
             else:
                 remaining = 0
-            drop_status = _cooldown_status(remaining, "Ready to drop!")
+            drop_bonus = get_bonus(user_id).get("drop", 0)
+            drop_status = _cooldown_status(remaining, "Ready to drop!", drop_bonus)
 
             # Claim status
             if user_id in claim_cooldowns:
                 remaining = int(CLAIM_COOLDOWN - (now - claim_cooldowns[user_id]))
             else:
                 remaining = 0
-            claim_status = _cooldown_status(remaining, "Ready to claim!")
+            claim_bonus = get_bonus(user_id).get("claim", 0)
+            claim_status = _cooldown_status(remaining, "Ready to claim!", claim_bonus)
 
             embed = discord.Embed(
                 color=THEME_COLOR,
@@ -4949,11 +8351,29 @@ class Client(discord.Client):
         if content_lower.startswith("lc"):
             target_user = message.author
             args = content[2:].strip()
+            # True only for `lc @Luka` (a mention of the bot's own
+            # account) -- routes the SAME InventoryView/pagination every
+            # normal user's `lc` uses at the bot's recovery/"__system__"
+            # inventory instead of a real per-user one, with only the
+            # embed title swapped out below. No other `lc` behavior
+            # (sorting, filters, pagination, non-Luka mentions/IDs) changes.
+            is_luka_inventory = False
 
             if message.reference and message.reference.resolved:
                 replied_msg = message.reference.resolved
                 if replied_msg and replied_msg.author:
                     target_user = replied_msg.author
+                    if target_user.id == self.user.id:
+                        is_luka_inventory = True
+
+            elif message.mentions and message.mentions[0].id == self.user.id:
+                target_user = message.mentions[0]
+                is_luka_inventory = True
+                mention_tokens = (f"<@{target_user.id}>", f"<@!{target_user.id}>")
+                for token in mention_tokens:
+                    if args.startswith(token):
+                        args = args[len(token):].strip()
+                        break
 
             elif args:
                 first_part = args.split()[0]
@@ -4962,6 +8382,8 @@ class Client(discord.Client):
                     if member:
                         target_user = member
                         args = args[len(first_part):].strip()
+                        if member.id == self.user.id:
+                            is_luka_inventory = True
 
             # `-p`: display-order-only sort by print number ascending.
             # `-untagged`: shows only cards with no tag at all.
@@ -4977,7 +8399,7 @@ class Client(discord.Client):
                     if t.lower() not in ("-p", "-untagged")
                 )
 
-            target_inv = get_inventory(target_user.id)
+            target_inv = get_inventory(SYSTEM_RECOVERY_USER) if is_luka_inventory else get_inventory(target_user.id)
 
             # Attach each card's TRUE display number (its position in the
             # full, unfiltered inventory, counted from highest/newest at
@@ -5054,7 +8476,8 @@ class Client(discord.Client):
             view = InventoryView(
                 target_user,
                 filtered_inventory,
-                viewer_id=message.author.id
+                viewer_id=message.author.id,
+                title_override="🤖 Luka's Collection" if is_luka_inventory else None
             )
 
             await reply(message, 
@@ -5135,6 +8558,100 @@ class Client(discord.Client):
             else:
                 gift_message = await message.channel.send(
                     content=f"{message.author.mention} is gifting {target_user.mention} a card!",
+                    embed=gift_embed,
+                    view=view
+                )
+
+            view.message = gift_message
+
+            return
+
+        # =========================
+        # GIVEAWAY COMMAND (lgw) -- Finalist-only, gifts from Luka's
+        # recovery ("__system__") inventory using the exact same
+        # GiftView/accept flow as lgift. No separate gifting system.
+        # =========================
+        if content_lower.startswith("lgw "):
+            if not any(r.id == FINALIST_ROLE_ID for r in message.author.roles):
+                return await reply(message, "You need the **Finalist** role to use this command.")
+
+            if is_command_spam(user_id, "lgw"):
+                return await reply(message, 
+                    "Please wait a few seconds before using this command again."
+                )
+
+            if not message.mentions:
+                return await reply(message, 
+                    "Usage: `lgw @winner <inventory number>`"
+                )
+
+            winner_user = message.mentions[0]
+
+            if winner_user.bot:
+                return await reply(message, 
+                    "You can't give cards to bots."
+                )
+
+            if winner_user.id == message.author.id:
+                return await reply(message, 
+                    "You can't give cards to yourself."
+                )
+
+            parts = message.content.split()
+
+            try:
+                requested_num = int(parts[-1])
+            except:
+                return await reply(message, 
+                    "Please provide a valid inventory number."
+                )
+
+            luka_inv = get_inventory(SYSTEM_RECOVERY_USER)
+
+            # Same newest-first display-number -> index conversion as lc
+            # (SYSTEM_RECOVERY_USER is the exact inventory `lc @Luka`
+            # browses), so a number copied straight from `lc @Luka`
+            # always refers to the same card here.
+            card_index = len(luka_inv) - requested_num
+
+            if card_index < 0 or card_index >= len(luka_inv):
+                return await reply(message, 
+                    "Invalid inventory number. Use `lc @Luka` to see Luka's current cards."
+                )
+
+            owned_card = luka_inv[card_index]
+
+            # The Member representation of the bot's own account ("Luka")
+            # in this guild -- used purely for GiftView's display (name,
+            # avatar, mention), the same way message.author is for lgift.
+            luka_member = message.guild.me or self.user
+
+            view = GiftView(
+                luka_member,
+                winner_user,
+                owned_card,
+                SYSTEM_RECOVERY_USER,
+                winner_user.id,
+                card_index
+            )
+
+            gift_embed, file = view.build_embed(luka_member)
+
+            # If there's an image, attach it when sending
+            if file:
+                gift_message = await message.channel.send(
+                    content=f"{luka_member.mention} is gifting {winner_user.mention} a card!",
+                    embed=gift_embed,
+                    file=file,
+                    view=view
+                )
+                try:
+                    os.remove(file.fp.name)
+                except:
+                    pass
+            else:
+                gift_message = await message.channel.send(
+                    content=f"{luka_member.mention} is gifting {winner_user.mention} a card!",
                     embed=gift_embed,
                     view=view
                 )
@@ -5434,6 +8951,141 @@ class Client(discord.Client):
 
             name = owned_card["card"].get("name", "Unknown")
             return await reply(message, f"Unpinned **{name}**.")
+
+        # =========================
+        # LMAIL COMMAND
+        # =========================
+        if content_lower == "lmail" or content_lower.startswith("lmail "):
+            args = content[len("lmail"):].strip()
+
+            # No target given -- open the mailbox (reuses the same
+            # prev/next pagination style as `lbadges`, via
+            # MailboxPaginationView).
+            if not args:
+                letters = sorted(
+                    get_mailbox(user_id),
+                    key=lambda l: l.get("timestamp", 0),
+                    reverse=True,
+                )
+                if not letters:
+                    return await reply(message, "📭 Your mailbox is empty.")
+
+                enriched_letters = await _resolve_mail_sender_info(self, letters)
+                view = MailboxPaginationView(enriched_letters, message.author.id)
+                return await reply(message, embed=view.build_embed(), view=view)
+
+            # Target given -- start the sending flow. Reuses the same
+            # target resolution (@mention / reply / raw ID / username)
+            # every other targeted command (lbadges, lprogress, ...) uses.
+            target_user = await resolve_target_user(message, args)
+
+            if target_user.id == message.author.id:
+                return await reply(message, "You can't send mail to yourself!")
+            if target_user.bot:
+                return await reply(message, "You can't send mail to a bot.")
+
+            await reply(
+                message,
+                f"✉️ What would you like to send to **{target_user.display_name}**? "
+                "Type your message now."
+            )
+
+            def check(m):
+                return m.author.id == message.author.id and m.channel.id == message.channel.id
+
+            try:
+                mail_msg = await self.wait_for("message", check=check, timeout=180)
+            except asyncio.TimeoutError:
+                return await reply(message, "❌ Timed out waiting for your mail message.")
+
+            mail_content = mail_msg.content.strip()
+            if not mail_content:
+                return await reply(
+                    mail_msg,
+                    "❌ Mail message can't be empty. Please run `lmail @user` again."
+                )
+
+            letter = {
+                "id": str(uuid.uuid4()),
+                "sender_id": str(message.author.id),
+                "receiver_id": str(target_user.id),
+                "timestamp": time.time(),
+                "message": mail_content,
+                "read": False,
+            }
+
+            async with mail_lock:
+                mailbox = get_mailbox(target_user.id)
+                mailbox.append(letter)
+                try:
+                    save_mail_local()
+                    mark_mail_dirty()
+                except Exception:
+                    mailbox.remove(letter)
+                    return await reply(
+                        mail_msg,
+                        "❌ Something went wrong saving your mail. Please try again."
+                    )
+
+            return await reply(mail_msg, f"✅ Mail sent to **{target_user.display_name}**!")
+
+        # =========================
+        # LDUO COMMAND
+        # =========================
+        if content_lower == "lduo" or content_lower.startswith("lduo "):
+            args = content[len("lduo"):].strip()
+            if not args:
+                return await reply(message, "Usage: `lduo @user`")
+
+            target_user = await resolve_target_user(message, args)
+
+            if target_user.id == message.author.id:
+                return await reply(message, "You can't start a Duo Challenge with yourself!")
+            if target_user.bot:
+                return await reply(message, "You can't start a Duo Challenge with a bot.")
+
+            author_id = message.author.id
+            target_id = target_user.id
+
+            async with duo_lock:
+                if find_active_duo(author_id)[0]:
+                    return await reply(message, "You're already in an active Duo Challenge.")
+                if find_active_duo(target_id)[0]:
+                    return await reply(message,
+                        f"**{target_user.display_name}** is already in an active Duo Challenge."
+                    )
+
+                if duo_weekly_count(author_id) >= DUO_WEEKLY_LIMIT:
+                    return await reply(message,
+                        "You've already completed 3 Duo Challenges this week."
+                    )
+                if duo_weekly_count(target_id) >= DUO_WEEKLY_LIMIT:
+                    return await reply(message,
+                        f"**{target_user.display_name}** has already completed 3 Duo Challenges this week."
+                    )
+
+                remaining = duo_cooldown_remaining(author_id)
+                if remaining > 0:
+                    return await reply(message,
+                        f"⏳ You must wait **{format_time(remaining)}** before starting another Duo."
+                    )
+                remaining = duo_cooldown_remaining(target_id)
+                if remaining > 0:
+                    return await reply(message,
+                        f"⏳ **{target_user.display_name}** must wait **{format_time(remaining)}** "
+                        "before starting another Duo."
+                    )
+
+                if str(target_id) in duo_weekly_partners(author_id):
+                    return await reply(message,
+                        f"You've already completed a Duo with **{target_user.display_name}** this week. "
+                        "Try a different player."
+                    )
+
+            view = DuoRequestView(message.author, target_user, author_id, target_id)
+            sent = await reply(message, embed=view.get_embed(), view=view)
+            view.message = sent
+            return
 
         # =========================
         # LBADGES COMMAND
@@ -5761,6 +9413,65 @@ class Client(discord.Client):
                 return await reply(message, f"Error: {e}")
 
         # =========================
+        # MERCHANT LIST / ACCEPT TRADE (lmerchant)
+        # =========================
+        if content_lower == "lmerchant" or content_lower == "lmerchants":
+            if is_command_spam(user_id, "lmerchant"):
+                return await reply(message,
+                    "Please wait a few seconds before using this command again."
+                )
+
+            await check_and_update_merchants()
+
+            list_view = MerchantListView(user_id)
+            embed, file = list_view.build_embed_and_file()
+
+            send_kwargs = {"embed": embed, "view": list_view}
+            if file:
+                send_kwargs["file"] = file
+
+            sent = await message.channel.send(**send_kwargs)
+            list_view.message = sent
+            return
+
+        # =========================
+        # MERCHANT TRADE: ADD CARD TO OFFER (madd <card_number>)
+        # =========================
+        if content_lower.startswith("madd "):
+            try:
+                words = content.split()
+                if len(words) < 2:
+                    return  # bare "madd" -- ignore silently, no usage reply
+
+                raw = words[1]
+                try:
+                    requested_num = int(raw)
+                except:
+                    return  # non-numeric -- ignore silently, no usage reply
+
+                trade_data = active_merchant_trades.get(user_id)
+                if not trade_data or not trade_data.get("view"):
+                    return  # not in an active merchant trade -- ignore silently
+
+                trade_view = trade_data["view"]
+
+                # Displayed numbers count down from newest (highest) to
+                # oldest (1), same convention as the player-to-player
+                # "add" command above.
+                pos_idx = len(inv) - requested_num
+                if pos_idx < 0 or pos_idx >= len(inv):
+                    return await reply(message, "Invalid card number.")
+
+                owned_card = inv[pos_idx]
+
+                status_text = trade_view.toggle_card(owned_card)
+                await trade_view.refresh_message()
+
+                return await reply(message, status_text)
+            except Exception as e:
+                return await reply(message, f"Error: {e}")
+
+        # =========================
         # VIEW CARD COMMAND (lv <num>)
         # =========================
         if content_lower.startswith("lv "):
@@ -5786,6 +9497,13 @@ class Client(discord.Client):
             series = card.get("series", "Unknown Series")
             star_val = card.get("stars", 1)
 
+            # Merchant-reward cards keep their real print number here too
+            # (text + rendered image both), instead of collapsing to "L"
+            # past 100 -- see render_card's force_real_print. Every other
+            # card is completely unaffected (owned_card.get(...) is False).
+            is_merchant_reward = bool(owned_card.get("merchant_reward"))
+            print_display = format_merchant_print(print_num) if is_merchant_reward else format_print(print_num)
+
             embed = discord.Embed(color=THEME_COLOR)
             embed.set_author(name=f"{message.author.name}'s Card", icon_url=message.author.display_avatar.url)
             embed.description = (
@@ -5793,11 +9511,11 @@ class Client(discord.Client):
                 f"✦ **Series:** **{series}**\n"
                 f"───\n"
                 f"✦ **Owner:** <@{viewing_user_id}>\n"
-                f"✦ **Print:** **{format_print(print_num)}**\n"
+                f"✦ **Print:** **{print_display}**\n"
                 f"✦ **Level:** **{stars(star_val)}**\n"
                 f"✦ **Version:** **{card_version_label(card)}**\n"
             )
-            image_path = render_card_final(card, print_num)
+            image_path = render_card_final(card, print_num, force_real_print=is_merchant_reward)
 
             if image_path:
                 file = discord.File(image_path, filename="card.png")
@@ -5839,9 +9557,13 @@ class Client(discord.Client):
 
                 chosen_card = previous_results[selection]
 
+                # Grouped by (name, series) -- same name in a DIFFERENT
+                # series (e.g. Robin from Honkai vs. Robin from DC) is a
+                # completely separate character, not another version.
                 all_versions = [
                     c for c in cards
                     if c.get("name", "").lower() == chosen_card.get("name", "").lower()
+                    and c.get("series", "").lower() == chosen_card.get("series", "").lower()
                 ]
                 all_versions.sort(key=lambda x: x.get("stars", 1))
 
@@ -5884,14 +9606,15 @@ class Client(discord.Client):
             if not matched_cards:
                 return await reply(message, "No cards found.")
 
-            # collapse to unique names for list view
+            # collapse to unique (name, series) pairs for list view --
+            # same name in a different series is a separate character.
             unique_results = []
-            seen_names = set()
+            seen_keys = set()
 
             for card in matched_cards:
-                card_name_lower = card.get("name", "").lower()
-                if card_name_lower not in seen_names:
-                    seen_names.add(card_name_lower)
+                key = (card.get("name", "").lower(), card.get("series", "").lower())
+                if key not in seen_keys:
+                    seen_keys.add(key)
                     unique_results.append(card)
 
             user_last_lookup[user_id] = unique_results
@@ -5901,6 +9624,7 @@ class Client(discord.Client):
                 all_versions = [
                     c for c in cards
                     if c.get("name", "").lower() == unique_results[0].get("name", "").lower()
+                    and c.get("series", "").lower() == unique_results[0].get("series", "").lower()
                 ]
                 all_versions.sort(key=lambda x: x.get("stars", 1))
 
@@ -5952,8 +9676,28 @@ class Client(discord.Client):
 
             if user_id in drop_cooldowns:
                 remaining = int(DROP_COOLDOWN - (now - drop_cooldowns[user_id]))
+            else:
+                remaining = 0
 
-                if remaining > 0:
+            # Duo bonus drops: only ever touched when the normal cooldown
+            # would otherwise block this drop. If the player is already
+            # off cooldown, this is a completely normal drop and no
+            # bonus is spent -- bonuses stay banked for when they're
+            # actually needed. Does not change drop generation, odds,
+            # rendering, or anything else about how a drop works.
+            used_bonus_drop = False
+            if remaining > 0:
+                async with duo_lock:
+                    if consume_bonus(user_id, "drop"):
+                        used_bonus_drop = True
+                        try:
+                            save_duo_local()
+                            mark_duo_dirty()
+                        except Exception:
+                            add_bonus(user_id, "drop", 1)
+                            used_bonus_drop = False
+
+                if not used_bonus_drop:
                     return await reply(message, 
                         f"⏳ You must wait **{format_time(remaining)}** before dropping again."
                     )
@@ -5966,7 +9710,11 @@ class Client(discord.Client):
             while card2["id"] == card1["id"]:
                 card2 = get_weighted_card()
 
-            drop_cooldowns[user_id] = now
+            # A bonus-drop never resets/restarts the normal cooldown --
+            # per the Duo bonus system, the normal cooldown only resumes
+            # once every bonus has been spent.
+            if not used_bonus_drop:
+                drop_cooldowns[user_id] = now
 
             t_ld_cardselect = time.perf_counter()
 
@@ -6117,9 +9865,84 @@ class Client(discord.Client):
                 view=view
             )
 
+        # =========================
+        # LPROGRESS COMMAND
+        # =========================
+        if content_lower == "lprogress" or content_lower.startswith("lprogress "):
+            args = content[len("lprogress"):].strip()
+            target_user = await resolve_target_user(message, args)
+
+            target_inv = get_inventory(target_user.id)
+            stats = _compute_collection_progress(target_inv)
+
+            embed = _build_progress_embed(target_user, stats)
+            return await reply(message, embed=embed)
+
+        # =========================
+        # LMISSING COMMAND
+        # =========================
+        if content_lower == "lmissing" or content_lower.startswith("lmissing "):
+            raw_args = content[len("lmissing"):].strip()
+            series_query, other_user = await _parse_missing_args(message, raw_args)
+
+            requester_inv = get_inventory(message.author.id)
+            stats = _compute_collection_progress(requester_inv)
+
+            # --- Comparison mode: which of THEIR cards from a series am I missing? ---
+            if other_user is not None:
+                if not series_query:
+                    return await reply(message,
+                        "Please specify a series to compare, e.g. `lmissing <series> @user`."
+                    )
+
+                matched_series = _match_series(series_query)
+                if matched_series is None:
+                    return await reply(message, f"No series found matching `{series_query}`.")
+
+                other_inv = get_inventory(other_user.id)
+                other_stats = _compute_collection_progress(other_inv)
+
+                your_owned = stats["per_series_owned"].get(matched_series, set())
+                their_owned = other_stats["per_series_owned"].get(matched_series, set())
+                missing_names = sorted(their_owned - your_owned)
+
+                embed = _build_missing_comparison_embed(matched_series, other_user, missing_names)
+                return await reply(message, embed=embed)
+
+            # --- Single-series view: only that series, no overview page ---
+            if series_query:
+                matched_series = _match_series(series_query)
+                if matched_series is None:
+                    return await reply(message, f"No series found matching `{series_query}`.")
+
+                embed = _build_missing_series_embed(message.author, matched_series, stats)
+                return await reply(message, embed=embed)
+
+            # --- No filters: paginated overview + one page per incomplete series ---
+            incomplete_series = []
+            for series, total in stats["series_totals"].items():
+                if total <= 0:
+                    continue
+                remaining = total - len(stats["per_series_owned"].get(series, set()))
+                if remaining > 0:
+                    incomplete_series.append((series, remaining))
+            incomplete_series.sort(key=lambda pair: pair[1])  # fewest remaining first
+
+            total_pages = 1 + len(incomplete_series)
+            embeds = [_build_missing_overview_embed(message.author, incomplete_series, total_pages)]
+            for i, (series, _remaining) in enumerate(incomplete_series, start=2):
+                embeds.append(
+                    _build_missing_series_embed(message.author, series, stats, page_num=i, total_pages=total_pages)
+                )
+
+            if len(embeds) == 1:
+                return await reply(message, embed=embeds[0])
+
+            view = MissingCardsPaginationView(embeds, message.author.id)
+            return await reply(message, embed=view.current_embed(), view=view)
+
 
 # --- Run Bot Connection ---
 client = Client(intents=intents)
-
 TOKEN = os.getenv("TOKEN")
 client.run(TOKEN)
