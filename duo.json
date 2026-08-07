@@ -274,7 +274,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 45,
+      "progress": 46,
       "id": "530c3b8c-b61c-4ebb-8adc-e0e6c69a1210",
       "player_a": "1299833889166065743",
       "player_b": "433218038385344532",
@@ -329,7 +329,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 52,
+      "progress": 53,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -340,7 +340,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 23,
+      "progress": 24,
       "id": "2606fb8b-c465-4cf9-8cd5-507666f52dc5",
       "player_a": "1466515237976150272",
       "player_b": "1310677632769327257",
@@ -380,38 +380,6 @@
       "started_at": 1786079233.7544386,
       "channel_id": 1530785861330014240
     },
-    "584e4c20-36fc-4270-a3e5-e68091c6d8fe": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Agott",
-        "Seele Vollerei & Veliona",
-        "Makoto Yuki",
-        "Banyue",
-        "Escoffier",
-        "Hubble",
-        "Taiga Kagami",
-        "Kinich",
-        "Tobio Kageyama",
-        "J",
-        "Satoru Gojo",
-        "Kasumi Yoshizawa",
-        "Soukaku",
-        "Cinderella",
-        "Lynae",
-        "Sinclair",
-        "Eddie",
-        "Sosuke Yamazaki",
-        "Ineffa"
-      ],
-      "id": "584e4c20-36fc-4270-a3e5-e68091c6d8fe",
-      "player_a": "771340815289024512",
-      "player_b": "717208938382229555",
-      "started_at": 1786080434.7703667,
-      "channel_id": 1535100835011371018
-    },
     "adfadbba-4f42-49c1-9e3c-5ad6c4e17165": {
       "type": "claim_count",
       "target": 60,
@@ -438,7 +406,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 42,
+      "progress": 43,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -523,7 +491,8 @@
         "Wind Breaker",
         "Checkmate",
         "Debut or Die",
-        "Ensemble Stars!"
+        "Ensemble Stars!",
+        "Vocaloid"
       ],
       "id": "0feff1c6-1ff6-452c-b7ff-550098ccab42",
       "player_a": "821574312216756224",
@@ -546,7 +515,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 16,
+      "progress": 17,
       "id": "f701abe5-90b0-4272-9f4a-bc2e08222029",
       "player_a": "782414692101521428",
       "player_b": "1433888427547295918",
@@ -588,7 +557,8 @@
         "Luca Kaneshiro",
         "Rumi",
         "Evanescia",
-        "Maizuru"
+        "Maizuru",
+        "Sun Jing"
       ],
       "id": "7532e2f4-daaa-4a12-a74b-7cd94d8dfbb2",
       "player_a": "1411686981468946664",
@@ -628,7 +598,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 3,
+      "progress": 4,
       "id": "7f197f8e-28f3-4a67-9515-691698e00727",
       "player_a": "1251051306177527878",
       "player_b": "975180513394438165",
@@ -639,7 +609,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 1,
+      "progress": 2,
       "id": "a73a86f2-b469-4297-b13b-3e3060af7d17",
       "player_a": "1079314071461044274",
       "player_b": "745734578005737623",
@@ -654,7 +624,8 @@
       "series_seen": [
         "Even the Introverted Gals Wanna Get Out There!",
         "Silver Palace",
-        "Link Click"
+        "Link Click",
+        "ZENO"
       ],
       "id": "cde914ed-b600-4fe8-b8d5-3876b173c3d6",
       "player_a": "856393524240711681",
@@ -1347,6 +1318,18 @@
         "timestamp": 1786100199.1699526,
         "partner_id": "1454914344792883305"
       }
+    ],
+    "771340815289024512": [
+      {
+        "timestamp": 1786100432.8464258,
+        "partner_id": "717208938382229555"
+      }
+    ],
+    "717208938382229555": [
+      {
+        "timestamp": 1786100432.8464258,
+        "partner_id": "771340815289024512"
+      }
     ]
   },
   "cooldowns": {
@@ -1463,7 +1446,9 @@
     "1028538307975589939": 1786099719.822955,
     "1228266277835898900": 1786099719.822955,
     "1454914344792883305": 1786100199.1699526,
-    "743938831107096637": 1786100199.1699526
+    "743938831107096637": 1786100199.1699526,
+    "771340815289024512": 1786100432.8464258,
+    "717208938382229555": 1786100432.8464258
   },
   "bonus": {
     "777925664358531102": {
@@ -2387,7 +2372,7 @@
       "claim": 0
     },
     "771340815289024512": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "819996378092666922": {
@@ -3147,7 +3132,7 @@
       "claim": 0
     },
     "717208938382229555": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1067570154768183356": {
@@ -5015,6 +5000,18 @@
       "claim": 0
     },
     "941554334007701584": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1523230534141218896": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1205851657901178892": {
+      "drop": 0,
+      "claim": 0
+    },
+    "952764852483522571": {
       "drop": 0,
       "claim": 0
     }
