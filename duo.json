@@ -15,7 +15,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 51,
       "id": "78043429-2997-432c-a442-a07eedb0c0fa",
       "player_a": "1132475401701171262",
       "player_b": "1274155690331734175",
@@ -114,7 +114,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 48,
+      "progress": 49,
       "id": "5fec59f7-58f2-4d7d-a2f1-c23596c05b68",
       "player_a": "716071317987786814",
       "player_b": "466368374490923008",
@@ -272,7 +272,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 39,
+      "progress": 40,
       "id": "530c3b8c-b61c-4ebb-8adc-e0e6c69a1210",
       "player_a": "1299833889166065743",
       "player_b": "433218038385344532",
@@ -305,7 +305,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 36,
+      "progress": 37,
       "id": "b833288c-0a48-4d41-9138-72095de51621",
       "player_a": "1352235126553313360",
       "player_b": "1056864800472313897",
@@ -327,7 +327,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 45,
+      "progress": 46,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -338,7 +338,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 18,
+      "progress": 19,
       "id": "2606fb8b-c465-4cf9-8cd5-507666f52dc5",
       "player_a": "1466515237976150272",
       "player_b": "1310677632769327257",
@@ -435,7 +435,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 27,
+      "progress": 28,
       "id": "f96cdea1-2cee-429e-b669-911991d71c6c",
       "player_a": "998047189240655942",
       "player_b": "595084117998043137",
@@ -457,7 +457,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 39,
+      "progress": 41,
       "id": "73404e39-d26d-43e1-9f76-7934e58c61d7",
       "player_a": "909713880694005771",
       "player_b": "897040507539189780",
@@ -523,7 +523,8 @@
         "Soshiro Hoshina",
         "Ryomen Sukuna",
         "Ula Usterka",
-        "Edmond"
+        "Edmond",
+        "Mammon"
       ],
       "id": "a9aa1695-00ed-418b-aa5d-34861f87d9e4",
       "player_a": "1210501746477244438",
@@ -546,7 +547,9 @@
         "Shen Qingqiu",
         "Ame-chan & KAngel",
         "Sua",
-        "Soshiro Hoshina"
+        "Soshiro Hoshina",
+        "Riruka Dokugamine",
+        "Toge Inumaki"
       ],
       "id": "5f52fd30-228b-4a0f-a777-ddea299b43e6",
       "player_a": "1454914344792883305",
@@ -578,7 +581,9 @@
         "Red Thread Quest",
         "Tokyo Mew Mew",
         "Alien Stage",
-        "My Hero Academia"
+        "My Hero Academia",
+        "Omniscient Reader\u2019s Viewpoint",
+        "Classroom of the Elite"
       ],
       "id": "d29f38d8-96b5-4028-9664-69b8fe21f9f8",
       "player_a": "1028538307975589939",
@@ -596,7 +601,8 @@
         "Nijisanji",
         "Diabolik Lovers",
         "I\u2019m a Young God, Won\u2019t You Raise Me",
-        "Fake Fact Lips"
+        "Fake Fact Lips",
+        "Fake Slackers"
       ],
       "id": "0feff1c6-1ff6-452c-b7ff-550098ccab42",
       "player_a": "821574312216756224",
@@ -639,7 +645,8 @@
         "BanG Dream!",
         "Moriarty the Patriot",
         "Sakamoto Days",
-        "ZENO"
+        "ZENO",
+        "BLUELOCK"
       ],
       "id": "d4b9b6f7-2a09-4568-8d60-e867b07a88e9",
       "player_a": "307844484618780673",
@@ -654,7 +661,8 @@
       "progress": 0,
       "characters_seen": [
         "Lauren Iroas",
-        "Rwanda Bailey & Macalo"
+        "Rwanda Bailey & Macalo",
+        "Meursault"
       ],
       "id": "a7774504-2e5b-4580-9fde-2baf2d1f8ff2",
       "player_a": "1261275450135543822",
@@ -667,12 +675,25 @@
       "target": 20,
       "label": "Obtain 20 unique characters together",
       "progress": 0,
-      "characters_seen": [],
+      "characters_seen": [
+        "Jin Eoh"
+      ],
       "id": "7532e2f4-daaa-4a12-a74b-7cd94d8dfbb2",
       "player_a": "1411686981468946664",
       "player_b": "1361841917960130701",
       "started_at": 1786096890.9605813,
       "channel_id": 1531403070758584370
+    },
+    "51ee0532-ba89-40d6-a52f-53b0536c91a7": {
+      "type": "claim_rarity4",
+      "target": 10,
+      "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
+      "progress": 0,
+      "id": "51ee0532-ba89-40d6-a52f-53b0536c91a7",
+      "player_a": "1425782801193631754",
+      "player_b": "1035656286039191692",
+      "started_at": 1786097260.4678462,
+      "channel_id": 1533302411375153182
     }
   },
   "weekly": {
@@ -4889,6 +4910,26 @@
       "claim": 0
     },
     "1192955009327964180": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1258676719037059105": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1022487940137492540": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1220465243092946978": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1374507832740810853": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1279518782838276148": {
       "drop": 0,
       "claim": 0
     }
