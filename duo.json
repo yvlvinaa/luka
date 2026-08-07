@@ -26,7 +26,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 58,
+      "progress": 59,
       "id": "2145b6b6-ad5e-4c03-8023-c303eeb40472",
       "player_a": "590230897089839123",
       "player_b": "772144591251177503",
@@ -224,7 +224,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 40,
+      "progress": 41,
       "id": "2606fb8b-c465-4cf9-8cd5-507666f52dc5",
       "player_a": "1466515237976150272",
       "player_b": "1310677632769327257",
@@ -370,7 +370,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 38,
+      "progress": 39,
       "id": "7f197f8e-28f3-4a67-9515-691698e00727",
       "player_a": "1251051306177527878",
       "player_b": "975180513394438165",
@@ -381,7 +381,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 21,
+      "progress": 22,
       "id": "a73a86f2-b469-4297-b13b-3e3060af7d17",
       "player_a": "1079314071461044274",
       "player_b": "745734578005737623",
@@ -434,33 +434,6 @@
       "player_b": "1518842132184563743",
       "started_at": 1786105496.5093093,
       "channel_id": 1529858740835061780
-    },
-    "fae41e22-cf61-4071-ba6d-6ef0eb984f89": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Spongebob Squarepants",
-        "Nerd Project",
-        "Kiss Me If You Can",
-        "Puella Magi Madoka Magica",
-        "Kamisama Kiss",
-        "Ensemble Stars!",
-        "No Home",
-        "The Hunter's Gonna Lay Low",
-        "Genshin Impact",
-        "Dandadan",
-        "My Little Pony",
-        "Chainsaw Man",
-        "Got Dropped into a Ghost Story, Still Gotta Work",
-        "Wuthering Waves"
-      ],
-      "id": "fae41e22-cf61-4071-ba6d-6ef0eb984f89",
-      "player_a": "1279169282126643292",
-      "player_b": "1271018988486524961",
-      "started_at": 1786106385.1683013,
-      "channel_id": 1534392062454010028
     },
     "0dafdd5c-c276-4110-bac2-7bf553978258": {
       "type": "claim_characters",
@@ -1476,6 +1449,18 @@
         "timestamp": 1786121352.3402135,
         "partner_id": "1414056833248919552"
       }
+    ],
+    "1279169282126643292": [
+      {
+        "timestamp": 1786121927.6870627,
+        "partner_id": "1271018988486524961"
+      }
+    ],
+    "1271018988486524961": [
+      {
+        "timestamp": 1786121927.6870627,
+        "partner_id": "1279169282126643292"
+      }
     ]
   },
   "cooldowns": {
@@ -1630,7 +1615,9 @@
     "885453562631553024": 1786121114.7692657,
     "756814026968793109": 1786121114.7692657,
     "1414056833248919552": 1786121352.3402135,
-    "1068689349455122432": 1786121352.3402135
+    "1068689349455122432": 1786121352.3402135,
+    "1279169282126643292": 1786121927.6870627,
+    "1271018988486524961": 1786121927.6870627
   },
   "bonus": {
     "777925664358531102": {
@@ -2635,7 +2622,7 @@
     },
     "1068689349455122432": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "1310677632769327257": {
       "drop": 0,
@@ -5030,7 +5017,7 @@
       "claim": 0
     },
     "1271018988486524961": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1092199688154910791": {
@@ -5162,7 +5149,7 @@
       "claim": 0
     },
     "1279169282126643292": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "800603519660589056": {
