@@ -15,7 +15,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 46,
+      "progress": 47,
       "id": "78043429-2997-432c-a442-a07eedb0c0fa",
       "player_a": "1132475401701171262",
       "player_b": "1274155690331734175",
@@ -125,7 +125,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 40,
+      "progress": 41,
       "id": "16d9eff8-3342-4aed-994f-7e763c773390",
       "player_a": "968786127081328660",
       "player_b": "764446760004354048",
@@ -208,17 +208,6 @@
       "player_b": "1175711320868405288",
       "started_at": 1786068481.579241,
       "channel_id": 1532235540760367205
-    },
-    "b2614d2f-6a46-48e3-a3ca-51fb5c4e4616": {
-      "type": "claim_count",
-      "target": 60,
-      "label": "Claim 60 cards together",
-      "progress": 59,
-      "id": "b2614d2f-6a46-48e3-a3ca-51fb5c4e4616",
-      "player_a": "1489161053798535168",
-      "player_b": "1091891524935098378",
-      "started_at": 1786069343.805681,
-      "channel_id": 1529638910139961464
     },
     "844d2fd0-61c7-4098-8290-1617f84d7eca": {
       "type": "claim_rarity4",
@@ -360,7 +349,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 51,
       "id": "61c4a873-1ce2-42b7-a75a-356cb2bc1bf4",
       "player_a": "748272021120483439",
       "player_b": "953969404884971521",
@@ -435,7 +424,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 14,
+      "progress": 15,
       "id": "adfadbba-4f42-49c1-9e3c-5ad6c4e17165",
       "player_a": "1187649058576277571",
       "player_b": "722139521864433717",
@@ -457,7 +446,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 27,
+      "progress": 28,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -507,7 +496,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 0,
+      "progress": 1,
       "id": "a39a9cb4-01c4-4c3b-894f-88bec700a754",
       "player_a": "714581544462712974",
       "player_b": "839510449166352404",
@@ -527,7 +516,9 @@
         "Lee Sam-seong",
         "Kang Jihwan & Han Yuseong",
         "Hirofumi Yoshida",
-        "Jolyne Cujoh"
+        "Jolyne Cujoh",
+        "Richeh",
+        "Von Lycaon"
       ],
       "id": "a9aa1695-00ed-418b-aa5d-34861f87d9e4",
       "player_a": "1210501746477244438",
@@ -546,7 +537,8 @@
         "Daffodill",
         "Iroi",
         "Trigger",
-        "Aston Machan"
+        "Aston Machan",
+        "Shen Qingqiu"
       ],
       "id": "5f52fd30-228b-4a0f-a777-ddea299b43e6",
       "player_a": "1454914344792883305",
@@ -587,7 +579,8 @@
       "progress": 0,
       "series_seen": [
         "Zenless Zone Zero",
-        "Nijisanji"
+        "Nijisanji",
+        "Diabolik Lovers"
       ],
       "id": "0feff1c6-1ff6-452c-b7ff-550098ccab42",
       "player_a": "821574312216756224",
@@ -610,7 +603,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 0,
+      "progress": 2,
       "id": "f701abe5-90b0-4272-9f4a-bc2e08222029",
       "player_a": "782414692101521428",
       "player_b": "1433888427547295918",
@@ -1230,6 +1223,18 @@
         "timestamp": 1786093694.4133294,
         "partner_id": "1513671121067573281"
       }
+    ],
+    "1489161053798535168": [
+      {
+        "timestamp": 1786094938.6557982,
+        "partner_id": "1091891524935098378"
+      }
+    ],
+    "1091891524935098378": [
+      {
+        "timestamp": 1786094938.6557982,
+        "partner_id": "1489161053798535168"
+      }
     ]
   },
   "cooldowns": {
@@ -1334,7 +1339,9 @@
     "979524252124471337": 1786092689.7917686,
     "751956717893451776": 1786092689.7917686,
     "1513671121067573281": 1786093694.4133294,
-    "857177938682970132": 1786093694.4133294
+    "857177938682970132": 1786093694.4133294,
+    "1489161053798535168": 1786094938.6557982,
+    "1091891524935098378": 1786094938.6557982
   },
   "bonus": {
     "777925664358531102": {
@@ -1502,8 +1509,8 @@
       "claim": 0
     },
     "1091891524935098378": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "754066769320214599": {
       "drop": 0,
@@ -1902,8 +1909,8 @@
       "claim": 0
     },
     "660455044163960842": {
-      "drop": 5,
-      "claim": 5
+      "drop": 0,
+      "claim": 2
     },
     "1330415378114940989": {
       "drop": 0,
@@ -2046,8 +2053,8 @@
       "claim": 5
     },
     "837077284845518888": {
-      "drop": 5,
-      "claim": 5
+      "drop": 0,
+      "claim": 3
     },
     "1207770813059571732": {
       "drop": 0,
@@ -3234,8 +3241,8 @@
       "claim": 0
     },
     "1489161053798535168": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "999178897629384754": {
       "drop": 0,
@@ -4754,6 +4761,14 @@
       "claim": 0
     },
     "1327877555927121952": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1231983509502164994": {
+      "drop": 0,
+      "claim": 0
+    },
+    "784525233922506802": {
       "drop": 0,
       "claim": 0
     }
