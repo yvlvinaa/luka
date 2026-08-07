@@ -81,7 +81,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 57,
+      "progress": 58,
       "id": "08c21a66-b424-4de0-8200-b335d373d029",
       "player_a": "703745509835407402",
       "player_b": "977162721520918538",
@@ -274,7 +274,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 43,
+      "progress": 45,
       "id": "530c3b8c-b61c-4ebb-8adc-e0e6c69a1210",
       "player_a": "1299833889166065743",
       "player_b": "433218038385344532",
@@ -285,7 +285,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 47,
+      "progress": 48,
       "id": "c9a42659-c2ba-4106-8b76-0025878a88fd",
       "player_a": "1152969942820466819",
       "player_b": "851453831350714388",
@@ -329,7 +329,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 51,
+      "progress": 52,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -438,7 +438,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 40,
+      "progress": 41,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -449,7 +449,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 46,
+      "progress": 47,
       "id": "73404e39-d26d-43e1-9f76-7934e58c61d7",
       "player_a": "909713880694005771",
       "player_b": "897040507539189780",
@@ -520,7 +520,8 @@
         "Hifumi Izanami",
         "Kotomi Ichinose",
         "Merlin",
-        "Nanally"
+        "Nanally",
+        "Narancia Ghirga"
       ],
       "id": "5f52fd30-228b-4a0f-a777-ddea299b43e6",
       "player_a": "1454914344792883305",
@@ -577,7 +578,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 14,
+      "progress": 16,
       "id": "f701abe5-90b0-4272-9f4a-bc2e08222029",
       "player_a": "782414692101521428",
       "player_b": "1433888427547295918",
@@ -643,7 +644,8 @@
       "progress": 0,
       "series_seen": [
         "Duet Night Abyss",
-        "Red Thread Quest"
+        "Red Thread Quest",
+        "MILGRAM"
       ],
       "id": "9a40facc-2e99-4743-acae-b99b86fc711f",
       "player_a": "1070404986057531452",
@@ -655,12 +657,37 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 1,
+      "progress": 2,
       "id": "7f197f8e-28f3-4a67-9515-691698e00727",
       "player_a": "1251051306177527878",
       "player_b": "975180513394438165",
       "started_at": 1786099460.097126,
       "channel_id": 1529796278761029753
+    },
+    "a73a86f2-b469-4297-b13b-3e3060af7d17": {
+      "type": "claim_count",
+      "target": 60,
+      "label": "Claim 60 cards together",
+      "progress": 0,
+      "id": "a73a86f2-b469-4297-b13b-3e3060af7d17",
+      "player_a": "1079314071461044274",
+      "player_b": "745734578005737623",
+      "started_at": 1786099969.0972283,
+      "channel_id": 1529510809816797304
+    },
+    "cde914ed-b600-4fe8-b8d5-3876b173c3d6": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "Even the Introverted Gals Wanna Get Out There!"
+      ],
+      "id": "cde914ed-b600-4fe8-b8d5-3876b173c3d6",
+      "player_a": "856393524240711681",
+      "player_b": "725183995893121095",
+      "started_at": 1786099984.290867,
+      "channel_id": 1530510529154777168
     }
   },
   "weekly": {
@@ -4993,6 +5020,10 @@
       "claim": 0
     },
     "859482237036265472": {
+      "drop": 0,
+      "claim": 0
+    },
+    "883370416188583958": {
       "drop": 0,
       "claim": 0
     }
