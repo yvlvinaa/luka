@@ -209,38 +209,6 @@
       "started_at": 1786069623.8661854,
       "channel_id": 1527893494230945912
     },
-    "5f257520-61ad-4dfc-ae7e-16c6d9ee2244": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Noe Archiviste",
-        "Kafka",
-        "Turing",
-        "Han Seo-in",
-        "Tartaglia",
-        "Shoko Nishimiya",
-        "Liu Xiao",
-        "Kiyora Jin",
-        "Lee Seonghae",
-        "Amelia Park Lee",
-        "Duke",
-        "Seong Seong-Yeon",
-        "Asa Mitaka",
-        "Ruby Kurosawa",
-        "Michael Kaiser",
-        "Soul Eater Evans",
-        "Yachiyo",
-        "Seitarou Tanabata",
-        "Midori Takamine"
-      ],
-      "id": "5f257520-61ad-4dfc-ae7e-16c6d9ee2244",
-      "player_a": "767054445724827718",
-      "player_b": "1390103695236141097",
-      "started_at": 1786070863.5778134,
-      "channel_id": 1531192700500574328
-    },
     "4da48f83-c589-4fc5-873c-f59cdb87e8b7": {
       "type": "claim_rarity4",
       "target": 10,
@@ -267,7 +235,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 57,
+      "progress": 58,
       "id": "c9a42659-c2ba-4106-8b76-0025878a88fd",
       "player_a": "1152969942820466819",
       "player_b": "851453831350714388",
@@ -289,7 +257,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 44,
+      "progress": 45,
       "id": "b833288c-0a48-4d41-9138-72095de51621",
       "player_a": "1352235126553313360",
       "player_b": "1056864800472313897",
@@ -322,7 +290,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 35,
+      "progress": 36,
       "id": "1813526a-6af8-49db-aa68-32c60e589e58",
       "player_a": "885453562631553024",
       "player_b": "756814026968793109",
@@ -377,7 +345,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 52,
+      "progress": 53,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -463,7 +431,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 26,
+      "progress": 27,
       "id": "f701abe5-90b0-4272-9f4a-bc2e08222029",
       "player_a": "782414692101521428",
       "player_b": "1433888427547295918",
@@ -530,7 +498,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 3,
+      "progress": 4,
       "id": "51ee0532-ba89-40d6-a52f-53b0536c91a7",
       "player_a": "1425782801193631754",
       "player_b": "1035656286039191692",
@@ -603,7 +571,8 @@
         "Genshin Impact",
         "Mo Dao Zu Shi",
         "Pink Bitch Club",
-        "The Fragrant Flower Blooms with Dignity"
+        "The Fragrant Flower Blooms with Dignity",
+        "Diabolik Lovers"
       ],
       "id": "cde914ed-b600-4fe8-b8d5-3876b173c3d6",
       "player_a": "856393524240711681",
@@ -621,6 +590,31 @@
       "player_b": "1192955009327964180",
       "started_at": 1786101361.4513817,
       "channel_id": 1534617213011628203
+    },
+    "1069bbbe-37d0-431f-b067-87ac4799edf3": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "The Quintessential Quintuplets"
+      ],
+      "id": "1069bbbe-37d0-431f-b067-87ac4799edf3",
+      "player_a": "1224818851464613952",
+      "player_b": "1027686610260738118",
+      "started_at": 1786105442.247672,
+      "channel_id": 1532589830725435392
+    },
+    "c1108a90-2fcd-4b8b-a97b-b2ed6cf26b6b": {
+      "type": "claim_rarity4",
+      "target": 10,
+      "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
+      "progress": 0,
+      "id": "c1108a90-2fcd-4b8b-a97b-b2ed6cf26b6b",
+      "player_a": "1517189515729571875",
+      "player_b": "1518842132184563743",
+      "started_at": 1786105496.5093093,
+      "channel_id": 1529858740835061780
     }
   },
   "weekly": {
@@ -1367,6 +1361,18 @@
         "timestamp": 1786104425.2540643,
         "partner_id": "653062007032905771"
       }
+    ],
+    "767054445724827718": [
+      {
+        "timestamp": 1786105420.1549113,
+        "partner_id": "1390103695236141097"
+      }
+    ],
+    "1390103695236141097": [
+      {
+        "timestamp": 1786105420.1549113,
+        "partner_id": "767054445724827718"
+      }
     ]
   },
   "cooldowns": {
@@ -1493,7 +1499,9 @@
     "821574312216756224": 1786104262.1852767,
     "870354420049776710": 1786104262.1852767,
     "653062007032905771": 1786104425.2540643,
-    "1271546566334873630": 1786104425.2540643
+    "1271546566334873630": 1786104425.2540643,
+    "767054445724827718": 1786105420.1549113,
+    "1390103695236141097": 1786105420.1549113
   },
   "bonus": {
     "777925664358531102": {
@@ -1581,7 +1589,7 @@
       "claim": 0
     },
     "1192201166893895725": {
-      "drop": 1,
+      "drop": 0,
       "claim": 1
     },
     "1398751184373678231": {
@@ -2073,7 +2081,7 @@
       "claim": 0
     },
     "1390103695236141097": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1501259751156355257": {
@@ -2417,7 +2425,7 @@
       "claim": 0
     },
     "771340815289024512": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "819996378092666922": {
@@ -3873,7 +3881,7 @@
       "claim": 0
     },
     "767054445724827718": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1194747459101007873": {
@@ -3933,7 +3941,7 @@
       "claim": 0
     },
     "653062007032905771": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "1507175188490616944": {
@@ -5101,6 +5109,14 @@
       "claim": 0
     },
     "694291848834842644": {
+      "drop": 0,
+      "claim": 0
+    },
+    "823151930414333963": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1306266817291092029": {
       "drop": 0,
       "claim": 0
     }
