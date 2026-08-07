@@ -235,7 +235,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 47,
+      "progress": 48,
       "id": "b833288c-0a48-4d41-9138-72095de51621",
       "player_a": "1352235126553313360",
       "player_b": "1056864800472313897",
@@ -268,7 +268,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 37,
+      "progress": 38,
       "id": "1813526a-6af8-49db-aa68-32c60e589e58",
       "player_a": "885453562631553024",
       "player_b": "756814026968793109",
@@ -323,7 +323,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 57,
+      "progress": 58,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -334,7 +334,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 58,
+      "progress": 59,
       "id": "73404e39-d26d-43e1-9f76-7934e58c61d7",
       "player_a": "909713880694005771",
       "player_b": "897040507539189780",
@@ -452,33 +452,6 @@
       "started_at": 1786097260.4678462,
       "channel_id": 1533302411375153182
     },
-    "9a40facc-2e99-4743-acae-b99b86fc711f": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Duet Night Abyss",
-        "Red Thread Quest",
-        "MILGRAM",
-        "Fragaria Memories",
-        "Alien Stage",
-        "Zenless Zone Zero",
-        "Hetalia",
-        "Re: Zero - Starting Life in Another World",
-        "Beastars",
-        "Chainsaw Man",
-        "Seraph of the End",
-        "Reverse: 1999",
-        "Genshin Impact",
-        "PSYCHO-PASS"
-      ],
-      "id": "9a40facc-2e99-4743-acae-b99b86fc711f",
-      "player_a": "1070404986057531452",
-      "player_b": "751661073727225887",
-      "started_at": 1786099023.4803634,
-      "channel_id": 1527462974124589166
-    },
     "7f197f8e-28f3-4a67-9515-691698e00727": {
       "type": "claim_count",
       "target": 60,
@@ -494,7 +467,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 10,
+      "progress": 11,
       "id": "a73a86f2-b469-4297-b13b-3e3060af7d17",
       "player_a": "1079314071461044274",
       "player_b": "745734578005737623",
@@ -1361,6 +1334,18 @@
         "timestamp": 1786106229.005127,
         "partner_id": "856393524240711681"
       }
+    ],
+    "1070404986057531452": [
+      {
+        "timestamp": 1786107454.5158646,
+        "partner_id": "751661073727225887"
+      }
+    ],
+    "751661073727225887": [
+      {
+        "timestamp": 1786107454.5158646,
+        "partner_id": "1070404986057531452"
+      }
     ]
   },
   "cooldowns": {
@@ -1497,7 +1482,9 @@
     "1152969942820466819": 1786105909.419206,
     "851453831350714388": 1786105909.419206,
     "856393524240711681": 1786106229.005127,
-    "725183995893121095": 1786106229.005127
+    "725183995893121095": 1786106229.005127,
+    "1070404986057531452": 1786107454.5158646,
+    "751661073727225887": 1786107454.5158646
   },
   "bonus": {
     "777925664358531102": {
@@ -1709,8 +1696,8 @@
       "claim": 0
     },
     "751661073727225887": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1089542400134885488": {
       "drop": 0,
