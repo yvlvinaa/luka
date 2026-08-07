@@ -59,7 +59,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 5,
+      "progress": 6,
       "id": "c1d27a17-8711-4bea-a881-15602097d9ee",
       "player_a": "886247125292306432",
       "player_b": "754066769320214599",
@@ -422,7 +422,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 30,
+      "progress": 31,
       "id": "7f197f8e-28f3-4a67-9515-691698e00727",
       "player_a": "1251051306177527878",
       "player_b": "975180513394438165",
@@ -433,7 +433,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 17,
+      "progress": 18,
       "id": "a73a86f2-b469-4297-b13b-3e3060af7d17",
       "player_a": "1079314071461044274",
       "player_b": "745734578005737623",
@@ -542,7 +542,9 @@
         "Frankenstein",
         "Cheng Xiaoshi",
         "Kagamine Rin",
-        "Edward Hart"
+        "Edward Hart",
+        "Shitou Zen",
+        "Angel Devil"
       ],
       "id": "1bd017a2-5b7e-4520-8d6c-9f747cbedf82",
       "player_a": "1388187436894523645",
@@ -573,13 +575,29 @@
         "Honkai: Star Rail",
         "CLANNAD",
         "Got Dropped into a Ghost Story, Still Gotta Work",
-        "Honkai Impact 3rd"
+        "Honkai Impact 3rd",
+        "Pita-Ten"
       ],
       "id": "317f5bc9-1e1f-47ba-8efa-5fae6bdf2ce9",
       "player_a": "1118324764012970164",
       "player_b": "1135011169485197314",
       "started_at": 1786112614.2310987,
       "channel_id": 1532172859080835242
+    },
+    "71ba7db2-eeb0-411f-9d7e-a0ebc1ee7ed6": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "Genshin Impact",
+        "Free! Iwatobi Swim Club"
+      ],
+      "id": "71ba7db2-eeb0-411f-9d7e-a0ebc1ee7ed6",
+      "player_a": "1498786280169935062",
+      "player_b": "753042849666302022",
+      "started_at": 1786115651.662871,
+      "channel_id": 1531193055296618627
     }
   },
   "weekly": {
@@ -5288,6 +5306,14 @@
       "claim": 0
     },
     "904146001810575430": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1353715816914227262": {
+      "drop": 0,
+      "claim": 0
+    },
+    "755155751470629290": {
       "drop": 0,
       "claim": 0
     }
