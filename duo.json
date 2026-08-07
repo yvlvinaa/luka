@@ -15,7 +15,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 45,
+      "progress": 46,
       "id": "78043429-2997-432c-a442-a07eedb0c0fa",
       "player_a": "1132475401701171262",
       "player_b": "1274155690331734175",
@@ -37,7 +37,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 42,
+      "progress": 43,
       "id": "2145b6b6-ad5e-4c03-8023-c303eeb40472",
       "player_a": "590230897089839123",
       "player_b": "772144591251177503",
@@ -114,7 +114,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 47,
+      "progress": 48,
       "id": "5fec59f7-58f2-4d7d-a2f1-c23596c05b68",
       "player_a": "716071317987786814",
       "player_b": "466368374490923008",
@@ -213,7 +213,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 57,
+      "progress": 58,
       "id": "b2614d2f-6a46-48e3-a3ca-51fb5c4e4616",
       "player_a": "1489161053798535168",
       "player_b": "1091891524935098378",
@@ -360,7 +360,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 48,
+      "progress": 49,
       "id": "61c4a873-1ce2-42b7-a75a-356cb2bc1bf4",
       "player_a": "748272021120483439",
       "player_b": "953969404884971521",
@@ -446,7 +446,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 20,
+      "progress": 21,
       "id": "f96cdea1-2cee-429e-b669-911991d71c6c",
       "player_a": "998047189240655942",
       "player_b": "595084117998043137",
@@ -457,7 +457,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 26,
+      "progress": 27,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -468,7 +468,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 28,
+      "progress": 30,
       "id": "73404e39-d26d-43e1-9f76-7934e58c61d7",
       "player_a": "909713880694005771",
       "player_b": "897040507539189780",
@@ -525,7 +525,9 @@
         "Hook",
         "Christina",
         "Lee Sam-seong",
-        "Kang Jihwan & Han Yuseong"
+        "Kang Jihwan & Han Yuseong",
+        "Hirofumi Yoshida",
+        "Jolyne Cujoh"
       ],
       "id": "a9aa1695-00ed-418b-aa5d-34861f87d9e4",
       "player_a": "1210501746477244438",
@@ -543,7 +545,8 @@
         "Otto Suwen",
         "Daffodill",
         "Iroi",
-        "Trigger"
+        "Trigger",
+        "Aston Machan"
       ],
       "id": "5f52fd30-228b-4a0f-a777-ddea299b43e6",
       "player_a": "1454914344792883305",
@@ -567,12 +570,39 @@
       "target": 15,
       "label": "Claim cards from 15 different series together",
       "progress": 0,
-      "series_seen": [],
+      "series_seen": [
+        "Mekakucity Actors"
+      ],
       "id": "d29f38d8-96b5-4028-9664-69b8fe21f9f8",
       "player_a": "1028538307975589939",
       "player_b": "1228266277835898900",
       "started_at": 1786093930.5047917,
       "channel_id": 1530510529154777168
+    },
+    "0feff1c6-1ff6-452c-b7ff-550098ccab42": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "Zenless Zone Zero"
+      ],
+      "id": "0feff1c6-1ff6-452c-b7ff-550098ccab42",
+      "player_a": "821574312216756224",
+      "player_b": "870354420049776710",
+      "started_at": 1786094161.4753306,
+      "channel_id": 1532009994810036434
+    },
+    "0bb3b46c-42ce-494c-a5f1-90671ae21d8d": {
+      "type": "claim_rarity4",
+      "target": 10,
+      "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
+      "progress": 0,
+      "id": "0bb3b46c-42ce-494c-a5f1-90671ae21d8d",
+      "player_a": "1228978576028729384",
+      "player_b": "1216834356396560406",
+      "started_at": 1786094294.344646,
+      "channel_id": 1531981710554693683
     }
   },
   "weekly": {
@@ -1472,7 +1502,7 @@
     },
     "192651968211058688": {
       "drop": 0,
-      "claim": 3
+      "claim": 0
     },
     "1353808862452519045": {
       "drop": 0,
@@ -4695,6 +4725,14 @@
       "claim": 0
     },
     "1092199688154910791": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1001201494344876133": {
+      "drop": 0,
+      "claim": 0
+    },
+    "887239060614185020": {
       "drop": 0,
       "claim": 0
     }
