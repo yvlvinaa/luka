@@ -92,7 +92,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 52,
+      "progress": 53,
       "id": "16d9eff8-3342-4aed-994f-7e763c773390",
       "player_a": "968786127081328660",
       "player_b": "764446760004354048",
@@ -213,7 +213,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 56,
+      "progress": 57,
       "id": "530c3b8c-b61c-4ebb-8adc-e0e6c69a1210",
       "player_a": "1299833889166065743",
       "player_b": "433218038385344532",
@@ -235,7 +235,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 45,
+      "progress": 46,
       "id": "b833288c-0a48-4d41-9138-72095de51621",
       "player_a": "1352235126553313360",
       "player_b": "1056864800472313897",
@@ -268,7 +268,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 36,
+      "progress": 37,
       "id": "1813526a-6af8-49db-aa68-32c60e589e58",
       "player_a": "885453562631553024",
       "player_b": "756814026968793109",
@@ -334,7 +334,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 56,
+      "progress": 57,
       "id": "73404e39-d26d-43e1-9f76-7934e58c61d7",
       "player_a": "909713880694005771",
       "player_b": "897040507539189780",
@@ -353,7 +353,8 @@
         "Neverness to Everness",
         "Love And Deepspace",
         "Night of Shadows",
-        "Omniscient Reader\u2019s Viewpoint"
+        "Omniscient Reader\u2019s Viewpoint",
+        "Danganronpa"
       ],
       "id": "213053d2-9460-4bef-a2b5-82327907fbaa",
       "player_a": "938827962571182123",
@@ -500,38 +501,11 @@
       "started_at": 1786099969.0972283,
       "channel_id": 1529510809816797304
     },
-    "cde914ed-b600-4fe8-b8d5-3876b173c3d6": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Even the Introverted Gals Wanna Get Out There!",
-        "Silver Palace",
-        "Link Click",
-        "ZENO",
-        "Deltarune",
-        "Bungo Stray Dogs",
-        "Gokurakugai",
-        "Horimiya",
-        "Genshin Impact",
-        "Mo Dao Zu Shi",
-        "Pink Bitch Club",
-        "The Fragrant Flower Blooms with Dignity",
-        "Diabolik Lovers",
-        "Gachiakuta"
-      ],
-      "id": "cde914ed-b600-4fe8-b8d5-3876b173c3d6",
-      "player_a": "856393524240711681",
-      "player_b": "725183995893121095",
-      "started_at": 1786099984.290867,
-      "channel_id": 1530510529154777168
-    },
     "5fb8df1b-db0e-4da3-b000-d9afc64ff993": {
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 5,
+      "progress": 6,
       "id": "5fb8df1b-db0e-4da3-b000-d9afc64ff993",
       "player_a": "787241864892907530",
       "player_b": "1192955009327964180",
@@ -545,7 +519,8 @@
       "progress": 0,
       "series_seen": [
         "The Quintessential Quintuplets",
-        "DC"
+        "DC",
+        "My Hero Academia"
       ],
       "id": "1069bbbe-37d0-431f-b067-87ac4799edf3",
       "player_a": "1224818851464613952",
@@ -563,6 +538,20 @@
       "player_b": "1518842132184563743",
       "started_at": 1786105496.5093093,
       "channel_id": 1529858740835061780
+    },
+    "fae41e22-cf61-4071-ba6d-6ef0eb984f89": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "Spongebob Squarepants"
+      ],
+      "id": "fae41e22-cf61-4071-ba6d-6ef0eb984f89",
+      "player_a": "1279169282126643292",
+      "player_b": "1271018988486524961",
+      "started_at": 1786106385.1683013,
+      "channel_id": 1534392062454010028
     }
   },
   "weekly": {
@@ -1357,6 +1346,18 @@
         "timestamp": 1786105909.419206,
         "partner_id": "1152969942820466819"
       }
+    ],
+    "856393524240711681": [
+      {
+        "timestamp": 1786106229.005127,
+        "partner_id": "725183995893121095"
+      }
+    ],
+    "725183995893121095": [
+      {
+        "timestamp": 1786106229.005127,
+        "partner_id": "856393524240711681"
+      }
     ]
   },
   "cooldowns": {
@@ -1491,7 +1492,9 @@
     "716071317987786814": 1786105874.4636772,
     "466368374490923008": 1786105874.4636772,
     "1152969942820466819": 1786105909.419206,
-    "851453831350714388": 1786105909.419206
+    "851453831350714388": 1786105909.419206,
+    "856393524240711681": 1786106229.005127,
+    "725183995893121095": 1786106229.005127
   },
   "bonus": {
     "777925664358531102": {
@@ -2028,7 +2031,7 @@
     },
     "924416537387991040": {
       "drop": 0,
-      "claim": 3
+      "claim": 2
     },
     "806751544418631690": {
       "drop": 0,
@@ -2887,8 +2890,8 @@
       "claim": 0
     },
     "725183995893121095": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1155911168058200104": {
       "drop": 0,
@@ -4443,7 +4446,7 @@
       "claim": 0
     },
     "1411686981468946664": {
-      "drop": 1,
+      "drop": 0,
       "claim": 1
     },
     "1382961822310731869": {
