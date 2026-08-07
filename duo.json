@@ -15,7 +15,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 44,
+      "progress": 45,
       "id": "78043429-2997-432c-a442-a07eedb0c0fa",
       "player_a": "1132475401701171262",
       "player_b": "1274155690331734175",
@@ -213,7 +213,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 56,
+      "progress": 57,
       "id": "b2614d2f-6a46-48e3-a3ca-51fb5c4e4616",
       "player_a": "1489161053798535168",
       "player_b": "1091891524935098378",
@@ -316,7 +316,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 32,
+      "progress": 33,
       "id": "b833288c-0a48-4d41-9138-72095de51621",
       "player_a": "1352235126553313360",
       "player_b": "1056864800472313897",
@@ -338,7 +338,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 40,
+      "progress": 41,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -349,7 +349,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 17,
+      "progress": 18,
       "id": "2606fb8b-c465-4cf9-8cd5-507666f52dc5",
       "player_a": "1466515237976150272",
       "player_b": "1310677632769327257",
@@ -360,7 +360,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 47,
+      "progress": 48,
       "id": "61c4a873-1ce2-42b7-a75a-356cb2bc1bf4",
       "player_a": "748272021120483439",
       "player_b": "953969404884971521",
@@ -468,7 +468,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 26,
+      "progress": 28,
       "id": "73404e39-d26d-43e1-9f76-7934e58c61d7",
       "player_a": "909713880694005771",
       "player_b": "897040507539189780",
@@ -503,32 +503,6 @@
       "started_at": 1786088690.5404437,
       "channel_id": 1533771086783840317
     },
-    "0be61a70-317a-4eeb-b6ed-f43ff62898fc": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Lobotomy Corporation",
-        "Jojo\u2019s Bizarre Adventure",
-        "Marvel",
-        "Dr. Stone",
-        "Limbus Company",
-        "One Piece",
-        "Persona",
-        "Path To Nowhere",
-        "I\u2019m a Young God, Won\u2019t You Raise Me",
-        "The Summer Hikaru Died",
-        "Kuroko's Basketball",
-        "Call of the Night",
-        "Genshin Impact"
-      ],
-      "id": "0be61a70-317a-4eeb-b6ed-f43ff62898fc",
-      "player_a": "1513671121067573281",
-      "player_b": "857177938682970132",
-      "started_at": 1786090251.950104,
-      "channel_id": 1533646738718593154
-    },
     "a39a9cb4-01c4-4c3b-894f-88bec700a754": {
       "type": "claim_rarity4",
       "target": 10,
@@ -550,7 +524,8 @@
         "Zhu Yuan",
         "Hook",
         "Christina",
-        "Lee Sam-seong"
+        "Lee Sam-seong",
+        "Kang Jihwan & Han Yuseong"
       ],
       "id": "a9aa1695-00ed-418b-aa5d-34861f87d9e4",
       "player_a": "1210501746477244438",
@@ -567,7 +542,8 @@
         "Joel Gear",
         "Otto Suwen",
         "Daffodill",
-        "Iroi"
+        "Iroi",
+        "Trigger"
       ],
       "id": "5f52fd30-228b-4a0f-a777-ddea299b43e6",
       "player_a": "1454914344792883305",
@@ -1187,6 +1163,18 @@
         "timestamp": 1786092689.7917686,
         "partner_id": "979524252124471337"
       }
+    ],
+    "1513671121067573281": [
+      {
+        "timestamp": 1786093694.4133294,
+        "partner_id": "857177938682970132"
+      }
+    ],
+    "857177938682970132": [
+      {
+        "timestamp": 1786093694.4133294,
+        "partner_id": "1513671121067573281"
+      }
     ]
   },
   "cooldowns": {
@@ -1289,7 +1277,9 @@
     "1508332965489279146": 1786088926.4078603,
     "763350530210267138": 1786088926.4078603,
     "979524252124471337": 1786092689.7917686,
-    "751956717893451776": 1786092689.7917686
+    "751956717893451776": 1786092689.7917686,
+    "1513671121067573281": 1786093694.4133294,
+    "857177938682970132": 1786093694.4133294
   },
   "bonus": {
     "777925664358531102": {
@@ -1733,8 +1723,8 @@
       "claim": 0
     },
     "1028994831466369055": {
-      "drop": 5,
-      "claim": 5
+      "drop": 0,
+      "claim": 0
     },
     "1278177665450246192": {
       "drop": 0,
@@ -1745,8 +1735,8 @@
       "claim": 0
     },
     "857177938682970132": {
-      "drop": 3,
-      "claim": 5
+      "drop": 1,
+      "claim": 1
     },
     "1378462940096761856": {
       "drop": 0,
@@ -1821,8 +1811,8 @@
       "claim": 0
     },
     "955119825670246400": {
-      "drop": 5,
-      "claim": 5
+      "drop": 1,
+      "claim": 1
     },
     "924416537387991040": {
       "drop": 0,
@@ -4537,7 +4527,7 @@
       "claim": 0
     },
     "1513671121067573281": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "244837348670439434": {
@@ -4673,6 +4663,14 @@
       "claim": 0
     },
     "633087806042013696": {
+      "drop": 0,
+      "claim": 0
+    },
+    "604257673713549341": {
+      "drop": 0,
+      "claim": 0
+    },
+    "897070243296452619": {
       "drop": 0,
       "claim": 0
     }
