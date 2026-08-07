@@ -11,22 +11,11 @@
       "started_at": 1786066094.2926638,
       "channel_id": 1531219450181980210
     },
-    "c1990ac9-3b24-4b10-a10c-8b5c1a028814": {
-      "type": "claim_count",
-      "target": 60,
-      "label": "Claim 60 cards together",
-      "progress": 59,
-      "id": "c1990ac9-3b24-4b10-a10c-8b5c1a028814",
-      "player_a": "550577262173487104",
-      "player_b": "673599163023360036",
-      "started_at": 1786066139.2785223,
-      "channel_id": 1531181038607270038
-    },
     "69860484-2ab5-4e8d-9699-5af4e5b4adcd": {
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 51,
       "id": "69860484-2ab5-4e8d-9699-5af4e5b4adcd",
       "player_a": "1487041378918858924",
       "player_b": "1468648929783709768",
@@ -37,7 +26,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 37,
+      "progress": 38,
       "id": "78043429-2997-432c-a442-a07eedb0c0fa",
       "player_a": "1132475401701171262",
       "player_b": "1274155690331734175",
@@ -125,7 +114,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 3,
+      "progress": 4,
       "id": "6380c6a7-8151-4656-8592-e9d7252893f4",
       "player_a": "913983867269034014",
       "player_b": "1400577424260862013",
@@ -136,7 +125,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 55,
+      "progress": 56,
       "id": "70c9647b-c9f4-433b-99c0-6d7ada91661a",
       "player_a": "606063258226655235",
       "player_b": "863797671818952754",
@@ -147,7 +136,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 49,
+      "progress": 50,
       "id": "40a1bb26-de0d-41ed-a9df-eb0f4ac3f2ec",
       "player_a": "909551241967861770",
       "player_b": "1232648410662834230",
@@ -235,7 +224,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 54,
+      "progress": 56,
       "id": "ae9bf169-00a8-4000-b108-02828a32b022",
       "player_a": "869612237692743751",
       "player_b": "953472774591111248",
@@ -375,7 +364,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 33,
+      "progress": 34,
       "id": "c9a42659-c2ba-4106-8b76-0025878a88fd",
       "player_a": "1152969942820466819",
       "player_b": "851453831350714388",
@@ -397,7 +386,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 16,
+      "progress": 17,
       "id": "b833288c-0a48-4d41-9138-72095de51621",
       "player_a": "1352235126553313360",
       "player_b": "1056864800472313897",
@@ -448,7 +437,8 @@
         "Cha Eui-jae",
         "Han Go-yo",
         "Nagasaki Soyo",
-        "Durin"
+        "Durin",
+        "Rinne Amagi"
       ],
       "id": "5b9444df-8575-450e-aaf6-c82c89551b6b",
       "player_a": "900306697850064936",
@@ -596,7 +586,8 @@
         "Hua Cheng",
         "Yo Hiori",
         "Baek Saheon",
-        "Mo Ran"
+        "Mo Ran",
+        "Hoshimi Miyabi"
       ],
       "id": "0c381f16-3d76-4392-b9fe-867c797fd2df",
       "player_a": "735119062585049229",
@@ -614,6 +605,46 @@
       "player_b": "722139521864433717",
       "started_at": 1786083008.0247207,
       "channel_id": 1535127237001486376
+    },
+    "f96cdea1-2cee-429e-b669-911991d71c6c": {
+      "type": "claim_count",
+      "target": 60,
+      "label": "Claim 60 cards together",
+      "progress": 2,
+      "id": "f96cdea1-2cee-429e-b669-911991d71c6c",
+      "player_a": "998047189240655942",
+      "player_b": "595084117998043137",
+      "started_at": 1786083226.2546594,
+      "channel_id": 1527166234150305913
+    },
+    "a7b7a4d9-0929-4ab4-a155-098d0364f192": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "Seraph of the End",
+        "NieR: Automata"
+      ],
+      "id": "a7b7a4d9-0929-4ab4-a155-098d0364f192",
+      "player_a": "542089282135785476",
+      "player_b": "793963981270155284",
+      "started_at": 1786083227.293069,
+      "channel_id": 1531181038607270038
+    },
+    "cb728562-7873-48ee-86e0-74acd8bbe49b": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Marcille Donato"
+      ],
+      "id": "cb728562-7873-48ee-86e0-74acd8bbe49b",
+      "player_a": "1508332965489279146",
+      "player_b": "763350530210267138",
+      "started_at": 1786083273.8174741,
+      "channel_id": 1532111145840934953
     }
   },
   "weekly": {
@@ -1072,6 +1103,18 @@
         "timestamp": 1786082840.189979,
         "partner_id": "475789322478551040"
       }
+    ],
+    "550577262173487104": [
+      {
+        "timestamp": 1786083162.331794,
+        "partner_id": "673599163023360036"
+      }
+    ],
+    "673599163023360036": [
+      {
+        "timestamp": 1786083162.331794,
+        "partner_id": "550577262173487104"
+      }
     ]
   },
   "cooldowns": {
@@ -1150,7 +1193,9 @@
     "583107073622016022": 1786081733.0543668,
     "658879787577901068": 1786081733.0543668,
     "475789322478551040": 1786082840.189979,
-    "1121901165865611264": 1786082840.189979
+    "1121901165865611264": 1786082840.189979,
+    "550577262173487104": 1786083162.331794,
+    "673599163023360036": 1786083162.331794
   },
   "bonus": {
     "777925664358531102": {
@@ -1211,7 +1256,7 @@
     },
     "673599163023360036": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "1312930449068392449": {
       "drop": 0,
@@ -1283,7 +1328,7 @@
     },
     "550577262173487104": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "882300738779357235": {
       "drop": 0,
