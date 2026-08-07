@@ -392,7 +392,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 32,
+      "progress": 34,
       "id": "7f197f8e-28f3-4a67-9515-691698e00727",
       "player_a": "1251051306177527878",
       "player_b": "975180513394438165",
@@ -544,33 +544,6 @@
       "player_b": "1259422786661912648",
       "started_at": 1786112214.9716065,
       "channel_id": 1529241749778727022
-    },
-    "317f5bc9-1e1f-47ba-8efa-5fae6bdf2ce9": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Genshin Impact",
-        "Hell\u2019s Paradise",
-        "Kimetsu no Yaiba",
-        "Honkai: Star Rail",
-        "CLANNAD",
-        "Got Dropped into a Ghost Story, Still Gotta Work",
-        "Honkai Impact 3rd",
-        "Pita-Ten",
-        "Nijisanji",
-        "The Quintessential Quintuplets",
-        "CookieRun Series",
-        "Wuthering Waves",
-        "SK8 THE INFINITY",
-        "Special Civil Servant"
-      ],
-      "id": "317f5bc9-1e1f-47ba-8efa-5fae6bdf2ce9",
-      "player_a": "1118324764012970164",
-      "player_b": "1135011169485197314",
-      "started_at": 1786112614.2310987,
-      "channel_id": 1532172859080835242
     },
     "71ba7db2-eeb0-411f-9d7e-a0ebc1ee7ed6": {
       "type": "claim_series",
@@ -1469,6 +1442,18 @@
         "timestamp": 1786117015.9174798,
         "partner_id": "1261275450135543822"
       }
+    ],
+    "1118324764012970164": [
+      {
+        "timestamp": 1786118909.0202992,
+        "partner_id": "1135011169485197314"
+      }
+    ],
+    "1135011169485197314": [
+      {
+        "timestamp": 1786118909.0202992,
+        "partner_id": "1118324764012970164"
+      }
     ]
   },
   "cooldowns": {
@@ -1617,7 +1602,9 @@
     "968786127081328660": 1786110918.1418307,
     "764446760004354048": 1786110918.1418307,
     "1261275450135543822": 1786117015.9174798,
-    "1358228187691225088": 1786117015.9174798
+    "1358228187691225088": 1786117015.9174798,
+    "1118324764012970164": 1786118909.0202992,
+    "1135011169485197314": 1786118909.0202992
   },
   "bonus": {
     "777925664358531102": {
@@ -1993,7 +1980,7 @@
       "claim": 0
     },
     "1256569950341169155": {
-      "drop": 1,
+      "drop": 0,
       "claim": 1
     },
     "1115364773039702116": {
@@ -2305,8 +2292,8 @@
       "claim": 0
     },
     "1135011169485197314": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "755211531674845235": {
       "drop": 0,
@@ -4157,8 +4144,8 @@
       "claim": 0
     },
     "1118324764012970164": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "919658842701307955": {
       "drop": 0,
