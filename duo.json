@@ -37,7 +37,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 35,
+      "progress": 36,
       "id": "2145b6b6-ad5e-4c03-8023-c303eeb40472",
       "player_a": "590230897089839123",
       "player_b": "772144591251177503",
@@ -114,7 +114,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 36,
+      "progress": 37,
       "id": "5fec59f7-58f2-4d7d-a2f1-c23596c05b68",
       "player_a": "716071317987786814",
       "player_b": "466368374490923008",
@@ -213,7 +213,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 49,
+      "progress": 50,
       "id": "b2614d2f-6a46-48e3-a3ca-51fb5c4e4616",
       "player_a": "1489161053798535168",
       "player_b": "1091891524935098378",
@@ -389,7 +389,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 40,
+      "progress": 41,
       "id": "61c4a873-1ce2-42b7-a75a-356cb2bc1bf4",
       "player_a": "748272021120483439",
       "player_b": "953969404884971521",
@@ -506,33 +506,6 @@
       "started_at": 1786083226.2546594,
       "channel_id": 1527166234150305913
     },
-    "a7b7a4d9-0929-4ab4-a155-098d0364f192": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Seraph of the End",
-        "NieR: Automata",
-        "Witch Hat Atelier",
-        "NU: Carnival",
-        "Genshin Impact",
-        "Ensemble Stars!",
-        "The Case Study of Vanitas",
-        "Bungo Stray Dogs",
-        "My Hero Academia",
-        "Heaven Official\u2019s Blessing",
-        "Honkai: Star Rail",
-        "Debut or Die",
-        "Global Examination",
-        "Utaite"
-      ],
-      "id": "a7b7a4d9-0929-4ab4-a155-098d0364f192",
-      "player_a": "542089282135785476",
-      "player_b": "793963981270155284",
-      "started_at": 1786083227.293069,
-      "channel_id": 1531181038607270038
-    },
     "cb728562-7873-48ee-86e0-74acd8bbe49b": {
       "type": "claim_characters",
       "target": 20,
@@ -554,7 +527,9 @@
         "Hwang Mok-yeon",
         "Hia",
         "Seth Lowell",
-        "Ivan"
+        "Ivan",
+        "Acheron",
+        "Mika Shimotsuki"
       ],
       "id": "cb728562-7873-48ee-86e0-74acd8bbe49b",
       "player_a": "1508332965489279146",
@@ -566,7 +541,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 15,
+      "progress": 16,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -1152,6 +1127,18 @@
         "timestamp": 1786087300.285241,
         "partner_id": "1487041378918858924"
       }
+    ],
+    "542089282135785476": [
+      {
+        "timestamp": 1786088412.641695,
+        "partner_id": "793963981270155284"
+      }
+    ],
+    "793963981270155284": [
+      {
+        "timestamp": 1786088412.641695,
+        "partner_id": "542089282135785476"
+      }
     ]
   },
   "cooldowns": {
@@ -1246,7 +1233,9 @@
     "909551241967861770": 1786086351.6804554,
     "1232648410662834230": 1786086351.6804554,
     "1487041378918858924": 1786087300.285241,
-    "1468648929783709768": 1786087300.285241
+    "1468648929783709768": 1786087300.285241,
+    "542089282135785476": 1786088412.641695,
+    "793963981270155284": 1786088412.641695
   },
   "bonus": {
     "777925664358531102": {
@@ -1314,8 +1303,8 @@
       "claim": 0
     },
     "793963981270155284": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "424002528774979594": {
       "drop": 1,
@@ -1514,8 +1503,8 @@
       "claim": 0
     },
     "247066385849647107": {
-      "drop": 4,
-      "claim": 5
+      "drop": 0,
+      "claim": 1
     },
     "784651032084086794": {
       "drop": 0,
@@ -2095,7 +2084,7 @@
     },
     "1266998768851746897": {
       "drop": 0,
-      "claim": 2
+      "claim": 1
     },
     "1042632363475210271": {
       "drop": 0,
@@ -4062,8 +4051,8 @@
       "claim": 0
     },
     "542089282135785476": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1213483241580007484": {
       "drop": 0,
@@ -4470,6 +4459,18 @@
       "claim": 0
     },
     "733669794737422416": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1253140480682623007": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1492950003851854008": {
+      "drop": 0,
+      "claim": 0
+    },
+    "845932352751534090": {
       "drop": 0,
       "claim": 0
     }
