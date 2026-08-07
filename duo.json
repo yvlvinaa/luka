@@ -15,7 +15,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 52,
       "id": "c1990ac9-3b24-4b10-a10c-8b5c1a028814",
       "player_a": "550577262173487104",
       "player_b": "673599163023360036",
@@ -26,7 +26,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 44,
+      "progress": 45,
       "id": "69860484-2ab5-4e8d-9699-5af4e5b4adcd",
       "player_a": "1487041378918858924",
       "player_b": "1468648929783709768",
@@ -136,7 +136,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 47,
+      "progress": 49,
       "id": "70c9647b-c9f4-433b-99c0-6d7ada91661a",
       "player_a": "606063258226655235",
       "player_b": "863797671818952754",
@@ -169,7 +169,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 25,
+      "progress": 26,
       "id": "16d9eff8-3342-4aed-994f-7e763c773390",
       "player_a": "968786127081328660",
       "player_b": "764446760004354048",
@@ -213,7 +213,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 1,
+      "progress": 2,
       "id": "7f06712d-fdc5-4604-8c22-d429e0f7ab93",
       "player_a": "848019779793322004",
       "player_b": "757749271582998698",
@@ -268,7 +268,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 35,
+      "progress": 36,
       "id": "b2614d2f-6a46-48e3-a3ca-51fb5c4e4616",
       "player_a": "1489161053798535168",
       "player_b": "1091891524935098378",
@@ -429,45 +429,14 @@
         "Powder",
         "Aya Oosawa",
         "Floyd Leech",
-        "Sorato Ichimiya"
+        "Sorato Ichimiya",
+        "Shijima Mei"
       ],
       "id": "d67fe7e9-df8f-4560-b58f-a8cf03e72def",
       "player_a": "583107073622016022",
       "player_b": "658879787577901068",
       "started_at": 1786071972.2610893,
       "channel_id": 1527991380650233866
-    },
-    "18257dfe-e562-4020-8cba-858071184189": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Higashikata Josuke",
-        "Kagari Shusei",
-        "Tamsy Caines",
-        "Tomoe",
-        "Black Swan",
-        "Midori",
-        "You Huo & Qin Jiu",
-        "Sunday",
-        "Hitoshi Shinso",
-        "Chiaki Morisawa",
-        "Dante",
-        "Mikado Kasuga & Rihito Nakahara",
-        "Sae Itoshi",
-        "Jonathan Joestar",
-        "Sosuke Yamazaki",
-        "Lee Sunny",
-        "Ochako Uraraka",
-        "Bai Liu",
-        "Protag"
-      ],
-      "id": "18257dfe-e562-4020-8cba-858071184189",
-      "player_a": "1231316819395084340",
-      "player_b": "1064312739150954570",
-      "started_at": 1786072631.0768373,
-      "channel_id": 1531348101422383115
     },
     "958f73c0-46ba-43f9-bf16-84910166ad2d": {
       "type": "claim_rarity4",
@@ -506,7 +475,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 10,
+      "progress": 11,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -592,7 +561,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 5,
+      "progress": 6,
       "id": "1813526a-6af8-49db-aa68-32c60e589e58",
       "player_a": "885453562631553024",
       "player_b": "756814026968793109",
@@ -608,7 +577,8 @@
         "Tears of Themis",
         "SK8 THE INFINITY",
         "Jujutsu Kaisen",
-        "Path To Nowhere"
+        "Path To Nowhere",
+        "My Hero Academia"
       ],
       "id": "87ce0f6f-2d08-45b0-9293-25931516d428",
       "player_a": "894445820613644318",
@@ -1074,6 +1044,18 @@
         "timestamp": 1786080048.7242024,
         "partner_id": "1327627470051999747"
       }
+    ],
+    "1231316819395084340": [
+      {
+        "timestamp": 1786080813.824134,
+        "partner_id": "1064312739150954570"
+      }
+    ],
+    "1064312739150954570": [
+      {
+        "timestamp": 1786080813.824134,
+        "partner_id": "1231316819395084340"
+      }
     ]
   },
   "cooldowns": {
@@ -1146,7 +1128,9 @@
     "1271399006370795542": 1786079714.6368504,
     "1079026770394746902": 1786079714.6368504,
     "1327627470051999747": 1786080048.7242024,
-    "1488887483335971039": 1786080048.7242024
+    "1488887483335971039": 1786080048.7242024,
+    "1231316819395084340": 1786080813.824134,
+    "1064312739150954570": 1786080813.824134
   },
   "bonus": {
     "777925664358531102": {
@@ -1566,8 +1550,8 @@
       "claim": 0
     },
     "1064312739150954570": {
-      "drop": 1,
-      "claim": 0
+      "drop": 2,
+      "claim": 1
     },
     "1487041378918858924": {
       "drop": 0,
@@ -3614,7 +3598,7 @@
       "claim": 0
     },
     "1231316819395084340": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1125010005066784860": {
@@ -4098,6 +4082,34 @@
       "claim": 0
     },
     "1411686981468946664": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1382961822310731869": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1228266277835898900": {
+      "drop": 0,
+      "claim": 0
+    },
+    "972894516694622278": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1515087336306639036": {
+      "drop": 0,
+      "claim": 0
+    },
+    "727051094429007873": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1423323604044742666": {
+      "drop": 0,
+      "claim": 0
+    },
+    "771052194292039681": {
       "drop": 0,
       "claim": 0
     }
