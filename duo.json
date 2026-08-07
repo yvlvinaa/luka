@@ -37,7 +37,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 46,
+      "progress": 47,
       "id": "2145b6b6-ad5e-4c03-8023-c303eeb40472",
       "player_a": "590230897089839123",
       "player_b": "772144591251177503",
@@ -77,17 +77,6 @@
       "started_at": 1786066265.6306798,
       "channel_id": 1531464611558330399
     },
-    "08c21a66-b424-4de0-8200-b335d373d029": {
-      "type": "claim_count",
-      "target": 60,
-      "label": "Claim 60 cards together",
-      "progress": 59,
-      "id": "08c21a66-b424-4de0-8200-b335d373d029",
-      "player_a": "703745509835407402",
-      "player_b": "977162721520918538",
-      "started_at": 1786066268.8353093,
-      "channel_id": 1528174700625268817
-    },
     "94ac5dc4-71f5-4942-b706-7a8ae13594ea": {
       "type": "claim_rarity4",
       "target": 10,
@@ -114,7 +103,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 55,
+      "progress": 56,
       "id": "5fec59f7-58f2-4d7d-a2f1-c23596c05b68",
       "player_a": "716071317987786814",
       "player_b": "466368374490923008",
@@ -286,7 +275,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 51,
+      "progress": 52,
       "id": "c9a42659-c2ba-4106-8b76-0025878a88fd",
       "player_a": "1152969942820466819",
       "player_b": "851453831350714388",
@@ -385,7 +374,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 22,
+      "progress": 23,
       "id": "adfadbba-4f42-49c1-9e3c-5ad6c4e17165",
       "player_a": "1187649058576277571",
       "player_b": "722139521864433717",
@@ -519,7 +508,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 19,
+      "progress": 21,
       "id": "f701abe5-90b0-4272-9f4a-bc2e08222029",
       "player_a": "782414692101521428",
       "player_b": "1433888427547295918",
@@ -565,7 +554,8 @@
         "Sun Jing",
         "James Bonde",
         "Shalom",
-        "All of Love"
+        "All of Love",
+        "Alucard"
       ],
       "id": "7532e2f4-daaa-4a12-a74b-7cd94d8dfbb2",
       "player_a": "1411686981468946664",
@@ -594,7 +584,8 @@
         "Red Thread Quest",
         "MILGRAM",
         "Fragaria Memories",
-        "Alien Stage"
+        "Alien Stage",
+        "Zenless Zone Zero"
       ],
       "id": "9a40facc-2e99-4743-acae-b99b86fc711f",
       "player_a": "1070404986057531452",
@@ -636,7 +627,8 @@
         "ZENO",
         "Deltarune",
         "Bungo Stray Dogs",
-        "Gokurakugai"
+        "Gokurakugai",
+        "Horimiya"
       ],
       "id": "cde914ed-b600-4fe8-b8d5-3876b173c3d6",
       "player_a": "856393524240711681",
@@ -1352,6 +1344,18 @@
         "timestamp": 1786100432.8464258,
         "partner_id": "771340815289024512"
       }
+    ],
+    "703745509835407402": [
+      {
+        "timestamp": 1786102343.3933175,
+        "partner_id": "977162721520918538"
+      }
+    ],
+    "977162721520918538": [
+      {
+        "timestamp": 1786102343.3933175,
+        "partner_id": "703745509835407402"
+      }
     ]
   },
   "cooldowns": {
@@ -1470,7 +1474,9 @@
     "1454914344792883305": 1786100199.1699526,
     "743938831107096637": 1786100199.1699526,
     "771340815289024512": 1786100432.8464258,
-    "717208938382229555": 1786100432.8464258
+    "717208938382229555": 1786100432.8464258,
+    "703745509835407402": 1786102343.3933175,
+    "977162721520918538": 1786102343.3933175
   },
   "bonus": {
     "777925664358531102": {
@@ -1618,7 +1624,7 @@
       "claim": 0
     },
     "977162721520918538": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1520466222666219544": {
@@ -1718,7 +1724,7 @@
       "claim": 0
     },
     "703745509835407402": {
-      "drop": 1,
+      "drop": 2,
       "claim": 0
     },
     "667365610748903445": {
