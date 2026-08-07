@@ -11,17 +11,6 @@
       "started_at": 1786066094.2926638,
       "channel_id": 1531219450181980210
     },
-    "78043429-2997-432c-a442-a07eedb0c0fa": {
-      "type": "claim_count",
-      "target": 60,
-      "label": "Claim 60 cards together",
-      "progress": 59,
-      "id": "78043429-2997-432c-a442-a07eedb0c0fa",
-      "player_a": "1132475401701171262",
-      "player_b": "1274155690331734175",
-      "started_at": 1786066195.1907659,
-      "channel_id": 1528192280350167130
-    },
     "3aac5abd-e768-46b5-9e42-6f838d4970b5": {
       "type": "claim_rarity4",
       "target": 10,
@@ -37,7 +26,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 47,
+      "progress": 48,
       "id": "2145b6b6-ad5e-4c03-8023-c303eeb40472",
       "player_a": "590230897089839123",
       "player_b": "772144591251177503",
@@ -213,7 +202,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 26,
+      "progress": 27,
       "id": "69ecdf98-e772-497e-b841-03e7c9e5f9d9",
       "player_a": "892458964317503580",
       "player_b": "1112195415446655026",
@@ -241,7 +230,8 @@
         "Asa Mitaka",
         "Ruby Kurosawa",
         "Michael Kaiser",
-        "Soul Eater Evans"
+        "Soul Eater Evans",
+        "Yachiyo"
       ],
       "id": "5f257520-61ad-4dfc-ae7e-16c6d9ee2244",
       "player_a": "767054445724827718",
@@ -264,7 +254,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 51,
       "id": "530c3b8c-b61c-4ebb-8adc-e0e6c69a1210",
       "player_a": "1299833889166065743",
       "player_b": "433218038385344532",
@@ -297,7 +287,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 40,
+      "progress": 41,
       "id": "b833288c-0a48-4d41-9138-72095de51621",
       "player_a": "1352235126553313360",
       "player_b": "1056864800472313897",
@@ -319,7 +309,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 55,
+      "progress": 56,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -330,7 +320,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 27,
+      "progress": 28,
       "id": "2606fb8b-c465-4cf9-8cd5-507666f52dc5",
       "player_a": "1466515237976150272",
       "player_b": "1310677632769327257",
@@ -396,7 +386,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 46,
+      "progress": 47,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -407,7 +397,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 51,
       "id": "73404e39-d26d-43e1-9f76-7934e58c61d7",
       "player_a": "909713880694005771",
       "player_b": "897040507539189780",
@@ -528,7 +518,8 @@
         "Haniel",
         "Sebastian Michaelis",
         "Boothill",
-        "Kasumi Mienishi"
+        "Kasumi Mienishi",
+        "Evanescia"
       ],
       "id": "a7774504-2e5b-4580-9fde-2baf2d1f8ff2",
       "player_a": "1261275450135543822",
@@ -608,7 +599,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 6,
+      "progress": 7,
       "id": "a73a86f2-b469-4297-b13b-3e3060af7d17",
       "player_a": "1079314071461044274",
       "player_b": "745734578005737623",
@@ -628,7 +619,8 @@
         "Deltarune",
         "Bungo Stray Dogs",
         "Gokurakugai",
-        "Horimiya"
+        "Horimiya",
+        "Genshin Impact"
       ],
       "id": "cde914ed-b600-4fe8-b8d5-3876b173c3d6",
       "player_a": "856393524240711681",
@@ -1356,6 +1348,18 @@
         "timestamp": 1786102343.3933175,
         "partner_id": "703745509835407402"
       }
+    ],
+    "1132475401701171262": [
+      {
+        "timestamp": 1786102763.4921339,
+        "partner_id": "1274155690331734175"
+      }
+    ],
+    "1274155690331734175": [
+      {
+        "timestamp": 1786102763.4921339,
+        "partner_id": "1132475401701171262"
+      }
     ]
   },
   "cooldowns": {
@@ -1476,7 +1480,9 @@
     "771340815289024512": 1786100432.8464258,
     "717208938382229555": 1786100432.8464258,
     "703745509835407402": 1786102343.3933175,
-    "977162721520918538": 1786102343.3933175
+    "977162721520918538": 1786102343.3933175,
+    "1132475401701171262": 1786102763.4921339,
+    "1274155690331734175": 1786102763.4921339
   },
   "bonus": {
     "777925664358531102": {
@@ -1596,8 +1602,8 @@
       "claim": 0
     },
     "1310963032016425043": {
-      "drop": 4,
-      "claim": 5
+      "drop": 1,
+      "claim": 2
     },
     "998047189240655942": {
       "drop": 0,
@@ -1724,7 +1730,7 @@
       "claim": 0
     },
     "703745509835407402": {
-      "drop": 2,
+      "drop": 1,
       "claim": 0
     },
     "667365610748903445": {
@@ -1756,8 +1762,8 @@
       "claim": 5
     },
     "1274155690331734175": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "764446760004354048": {
       "drop": 0,
@@ -1904,8 +1910,8 @@
       "claim": 0
     },
     "1132475401701171262": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1328464837537304586": {
       "drop": 0,
@@ -4437,7 +4443,7 @@
     },
     "1228266277835898900": {
       "drop": 1,
-      "claim": 1
+      "claim": 0
     },
     "972894516694622278": {
       "drop": 0,
@@ -4724,7 +4730,7 @@
       "claim": 0
     },
     "1513671121067573281": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "244837348670439434": {
