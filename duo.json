@@ -26,7 +26,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 51,
       "id": "2145b6b6-ad5e-4c03-8023-c303eeb40472",
       "player_a": "590230897089839123",
       "player_b": "772144591251177503",
@@ -180,7 +180,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 35,
+      "progress": 36,
       "id": "69ecdf98-e772-497e-b841-03e7c9e5f9d9",
       "player_a": "892458964317503580",
       "player_b": "1112195415446655026",
@@ -235,7 +235,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 38,
+      "progress": 39,
       "id": "2606fb8b-c465-4cf9-8cd5-507666f52dc5",
       "player_a": "1466515237976150272",
       "player_b": "1310677632769327257",
@@ -439,7 +439,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 14,
+      "progress": 15,
       "id": "5fb8df1b-db0e-4da3-b000-d9afc64ff993",
       "player_a": "787241864892907530",
       "player_b": "1192955009327964180",
@@ -456,7 +456,8 @@
         "DC",
         "My Hero Academia",
         "Honkai: Star Rail",
-        "Zenless Zone Zero"
+        "Zenless Zone Zero",
+        "Genshin Impact"
       ],
       "id": "1069bbbe-37d0-431f-b067-87ac4799edf3",
       "player_a": "1224818851464613952",
@@ -524,7 +525,8 @@
       "characters_seen": [
         "Aria",
         "Hawks",
-        "Shishikuno Mogari"
+        "Shishikuno Mogari",
+        "Lamia"
       ],
       "id": "1bd017a2-5b7e-4520-8d6c-9f747cbedf82",
       "player_a": "1388187436894523645",
@@ -542,6 +544,20 @@
       "player_b": "1259422786661912648",
       "started_at": 1786112214.9716065,
       "channel_id": 1529241749778727022
+    },
+    "317f5bc9-1e1f-47ba-8efa-5fae6bdf2ce9": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "Genshin Impact"
+      ],
+      "id": "317f5bc9-1e1f-47ba-8efa-5fae6bdf2ce9",
+      "player_a": "1118324764012970164",
+      "player_b": "1135011169485197314",
+      "started_at": 1786112614.2310987,
+      "channel_id": 1532172859080835242
     }
   },
   "weekly": {
@@ -2082,7 +2098,7 @@
       "claim": 0
     },
     "748272021120483439": {
-      "drop": 1,
+      "drop": 0,
       "claim": 1
     },
     "955119825670246400": {
@@ -4610,7 +4626,7 @@
       "claim": 0
     },
     "1439628725288173759": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "1144299503348891751": {
