@@ -103,7 +103,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 49,
+      "progress": 50,
       "id": "16d9eff8-3342-4aed-994f-7e763c773390",
       "player_a": "968786127081328660",
       "player_b": "764446760004354048",
@@ -255,7 +255,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 53,
+      "progress": 54,
       "id": "530c3b8c-b61c-4ebb-8adc-e0e6c69a1210",
       "player_a": "1299833889166065743",
       "player_b": "433218038385344532",
@@ -288,7 +288,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 42,
+      "progress": 43,
       "id": "b833288c-0a48-4d41-9138-72095de51621",
       "player_a": "1352235126553313360",
       "player_b": "1056864800472313897",
@@ -310,7 +310,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 58,
+      "progress": 59,
       "id": "ada3af21-3d78-484c-806d-c75cd4d9c9ad",
       "player_a": "653062007032905771",
       "player_b": "1271546566334873630",
@@ -458,33 +458,6 @@
       "started_at": 1786092200.9756963,
       "channel_id": 1532452400470687966
     },
-    "0feff1c6-1ff6-452c-b7ff-550098ccab42": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Zenless Zone Zero",
-        "Nijisanji",
-        "Diabolik Lovers",
-        "I\u2019m a Young God, Won\u2019t You Raise Me",
-        "Fake Fact Lips",
-        "Fake Slackers",
-        "Wind Breaker",
-        "Checkmate",
-        "Debut or Die",
-        "Ensemble Stars!",
-        "Vocaloid",
-        "Neverness to Everness",
-        "Code Geass",
-        "Link Click"
-      ],
-      "id": "0feff1c6-1ff6-452c-b7ff-550098ccab42",
-      "player_a": "821574312216756224",
-      "player_b": "870354420049776710",
-      "started_at": 1786094161.4753306,
-      "channel_id": 1532009994810036434
-    },
     "0bb3b46c-42ce-494c-a5f1-90671ae21d8d": {
       "type": "claim_rarity4",
       "target": 10,
@@ -500,7 +473,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 24,
+      "progress": 25,
       "id": "f701abe5-90b0-4272-9f4a-bc2e08222029",
       "player_a": "782414692101521428",
       "player_b": "1433888427547295918",
@@ -522,7 +495,8 @@
         "Boothill",
         "Kasumi Mienishi",
         "Evanescia",
-        "Jotaro Kujo"
+        "Jotaro Kujo",
+        "Yae Miko"
       ],
       "id": "a7774504-2e5b-4580-9fde-2baf2d1f8ff2",
       "player_a": "1261275450135543822",
@@ -550,7 +524,9 @@
         "Shalom",
         "All of Love",
         "Alucard",
-        "Hokuto Hidaka"
+        "Hokuto Hidaka",
+        "Tamon Fukuhara",
+        "Uni"
       ],
       "id": "7532e2f4-daaa-4a12-a74b-7cd94d8dfbb2",
       "player_a": "1411686981468946664",
@@ -583,7 +559,8 @@
         "Zenless Zone Zero",
         "Hetalia",
         "Re: Zero - Starting Life in Another World",
-        "Beastars"
+        "Beastars",
+        "Chainsaw Man"
       ],
       "id": "9a40facc-2e99-4743-acae-b99b86fc711f",
       "player_a": "1070404986057531452",
@@ -1368,6 +1345,18 @@
         "timestamp": 1786102763.4921339,
         "partner_id": "1132475401701171262"
       }
+    ],
+    "821574312216756224": [
+      {
+        "timestamp": 1786104262.1852767,
+        "partner_id": "870354420049776710"
+      }
+    ],
+    "870354420049776710": [
+      {
+        "timestamp": 1786104262.1852767,
+        "partner_id": "821574312216756224"
+      }
     ]
   },
   "cooldowns": {
@@ -1490,7 +1479,9 @@
     "703745509835407402": 1786102343.3933175,
     "977162721520918538": 1786102343.3933175,
     "1132475401701171262": 1786102763.4921339,
-    "1274155690331734175": 1786102763.4921339
+    "1274155690331734175": 1786102763.4921339,
+    "821574312216756224": 1786104262.1852767,
+    "870354420049776710": 1786104262.1852767
   },
   "bonus": {
     "777925664358531102": {
@@ -1694,7 +1685,7 @@
       "claim": 0
     },
     "1068989639362355252": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "694261236728070255": {
@@ -3466,8 +3457,8 @@
       "claim": 0
     },
     "821574312216756224": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "850505130658627614": {
       "drop": 0,
@@ -5086,6 +5077,10 @@
       "claim": 0
     },
     "894320065539887128": {
+      "drop": 0,
+      "claim": 0
+    },
+    "997284765046677544": {
       "drop": 0,
       "claim": 0
     }
