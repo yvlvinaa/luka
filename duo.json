@@ -92,7 +92,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 49,
+      "progress": 50,
       "id": "2478380d-aef5-40b4-b708-afc669821c64",
       "player_a": "1414056833248919552",
       "player_b": "1068689349455122432",
@@ -246,7 +246,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 49,
+      "progress": 50,
       "id": "1813526a-6af8-49db-aa68-32c60e589e58",
       "player_a": "885453562631553024",
       "player_b": "756814026968793109",
@@ -377,38 +377,6 @@
       "started_at": 1786094462.8681448,
       "channel_id": 1531103399364526127
     },
-    "a7774504-2e5b-4580-9fde-2baf2d1f8ff2": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Lauren Iroas",
-        "Rwanda Bailey & Macalo",
-        "Meursault",
-        "Samatoki Aohitsugi",
-        "Haniel",
-        "Sebastian Michaelis",
-        "Boothill",
-        "Kasumi Mienishi",
-        "Evanescia",
-        "Jotaro Kujo",
-        "Yae Miko",
-        "Lee Woo-yeol",
-        "Heo Chanyoung & Seo Hyunjin",
-        "You Huo",
-        "Sun Wukong",
-        "Lady Pearl",
-        "Riyo Reaper",
-        "Kirara",
-        "Russia"
-      ],
-      "id": "a7774504-2e5b-4580-9fde-2baf2d1f8ff2",
-      "player_a": "1261275450135543822",
-      "player_b": "1358228187691225088",
-      "started_at": 1786096419.803031,
-      "channel_id": 1528758308641571027
-    },
     "51ee0532-ba89-40d6-a52f-53b0536c91a7": {
       "type": "claim_rarity4",
       "target": 10,
@@ -466,7 +434,8 @@
         "Zenless Zone Zero",
         "Genshin Impact",
         "Lord Of The Mysteries",
-        "SK8 THE INFINITY"
+        "SK8 THE INFINITY",
+        "CLANNAD"
       ],
       "id": "1069bbbe-37d0-431f-b067-87ac4799edf3",
       "player_a": "1224818851464613952",
@@ -501,7 +470,8 @@
         "The Hunter's Gonna Lay Low",
         "Genshin Impact",
         "Dandadan",
-        "My Little Pony"
+        "My Little Pony",
+        "Chainsaw Man"
       ],
       "id": "fae41e22-cf61-4071-ba6d-6ef0eb984f89",
       "player_a": "1279169282126643292",
@@ -600,7 +570,9 @@
         "Genshin Impact",
         "Free! Iwatobi Swim Club",
         "Daemons Of The Shadow Realm",
-        "Jojo\u02bcs Bizarre Adventure"
+        "Jojo\u02bcs Bizarre Adventure",
+        "BLUELOCK",
+        "Secrets of the Silent Witch"
       ],
       "id": "71ba7db2-eeb0-411f-9d7e-a0ebc1ee7ed6",
       "player_a": "1498786280169935062",
@@ -1473,6 +1445,18 @@
         "timestamp": 1786110918.1418307,
         "partner_id": "968786127081328660"
       }
+    ],
+    "1261275450135543822": [
+      {
+        "timestamp": 1786117015.9174798,
+        "partner_id": "1358228187691225088"
+      }
+    ],
+    "1358228187691225088": [
+      {
+        "timestamp": 1786117015.9174798,
+        "partner_id": "1261275450135543822"
+      }
     ]
   },
   "cooldowns": {
@@ -1619,7 +1603,9 @@
     "1299833889166065743": 1786108812.6038074,
     "433218038385344532": 1786108812.6038074,
     "968786127081328660": 1786110918.1418307,
-    "764446760004354048": 1786110918.1418307
+    "764446760004354048": 1786110918.1418307,
+    "1261275450135543822": 1786117015.9174798,
+    "1358228187691225088": 1786117015.9174798
   },
   "bonus": {
     "777925664358531102": {
@@ -2396,7 +2382,7 @@
     },
     "1415778966287028315": {
       "drop": 5,
-      "claim": 5
+      "claim": 4
     },
     "1272886214084657193": {
       "drop": 2,
@@ -3783,8 +3769,8 @@
       "claim": 0
     },
     "1358228187691225088": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1147586326116438019": {
       "drop": 0,
@@ -5083,8 +5069,8 @@
       "claim": 0
     },
     "1261275450135543822": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "836626268882731038": {
       "drop": 0,
