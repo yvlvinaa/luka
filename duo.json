@@ -15,7 +15,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 49,
+      "progress": 50,
       "id": "78043429-2997-432c-a442-a07eedb0c0fa",
       "player_a": "1132475401701171262",
       "player_b": "1274155690331734175",
@@ -272,7 +272,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 38,
+      "progress": 39,
       "id": "530c3b8c-b61c-4ebb-8adc-e0e6c69a1210",
       "player_a": "1299833889166065743",
       "player_b": "433218038385344532",
@@ -283,7 +283,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 44,
+      "progress": 45,
       "id": "c9a42659-c2ba-4106-8b76-0025878a88fd",
       "player_a": "1152969942820466819",
       "player_b": "851453831350714388",
@@ -349,7 +349,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 54,
+      "progress": 55,
       "id": "61c4a873-1ce2-42b7-a75a-356cb2bc1bf4",
       "player_a": "748272021120483439",
       "player_b": "953969404884971521",
@@ -424,7 +424,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 17,
+      "progress": 18,
       "id": "adfadbba-4f42-49c1-9e3c-5ad6c4e17165",
       "player_a": "1187649058576277571",
       "player_b": "722139521864433717",
@@ -435,7 +435,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 26,
+      "progress": 27,
       "id": "f96cdea1-2cee-429e-b669-911991d71c6c",
       "player_a": "998047189240655942",
       "player_b": "595084117998043137",
@@ -446,7 +446,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 33,
+      "progress": 34,
       "id": "8e1b62c2-f78e-4e3c-b27d-7c25cb3df86d",
       "player_a": "1439628725288173759",
       "player_b": "1282059759046099038",
@@ -457,7 +457,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 37,
+      "progress": 39,
       "id": "73404e39-d26d-43e1-9f76-7934e58c61d7",
       "player_a": "909713880694005771",
       "player_b": "897040507539189780",
@@ -619,7 +619,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 8,
+      "progress": 9,
       "id": "f701abe5-90b0-4272-9f4a-bc2e08222029",
       "player_a": "782414692101521428",
       "player_b": "1433888427547295918",
@@ -638,7 +638,8 @@
         "The Summer Hikaru Died",
         "BanG Dream!",
         "Moriarty the Patriot",
-        "Sakamoto Days"
+        "Sakamoto Days",
+        "ZENO"
       ],
       "id": "d4b9b6f7-2a09-4568-8d60-e867b07a88e9",
       "player_a": "307844484618780673",
@@ -660,6 +661,18 @@
       "player_b": "1358228187691225088",
       "started_at": 1786096419.803031,
       "channel_id": 1528758308641571027
+    },
+    "7532e2f4-daaa-4a12-a74b-7cd94d8dfbb2": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [],
+      "id": "7532e2f4-daaa-4a12-a74b-7cd94d8dfbb2",
+      "player_a": "1411686981468946664",
+      "player_b": "1361841917960130701",
+      "started_at": 1786096890.9605813,
+      "channel_id": 1531403070758584370
     }
   },
   "weekly": {
@@ -1817,7 +1830,7 @@
     },
     "1487041378918858924": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "1132475401701171262": {
       "drop": 0,
@@ -4872,6 +4885,10 @@
       "claim": 0
     },
     "1345282051011645450": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1192955009327964180": {
       "drop": 0,
       "claim": 0
     }
