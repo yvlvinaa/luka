@@ -202,7 +202,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 31,
+      "progress": 32,
       "id": "d2e1af5d-d60f-4d9a-859a-c9ce55c45deb",
       "player_a": "706017428857159730",
       "player_b": "496456569496535051",
@@ -337,7 +337,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 32,
+      "progress": 33,
       "id": "f701abe5-90b0-4272-9f4a-bc2e08222029",
       "player_a": "782414692101521428",
       "player_b": "1433888427547295918",
@@ -441,33 +441,6 @@
       "player_b": "1259422786661912648",
       "started_at": 1786112214.9716065,
       "channel_id": 1529241749778727022
-    },
-    "71ba7db2-eeb0-411f-9d7e-a0ebc1ee7ed6": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Genshin Impact",
-        "Free! Iwatobi Swim Club",
-        "Daemons Of The Shadow Realm",
-        "Jojo\u02bcs Bizarre Adventure",
-        "BLUELOCK",
-        "Secrets of the Silent Witch",
-        "Your Turn To Die",
-        "Jujutsu Kaisen",
-        "Needy Streamer Overload",
-        "Magical Girl Witch Trials",
-        "Happy Twogether",
-        "Kimetsu no Yaiba",
-        "My Hero Academia",
-        "Bocchi The Rock!"
-      ],
-      "id": "71ba7db2-eeb0-411f-9d7e-a0ebc1ee7ed6",
-      "player_a": "1498786280169935062",
-      "player_b": "753042849666302022",
-      "started_at": 1786115651.662871,
-      "channel_id": 1531193055296618627
     },
     "cea0e9f9-0ae3-4ac2-aead-523e52b68c7e": {
       "type": "claim_rarity4",
@@ -1441,6 +1414,18 @@
         "timestamp": 1786128172.7760637,
         "partner_id": "1388187436894523645"
       }
+    ],
+    "1498786280169935062": [
+      {
+        "timestamp": 1786129655.8499641,
+        "partner_id": "753042849666302022"
+      }
+    ],
+    "753042849666302022": [
+      {
+        "timestamp": 1786129655.8499641,
+        "partner_id": "1498786280169935062"
+      }
     ]
   },
   "cooldowns": {
@@ -1603,7 +1588,9 @@
     "1224818851464613952": 1786123908.0043192,
     "1027686610260738118": 1786123908.0043192,
     "1388187436894523645": 1786128172.7760637,
-    "871408813624926238": 1786128172.7760637
+    "871408813624926238": 1786128172.7760637,
+    "1498786280169935062": 1786129655.8499641,
+    "753042849666302022": 1786129655.8499641
   },
   "bonus": {
     "777925664358531102": {
@@ -2152,7 +2139,7 @@
     },
     "753042849666302022": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "954473441963155496": {
       "drop": 0,
@@ -5339,6 +5326,10 @@
       "claim": 0
     },
     "816051391503007806": {
+      "drop": 0,
+      "claim": 0
+    },
+    "963637640740110356": {
       "drop": 0,
       "claim": 0
     }
