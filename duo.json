@@ -198,33 +198,6 @@
       "started_at": 1786083008.0247207,
       "channel_id": 1535127237001486376
     },
-    "213053d2-9460-4bef-a2b5-82327907fbaa": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Jojo\u2019s Bizarre Adventure",
-        "Between The Lines",
-        "The Quintessential Quintuplets",
-        "Neverness to Everness",
-        "Love And Deepspace",
-        "Night of Shadows",
-        "Omniscient Reader\u2019s Viewpoint",
-        "Danganronpa",
-        "Doki Doki Literature Club!",
-        "Genshin Impact",
-        "My Hero Academia",
-        "Honkai: Star Rail",
-        "Two Tigers, Too Close",
-        "Bungo Stray Dogs"
-      ],
-      "id": "213053d2-9460-4bef-a2b5-82327907fbaa",
-      "player_a": "938827962571182123",
-      "player_b": "763825862075613184",
-      "started_at": 1786086732.7176409,
-      "channel_id": 1533140993337983037
-    },
     "970e6912-cb0a-4590-a535-793d47ba6864": {
       "type": "claim_rarity4",
       "target": 10,
@@ -1473,6 +1446,18 @@
         "timestamp": 1786185583.4175313,
         "partner_id": "1425782801193631754"
       }
+    ],
+    "938827962571182123": [
+      {
+        "timestamp": 1786187445.2698467,
+        "partner_id": "763825862075613184"
+      }
+    ],
+    "763825862075613184": [
+      {
+        "timestamp": 1786187445.2698467,
+        "partner_id": "938827962571182123"
+      }
     ]
   },
   "cooldowns": {
@@ -1659,7 +1644,9 @@
     "889013975046574091": 1786179984.5450087,
     "1314762933758201896": 1786179984.5450087,
     "1425782801193631754": 1786185583.4175313,
-    "1035656286039191692": 1786185583.4175313
+    "1035656286039191692": 1786185583.4175313,
+    "938827962571182123": 1786187445.2698467,
+    "763825862075613184": 1786187445.2698467
   },
   "bonus": {
     "777925664358531102": {
@@ -4831,8 +4818,8 @@
       "claim": 0
     },
     "938827962571182123": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "841694108187361290": {
       "drop": 0,
@@ -4919,8 +4906,8 @@
       "claim": 0
     },
     "763825862075613184": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "691989049313067068": {
       "drop": 0,
