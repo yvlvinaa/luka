@@ -139,6 +139,19 @@ EARLY_SUPPORTER_ROLE_ID = 1505590926947651669
 # never by name, per spec.
 FINALIST_ROLE_ID = 1506025540350509177
 
+# =========================
+# OWNER-ONLY STAFF COMMANDS (lgive)
+# =========================
+# TODO: replace with the actual Discord user IDs of the bot owner(s).
+# Checked by explicit ID, never by role/username, per spec. Left empty
+# on purpose: an unfilled set means lgive refuses EVERYONE rather than
+# accidentally granting access to nobody-in-particular or to a
+# plausible-looking placeholder id that isn't actually yours.
+OWNER_USER_IDS = {
+    727441845789130804,  # owner
+    770651160695537697,  # other owner
+}
+
 MAX_SHOWCASE_CARDS = 3
 BADGES_PER_PAGE = 4
 HELP_COMMANDS_PER_PAGE = 6
@@ -226,6 +239,65 @@ def user_has_active_trade(user_id) -> bool:
         if view is not None and user_id in (view.user1_id, view.user2_id):
             return True
     return False
+
+
+_trade_sweep_task = None
+
+
+async def trade_expiration_sweep_loop():
+    """
+    Backstop for active_trades, independent of any single TradeView's
+    own on_timeout callback. Runs every TRADE_SWEEP_INTERVAL_SECONDS and
+    force-expires (clears) any active_trades entry older than
+    TRADE_MAX_LIFETIME_SECONDS, even if its view's own timeout somehow
+    never fired (a swallowed exception, a library-timer edge case, an
+    abandoned confirming-stage trade, etc.) and even if nobody has
+    touched that trade since. This is what makes expiration reliable
+    "even if nobody interacts with the old trade again" -- it never
+    depends on further user interaction to run.
+    """
+    while True:
+        await asyncio.sleep(TRADE_SWEEP_INTERVAL_SECONDS)
+        try:
+            now = time.time()
+            stale_ids = [
+                trade_id for trade_id, trade_data in list(active_trades.items())
+                if now - trade_data.get("time", 0) > TRADE_MAX_LIFETIME_SECONDS
+            ]
+
+            for trade_id in stale_ids:
+                trade_data = active_trades.pop(trade_id, None)
+                if trade_data is None:
+                    continue
+
+                view = trade_data.get("view")
+                message = trade_data.get("message")
+
+                if view is not None:
+                    for item in view.children:
+                        item.disabled = True
+                    try:
+                        # Stops this view from listening for further
+                        # interactions -- also means its own on_timeout
+                        # (if it fires later regardless) just no-ops on
+                        # an already-removed trade_id, never a duplicate
+                        # or conflicting cleanup.
+                        view.stop()
+                    except Exception:
+                        pass
+
+                if message is not None:
+                    try:
+                        embed = discord.Embed(color=THEME_COLOR)
+                        embed.description = "Trade has expired."
+                        await message.edit(content=None, embed=embed, view=view)
+                    except Exception:
+                        pass
+        except Exception:
+            print("[trades] Periodic trade expiration sweep failed (will retry next cycle):")
+            traceback.print_exc()
+
+
 user_viewing_inventory = {}
 
 # Command anti-spam state (see COMMAND_SPAM_* above). Keyed by
@@ -508,10 +580,31 @@ def remove_card(user_id, index):
 
 
 def get_weighted_card():
-    """Selects a card randomly based on its assigned weight value."""
+    """
+    Selects a card randomly based on its assigned weight value,
+    restricted to cards currently eligible to drop under the
+    version/unlock system (base-card period, then sequential Common
+    unlocks + the Rare unlock -- see _card_is_eligible_to_drop). This is
+    the single place drop eligibility is enforced; lup/lv/lmissing all
+    read the same underlying `version` metadata and `card_prints` claim
+    counts, but never re-implement this eligibility check themselves.
+    """
+    now = time.time()
+    base_by_character, prev_common_by_card_id = _build_character_version_lookup()
+
     weighted = []
     for card in cards:
+        if not _card_is_eligible_to_drop(card, now, base_by_character, prev_common_by_card_id):
+            continue
         weighted.extend([card] * card.get("weight", 1))
+
+    if not weighted:
+        # Extremely defensive fallback -- e.g. immediately after a reset,
+        # before any base Commons exist in cards.json yet. Never crash a
+        # drop; fall back to the full (unfiltered) pool rather than
+        # raise on an empty random.choice().
+        weighted = [card for card in cards for _ in range(card.get("weight", 1))]
+
     return random.choice(weighted)
 
 
@@ -548,6 +641,24 @@ def card_version_label(card):
     "common" (case-insensitive) counts as Rare.
     """
     return "Common" if card.get("frame", "").strip().lower() == "common" else "Rare"
+
+
+def card_version_display(card):
+    """
+    Returns the card's actual `version` metadata for display -- "common",
+    "V1", "V2", ... for Commons (per-character, creation-order), "rare"
+    for Rares. This is the corrected replacement for card_version_label()
+    everywhere a card's specific version (not just its broad Common/Rare
+    rarity) needs to be shown, per the version/unlock system -- lup and
+    lv both use this now. Falls back to card_version_label()'s broad
+    Common/Rare text (lowercased) only for the theoretical case of a
+    card with no `version` field yet (e.g. a cards.json that predates
+    the migration and hasn't been reloaded).
+    """
+    version = card.get("version")
+    if version:
+        return version
+    return card_version_label(card).lower()
 
 
 def save_cards_json():
@@ -1713,6 +1824,60 @@ def mark_letter_read(user_id, letter_id) -> bool:
     return False
 
 
+# =========================
+# MAIL BLOCKING (stored inside mail.json, no second persistence system)
+# =========================
+# Reserved key inside the same `mail` dict every mailbox already lives
+# in -- same "double-underscore, deliberately non-numeric, never
+# collides with a real Discord user id" convention as
+# SYSTEM_RECOVERY_USER in `inventories`. Nothing iterates over
+# mail.items()/.values()/.keys() anywhere in this file (only ever
+# mail[str(user_id)]/mail.setdefault(str(user_id), ...) for a specific
+# user), so adding this one extra key is safe and doesn't disturb any
+# existing mailbox lookup.
+#
+# Shape: mail["__blocked__"] = { receiver_id (str): [sender_id (str), ...] }
+# i.e. "who has this receiver blocked". One-way by construction: only
+# ever consulted as "is sender_id in receiver's blocked list", never
+# the reverse, so a block never restricts the blocker's own outgoing
+# mail to that person.
+MAIL_BLOCKED_KEY = "__blocked__"
+
+
+def get_blocked_senders(user_id) -> list:
+    """Safely fetches or initializes user_id's list of blocked sender
+    IDs -- same setdefault-a-list-per-user shape as get_mailbox(), just
+    nested one level under the reserved MAIL_BLOCKED_KEY instead of at
+    the top level of `mail`."""
+    blocked_map = mail.setdefault(MAIL_BLOCKED_KEY, {})
+    return blocked_map.setdefault(str(user_id), [])
+
+
+def is_sender_blocked(sender_id, receiver_id) -> bool:
+    """Whether receiver_id has blocked sender_id from sending them
+    mail. Read-only -- does not create an entry for receiver_id if
+    they've never blocked anyone."""
+    blocked_map = mail.get(MAIL_BLOCKED_KEY, {})
+    return str(sender_id) in blocked_map.get(str(receiver_id), [])
+
+
+def block_sender(receiver_id, sender_id) -> bool:
+    """
+    Adds sender_id to receiver_id's blocked-senders list, in memory.
+    One-way: only ever affects mail FROM sender_id TO receiver_id --
+    never touches receiver_id's own ability to mail sender_id back.
+    Returns True if this newly blocked them, False if they were
+    already blocked (so the caller can show an accurate message either
+    way).
+    """
+    blocked = get_blocked_senders(receiver_id)
+    sender_key = str(sender_id)
+    if sender_key in blocked:
+        return False
+    blocked.append(sender_key)
+    return True
+
+
 async def _resolve_mail_sender_info(client, letters: list) -> list:
     """
     Best-effort resolves each letter's sender into a display name and
@@ -1746,6 +1911,82 @@ async def _resolve_mail_sender_info(client, letters: list) -> list:
     return enriched
 
 
+async def _run_mail_sending_flow(bot, channel, sender, target_user) -> None:
+    """
+    Shared "type your message, next message becomes the mail" flow.
+    Used by both `lmail @user` and each mail page's Reply button (which
+    targets that letter's original sender) -- exactly one implementation
+    of send+persist, no duplicated logic between the two entry points.
+
+    Prompts via channel.send (works identically whether the caller is a
+    plain text command or a button interaction), waits for `sender`'s
+    next message in that same channel, then persists it with the same
+    letter shape and the same mail_lock/save_mail_local/mark_mail_dirty/
+    rollback-on-failed-save sequence the original inline `lmail @user`
+    flow used.
+    """
+    # One-way block check: if target_user has blocked sender, reject
+    # before even prompting for a message. This is the single choke
+    # point both `lmail @user` and every mail page's Reply button go
+    # through, so the block is enforced everywhere mail can be sent,
+    # with no separate check needed at either call site. Blocking is
+    # one-way by construction (see is_sender_blocked/block_sender) --
+    # this never affects sender's ability to receive mail FROM
+    # target_user.
+    if is_sender_blocked(sender.id, target_user.id):
+        await channel.send(
+            f"🚫 You can't send mail to **{target_user.display_name}** -- they aren't accepting mail from you."
+        )
+        return
+
+    await channel.send(
+        f"✉️ What would you like to send to **{target_user.display_name}**? "
+        "Type your message now."
+    )
+
+    def check(m):
+        return m.author.id == sender.id and m.channel.id == channel.id
+
+    try:
+        mail_msg = await bot.wait_for("message", check=check, timeout=180)
+    except asyncio.TimeoutError:
+        await channel.send("❌ Timed out waiting for your mail message.")
+        return
+
+    mail_content = mail_msg.content.strip()
+    if not mail_content:
+        await reply(
+            mail_msg,
+            "❌ Mail message can't be empty. Please try again."
+        )
+        return
+
+    letter = {
+        "id": str(uuid.uuid4()),
+        "sender_id": str(sender.id),
+        "receiver_id": str(target_user.id),
+        "timestamp": time.time(),
+        "message": mail_content,
+        "read": False,
+    }
+
+    async with mail_lock:
+        mailbox = get_mailbox(target_user.id)
+        mailbox.append(letter)
+        try:
+            save_mail_local()
+            mark_mail_dirty()
+        except Exception:
+            mailbox.remove(letter)
+            await reply(
+                mail_msg,
+                "❌ Something went wrong saving your mail. Please try again."
+            )
+            return
+
+    await reply(mail_msg, f"✅ Mail sent to **{target_user.display_name}**!")
+
+
 def _looks_like_bot_command(content_lower: str) -> bool:
     """
     Whether a message looks like an attempt to run one of this bot's
@@ -1760,6 +2001,21 @@ def _looks_like_bot_command(content_lower: str) -> bool:
         return False
     first_word = content_lower.split(maxsplit=1)[0]
     return len(first_word) > 1 and first_word[0] == "l" and first_word[1].isalpha()
+
+
+# How often (at most) a single user can be shown the unread-mail
+# reminder below. Purely an in-memory rate limit on a repeated
+# notification -- not real persistent state, so it deliberately does
+# NOT go through the local-first/GitHub persistence system the way
+# mail.json itself does; losing it on a restart just means the next
+# qualifying command shows the reminder again immediately, which is
+# harmless.
+MAIL_REMINDER_COOLDOWN_SECONDS = 600  # 10 minutes
+
+# user_id -> unix timestamp the reminder was last actually shown to
+# them. Same plain in-memory dict, no lock, as the existing
+# drop_cooldowns/claim_cooldowns.
+_last_mail_reminder_at = {}
 
 
 # =========================
@@ -2165,6 +2421,67 @@ def build_duo_challenge_embed(challenge: dict, user_a, user_b) -> discord.Embed:
             f"Progress: **{progress}/{target}**"
         ),
     )
+    return embed
+
+
+def _duo_progress_bar(progress: int, target: int, length: int = 10) -> str:
+    """A simple filled/empty block bar for `lduoprogress` -- purely a
+    display helper over the same progress/target _duo_progress_value()
+    already computes; no new state."""
+    target = max(target, 1)
+    filled = max(0, min(length, round(length * progress / target)))
+    return "🟩" * filled + "⬜" * (length - filled)
+
+
+def build_duo_progress_embed(client, challenge: dict, viewer_id, partner_user) -> discord.Embed:
+    """
+    Detailed progress view for `lduoprogress` -- reuses the exact same
+    challenge state build_duo_challenge_embed() does (progress/target
+    via _duo_progress_value(), label, etc.), just laid out with more
+    detail: a percentage/bar indicator, the possible reward, and
+    remaining-challenge info. Does not compute or store anything new;
+    purely a read-only, richer display of the same `duo` state.
+    """
+    progress = _duo_progress_value(challenge)
+    target = max(challenge.get("target", 0), 0)
+    percent = min(100, round((progress / target) * 100)) if target else 0
+    remaining = max(target - progress, 0)
+
+    embed = discord.Embed(color=THEME_COLOR, title="🤝 Duo Challenge Progress")
+
+    embed.add_field(name="Partner", value=partner_user.mention, inline=False)
+    embed.add_field(name="Challenge", value=challenge.get("label", "Duo Challenge"), inline=False)
+    embed.add_field(name="Progress", value=f"**{progress}/{target}**", inline=True)
+    embed.add_field(name="Percentage", value=f"**{percent}%**", inline=True)
+    embed.add_field(name="Remaining", value=f"**{remaining}** to go", inline=True)
+    embed.add_field(name="Indicator", value=_duo_progress_bar(progress, target), inline=False)
+
+    # The actual reward is randomly rolled (drop, claim, or both) only
+    # once the challenge is completed -- see _finalize_completed_duo --
+    # so this describes the possible outcome rather than a fixed,
+    # precomputed one, since the real system never decides it early.
+    embed.add_field(
+        name="Rewards",
+        value="🎁 On completion, you **and** your partner each get a random "
+              "bonus: an extra drop, an extra claim, or both.",
+        inline=False,
+    )
+
+    started_at = challenge.get("started_at")
+    started_text = f"<t:{int(started_at)}:R>" if started_at else "Unknown"
+    weekly_used = duo_weekly_count(viewer_id)
+    embed.add_field(
+        name="Other Info",
+        value=(
+            f"**Started:** {started_text}\n"
+            f"**Weekly Duos completed:** {weekly_used}/{DUO_WEEKLY_LIMIT}"
+        ),
+        inline=False,
+    )
+
+    if partner_user.display_avatar:
+        embed.set_thumbnail(url=partner_user.display_avatar.url)
+
     return embed
 
 
@@ -3417,6 +3734,563 @@ if _weights_migrated:
     print(f"[cards] Migrated weight for {_weights_migrated} card(s) to match their star rating.")
 
 
+# =========================
+# CARD VERSION METADATA (common / V1 / V2 / ... / rare)
+# =========================
+# Single source of truth for a card's "version" field, used by
+# get_weighted_card() (drop eligibility), lup/lv (display), and
+# lmissing (per-version missing display). Grouping is always by
+# (name, series) case-insensitively -- the same "character" grouping
+# CharacterVersionView/lmissing already use elsewhere -- so the same
+# name in a different series is a different character with its own
+# independent version sequence.
+
+def _card_character_key(card: dict):
+    """The (name, series) key identifying which character a card
+    belongs to, matching the grouping already used by
+    CharacterVersionView/lup's "all_versions" lookup."""
+    return (card.get("name", "").strip().lower(), card.get("series", "").strip().lower())
+
+
+def _is_common_card(card: dict) -> bool:
+    """Whether a card is a Common (frame == "common", case-insensitive)
+    -- the same check card_version_label() already uses for display."""
+    return card.get("frame", "").strip().lower() == "common"
+
+
+def _version_index(version) -> int:
+    """"common" -> 0, "V1" -> 1, "V2" -> 2, etc. Used only to order a
+    character's own Common cards relative to each other; meaningless
+    (and unused) for Rare cards."""
+    if version == "common":
+        return 0
+    if isinstance(version, str) and version.startswith("V") and version[1:].isdigit():
+        return int(version[1:])
+    return 0
+
+
+def is_base_common_card(card: dict) -> bool:
+    """A character's BASE Common card -- the first Common ever created
+    for that character. Exactly one card per character satisfies this
+    (per _recompute_card_versions below), and it's what the base-card
+    period, the sequential Common unlock chain, and the Rare unlock all
+    key off of."""
+    return _is_common_card(card) and card.get("version") == "common"
+
+
+def _build_character_version_lookup():
+    """
+    Builds, fresh from the current `cards` list, the two lookups
+    get_weighted_card() needs to evaluate drop eligibility. Cheap to
+    rebuild on every drop -- keeps this correct immediately after
+    laddcard adds a brand new card, with no separate cache-invalidation
+    step needed.
+
+    Returns (base_by_character, prev_common_by_card_id):
+      - base_by_character: {character_key: that character's base Common
+        card dict (version == "common"), or missing if it has none}.
+      - prev_common_by_card_id: {card id: that SAME character's Common
+        card exactly one version before it} -- e.g. V2's entry points
+        at V1, V1's entry points at the base "common". Only populated
+        for Common cards that aren't already the base.
+    """
+    commons_by_character = {}
+    for c in cards:
+        if _is_common_card(c):
+            commons_by_character.setdefault(_card_character_key(c), []).append(c)
+
+    base_by_character = {}
+    prev_common_by_card_id = {}
+    for key, group in commons_by_character.items():
+        by_index = {_version_index(c.get("version")): c for c in group}
+        if 0 in by_index:
+            base_by_character[key] = by_index[0]
+        for idx, c in by_index.items():
+            if idx == 0:
+                continue
+            prev = by_index.get(idx - 1)
+            if prev is not None:
+                prev_common_by_card_id[c["id"]] = prev
+
+    return base_by_character, prev_common_by_card_id
+
+
+def _card_is_eligible_to_drop(card, now, base_by_character, prev_common_by_card_id) -> bool:
+    """
+    The drop-eligibility rule (see DROP LOGIC in the version/unlock
+    spec):
+      - During the 5-day base-card period: only each character's base
+        Common can drop -- no later Common versions, no Rare cards.
+      - After the base-card period:
+          * a character's base Common remains eligible forever.
+          * a later Common version (V1, V2, ...) is eligible once the
+            PREVIOUS Common version of that SAME character has been
+            claimed COMMON_VERSION_UNLOCK_CLAIMS times.
+          * a character's Rare card(s) are eligible once that
+            character's base Common has been claimed
+            RARE_UNLOCK_CLAIMS times.
+    Claims are always read per exact card id from `card_prints` --
+    never shared across characters or versions.
+    """
+    # A character with no Common card at all (i.e. it only has Rare/
+    # 4-star cards) has nothing to gate its Rare behind -- no base
+    # Common to sit through the 5-day base-card period for, and no
+    # base-Common claim count to reach RARE_UNLOCK_CLAIMS on. Its Rare
+    # is therefore automatically eligible to drop, unconditionally.
+    # This must be checked BEFORE the base-card-period short-circuit
+    # below (which otherwise only ever lets base Commons through), or a
+    # Common-less character would have zero eligible cards for the
+    # entire 5-day period. Characters that DO have a Common card are
+    # completely unaffected -- base_by_character.get(...) is not None
+    # for them, so they fall straight through to the unchanged logic
+    # below, including the existing 50-claim Rare unlock rule.
+    if not _is_common_card(card) and base_by_character.get(_card_character_key(card)) is None:
+        return True
+
+    if base_card_period_active(now):
+        return is_base_common_card(card)
+
+    if is_base_common_card(card):
+        return True
+
+    if _is_common_card(card):
+        prev = prev_common_by_card_id.get(card.get("id"))
+        if prev is None:
+            # No known previous version to chain off of (e.g. a data
+            # inconsistency) -- never eligible rather than guessing.
+            return False
+        return card_prints.get(prev["id"], 0) >= COMMON_VERSION_UNLOCK_CLAIMS
+
+    # Rare.
+    base = base_by_character.get(_card_character_key(card))
+    if base is None:
+        return False
+    return card_prints.get(base["id"], 0) >= RARE_UNLOCK_CLAIMS
+
+
+def _next_version_for_new_card(char_name: str, series: str, frame_name: str) -> str:
+    """
+    Computes the `version` a brand-new card (about to be appended to
+    `cards` by laddcard) should get -- reuses the exact same
+    character-grouping/Common-counting rule _recompute_card_versions
+    uses for the startup migration, so laddcard and the migration are
+    never two separate implementations of this logic. Must be called
+    with the new card NOT YET appended to `cards`.
+    """
+    if frame_name.strip().lower() != "common":
+        return "rare"
+    key = (char_name.strip().lower(), series.strip().lower())
+    existing_commons = sum(
+        1 for c in cards
+        if _card_character_key(c) == key and _is_common_card(c)
+    )
+    return "common" if existing_commons == 0 else f"V{existing_commons}"
+
+
+def _recompute_card_versions() -> int:
+    """
+    One-time (startup-only) migration: assigns/corrects every card's
+    `version` field from scratch, based purely on cards.json's list
+    order -- which is creation order, since laddcard only ever
+    cards.append()s a brand new card, never inserts one out of order --
+    grouped per character:
+
+        - Common cards, in creation order, per character:
+          1st -> "common" (the character's base card), 2nd -> "V1",
+          3rd -> "V2", 4th -> "V3", etc.
+        - Rare cards (any frame other than exactly "common") always ->
+          "rare", regardless of creation order or how many exist.
+
+    Idempotent, same pattern as the weight migration above -- only
+    writes cards.json if something actually changed, so every later
+    startup (once everything already matches) is a no-op.
+    """
+    common_seen_count = {}
+    changed = 0
+    for card in cards:
+        if _is_common_card(card):
+            key = _card_character_key(card)
+            n = common_seen_count.get(key, 0)
+            new_version = "common" if n == 0 else f"V{n}"
+            common_seen_count[key] = n + 1
+        else:
+            new_version = "rare"
+
+        if card.get("version") != new_version:
+            card["version"] = new_version
+            changed += 1
+    return changed
+
+
+_versions_migrated = _recompute_card_versions()
+if _versions_migrated:
+    save_cards_json()
+    print(f"[cards] Migrated version metadata for {_versions_migrated} card(s).")
+
+
+# =========================
+# VERSION SYSTEM STATE (version_system.json)
+# =========================
+# Tracks exactly one thing: the timestamp this card-version/unlock
+# system first went live on this bot (its very first startup after the
+# inventory reset that precedes it). The 5-day base-card-only period is
+# counted from that single moment, once, forever -- a later restart
+# must NOT push it back or restart the clock. Persisted/synced with the
+# exact same local-first + GitHub-backfill + debounced-sync +
+# shutdown-flush pipeline every other piece of state in this file
+# already uses (mail.json, duo.json, merchants.json, ...) -- no second
+# persistence system, just that same one reused for one more small
+# piece of state.
+
+BASE_CARD_PERIOD_SECONDS = 5 * 24 * 3600         # 5 days
+COMMON_VERSION_UNLOCK_CLAIMS = 75                # V(n) unlocks once V(n-1) hits this many claims
+RARE_UNLOCK_CLAIMS = 50                          # a character's Rare unlocks once its base Common hits this many claims
+
+
+def _load_version_system_json():
+    """Loads and validates the local version_system.json. Same
+    missing-vs-invalid contract as every other loader in this file --
+    returns the parsed dict if valid, None if
+    missing/unreadable/malformed/not a dict."""
+    try:
+        with open('version_system.json', 'r') as f:
+            raw = f.read().strip()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        print("[versions] Failed to read version_system.json:")
+        traceback.print_exc()
+        return None
+
+    if not raw:
+        return None
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        print("[versions] version_system.json contains invalid JSON:")
+        traceback.print_exc()
+        return None
+
+    if not isinstance(parsed, dict):
+        return None
+
+    return parsed
+
+
+def _version_system_json_bytes() -> bytes:
+    return json.dumps(version_system, indent=2).encode("utf-8")
+
+
+def save_version_system_local() -> None:
+    """Writes the current in-memory `version_system` dict to
+    version_system.json, atomically -- same role as
+    save_mail_local()/save_duo_local()."""
+    try:
+        _atomic_write_bytes("version_system.json", _version_system_json_bytes())
+    except Exception:
+        print("[versions] Failed to save version_system.json locally:")
+        traceback.print_exc()
+        raise
+
+
+_version_system_sync_task = None
+_version_system_dirty = False
+_version_system_upload_in_progress = False
+
+
+def mark_version_system_dirty() -> None:
+    global _version_system_dirty
+    _version_system_dirty = True
+
+
+async def version_system_github_sync_loop():
+    """Background task: same debounced-commit pattern as
+    mail_github_sync_loop()/duo_github_sync_loop() -- wakes up every
+    INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS and, only if there are
+    unpushed local changes, performs exactly one GitHub commit."""
+    global _version_system_dirty, _version_system_upload_in_progress
+    while True:
+        await asyncio.sleep(INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS)
+
+        if not _version_system_dirty or _version_system_upload_in_progress:
+            continue
+
+        async with version_system_lock:
+            if not _version_system_dirty:
+                continue
+            data = _version_system_json_bytes()
+            _version_system_dirty = False
+
+        _version_system_upload_in_progress = True
+        try:
+            await github_commit_files({"version_system.json": data}, "Batched version system sync")
+        except Exception:
+            print("[versions] Periodic GitHub sync failed (will retry next cycle):")
+            traceback.print_exc()
+            async with version_system_lock:
+                _version_system_dirty = True
+        finally:
+            _version_system_upload_in_progress = False
+
+
+async def flush_version_system_to_github() -> None:
+    """Best-effort final push on graceful shutdown -- same mechanism as
+    flush_mail_to_github()/flush_duo_to_github()."""
+    global _version_system_dirty
+
+    async with version_system_lock:
+        if not _version_system_dirty:
+            return
+        data = _version_system_json_bytes()
+        _version_system_dirty = False
+
+    try:
+        await github_commit_files({"version_system.json": data}, "Final version system sync (shutdown)")
+        print("[versions] Flushed version system changes to GitHub before shutdown.")
+    except Exception:
+        async with version_system_lock:
+            _version_system_dirty = True
+        print("[versions] Failed to flush version system changes to GitHub on shutdown "
+              "(they remain saved locally):")
+        traceback.print_exc()
+
+
+async def _sync_version_system_from_github_at_startup() -> dict:
+    """
+    Startup-only, single load into memory -- same local-wins,
+    GitHub-as-backfill priority as every other _sync_*_from_github_at_startup()
+    in this file. If, after that, there's still no "started_at" (a
+    genuinely first-ever launch, or a pre-existing file from before this
+    field existed), it's set to now() right here, once -- this is the
+    ONLY place "started_at" is ever written from scratch.
+    """
+    state = _load_version_system_json()
+    if state is not None:
+        print("[versions] Loaded version_system.json from local disk.")
+    else:
+        print("[versions] Local version_system.json is missing/unreadable/malformed -- trying GitHub as a backfill.")
+        remote_bytes = await github_get_file("version_system.json")
+        if remote_bytes is None:
+            state = {}
+        else:
+            try:
+                remote_data = json.loads(remote_bytes.decode("utf-8") or "{}")
+                state = remote_data if isinstance(remote_data, dict) else {}
+            except Exception:
+                print("[versions] Downloaded version_system.json from GitHub was not valid JSON -- starting fresh.")
+                traceback.print_exc()
+                state = {}
+
+    if "started_at" not in state:
+        state["started_at"] = time.time()
+        try:
+            _atomic_write_bytes("version_system.json", json.dumps(state, indent=2).encode("utf-8"))
+            mark_version_system_dirty()
+            print(f"[versions] First-ever launch of the version system -- base-card period started now.")
+        except Exception:
+            print("[versions] Failed to persist the new version_system.json locally:")
+            traceback.print_exc()
+
+    return state
+
+
+version_system = asyncio.run(_sync_version_system_from_github_at_startup())
+version_system_lock = asyncio.Lock()
+
+
+def base_card_period_active(now=None) -> bool:
+    """Whether we're still within the 5-day base-card-only period
+    following this system's one-time, persisted launch timestamp."""
+    now = now if now is not None else time.time()
+    started_at = version_system.get("started_at", now)
+    return (now - started_at) < BASE_CARD_PERIOD_SECONDS
+
+
+# =========================
+# BACKUP STATUS (backup_status.json)
+# =========================
+# Tracks exactly one thing: the timestamp of the last `lbackup` GitHub
+# commit that actually SUCCEEDED (see the LBACKUP COMMAND below).
+# Persisted/synced with the exact same local-first + GitHub-backfill +
+# debounced-sync + shutdown-flush pipeline every other piece of state
+# in this file already uses (mail.json, duo.json, version_system.json,
+# ...) -- no second persistence system, just that same one reused for
+# one more small piece of state. The local file is created
+# automatically the first time the bot starts (see
+# _sync_backup_status_from_github_at_startup below) -- nothing needs
+# to be created by hand.
+#
+# backup_status = { "last_successful_backup_at": float (unix
+#   timestamp) }, key absent entirely if no `lbackup` has ever
+#   succeeded yet -- lbackupstatus reports that explicitly rather than
+#   showing a fake/zero timestamp.
+
+def _load_backup_status_json():
+    """Loads and validates the local backup_status.json. Same
+    missing-vs-invalid contract as every other loader in this file --
+    returns the parsed dict if valid, None if
+    missing/unreadable/malformed/not a dict."""
+    try:
+        with open('backup_status.json', 'r') as f:
+            raw = f.read().strip()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        print("[backup_status] Failed to read backup_status.json:")
+        traceback.print_exc()
+        return None
+
+    if not raw:
+        return None
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        print("[backup_status] backup_status.json contains invalid JSON:")
+        traceback.print_exc()
+        return None
+
+    if not isinstance(parsed, dict):
+        return None
+
+    return parsed
+
+
+def _backup_status_json_bytes() -> bytes:
+    return json.dumps(backup_status, indent=2).encode("utf-8")
+
+
+def save_backup_status_local() -> None:
+    """Writes the current in-memory `backup_status` dict to
+    backup_status.json, atomically -- same role as
+    save_version_system_local()/save_mail_local()."""
+    try:
+        _atomic_write_bytes("backup_status.json", _backup_status_json_bytes())
+    except Exception:
+        print("[backup_status] Failed to save backup_status.json locally:")
+        traceback.print_exc()
+        raise
+
+
+_backup_status_sync_task = None
+_backup_status_dirty = False
+_backup_status_upload_in_progress = False
+
+
+def mark_backup_status_dirty() -> None:
+    """Marks backup_status.json as having local changes not yet pushed
+    to GitHub. Must be called while holding backup_status_lock,
+    immediately after a successful save_backup_status_local()."""
+    global _backup_status_dirty
+    _backup_status_dirty = True
+
+
+async def backup_status_github_sync_loop():
+    """
+    Background task: same debounced-commit pattern as
+    version_system_github_sync_loop()/mail_github_sync_loop() -- wakes
+    up every INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS and, only if there
+    are unpushed local changes, performs exactly one GitHub commit.
+    In normal operation this should rarely ever have anything to do,
+    since `lbackup` already commits backup_status.json itself as part
+    of its own single atomic commit -- this loop exists purely as the
+    same safety net every other store gets, in case a local save ever
+    succeeds without its matching commit going through.
+    """
+    global _backup_status_dirty, _backup_status_upload_in_progress
+    while True:
+        await asyncio.sleep(INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS)
+
+        if not _backup_status_dirty or _backup_status_upload_in_progress:
+            continue
+
+        async with backup_status_lock:
+            if not _backup_status_dirty:
+                continue
+            data = _backup_status_json_bytes()
+            _backup_status_dirty = False
+
+        _backup_status_upload_in_progress = True
+        try:
+            await github_commit_files({"backup_status.json": data}, "Batched backup status sync")
+        except Exception:
+            print("[backup_status] Periodic GitHub sync failed (will retry next cycle):")
+            traceback.print_exc()
+            async with backup_status_lock:
+                _backup_status_dirty = True
+        finally:
+            _backup_status_upload_in_progress = False
+
+
+async def flush_backup_status_to_github() -> None:
+    """Best-effort final push on graceful shutdown -- same mechanism as
+    flush_version_system_to_github()/flush_mail_to_github()."""
+    global _backup_status_dirty
+
+    async with backup_status_lock:
+        if not _backup_status_dirty:
+            return
+        data = _backup_status_json_bytes()
+        _backup_status_dirty = False
+
+    try:
+        await github_commit_files({"backup_status.json": data}, "Final backup status sync (shutdown)")
+        print("[backup_status] Flushed backup status changes to GitHub before shutdown.")
+    except Exception:
+        async with backup_status_lock:
+            _backup_status_dirty = True
+        print("[backup_status] Failed to flush backup status changes to GitHub on shutdown "
+              "(they remain saved locally):")
+        traceback.print_exc()
+
+
+async def _sync_backup_status_from_github_at_startup() -> dict:
+    """
+    Startup-only, single load into memory -- same local-wins,
+    GitHub-as-backfill priority as _sync_version_system_from_github_at_startup()
+    and every other _sync_*_from_github_at_startup() in this file.
+
+    Unlike version_system, nothing is auto-populated into the returned
+    dict here: an absent "last_successful_backup_at" key just means no
+    `lbackup` has ever succeeded yet, which lbackupstatus reports as-is
+    rather than inventing a value. The local FILE itself, however, is
+    always created here if it doesn't already exist (even if that just
+    means writing "{}") -- so it's always present from the bot's very
+    first startup onward, with no manual setup step required.
+    """
+    state = _load_backup_status_json()
+    if state is not None:
+        print("[backup_status] Loaded backup_status.json from local disk.")
+    else:
+        print("[backup_status] Local backup_status.json is missing/unreadable/malformed -- trying GitHub as a backfill.")
+        remote_bytes = await github_get_file("backup_status.json")
+        if remote_bytes is None:
+            state = {}
+        else:
+            try:
+                remote_data = json.loads(remote_bytes.decode("utf-8") or "{}")
+                state = remote_data if isinstance(remote_data, dict) else {}
+            except Exception:
+                print("[backup_status] Downloaded backup_status.json from GitHub was not valid JSON -- starting fresh.")
+                traceback.print_exc()
+                state = {}
+
+    if not os.path.exists('backup_status.json'):
+        try:
+            _atomic_write_bytes("backup_status.json", json.dumps(state, indent=2).encode("utf-8"))
+            print("[backup_status] Created backup_status.json (no successful backup on record yet).")
+        except Exception:
+            print("[backup_status] Failed to create backup_status.json:")
+            traceback.print_exc()
+
+    return state
+
+
+backup_status = asyncio.run(_sync_backup_status_from_github_at_startup())
+backup_status_lock = asyncio.Lock()
+
+
 def _rebuild_card_prints_from_inventories() -> None:
     """
     Rebuilds the in-memory card_prints counter from the inventories that
@@ -3430,7 +4304,19 @@ def _rebuild_card_prints_from_inventories() -> None:
     someone else. Purely a read over the already-loaded `inventories`;
     does not touch inventories.json's format or content, and does not
     write anything to disk itself.
+
+    Always CLEARS card_prints first, then rebuilds it purely from what's
+    actually in `inventories` right now -- this used to only ever raise
+    each card's count, never lower it, so a fully wiped inventories.json
+    (all claim data intentionally reset) left every card's claim count
+    frozen at its old, stale high-water mark forever (since nothing else
+    ever lowers card_prints, and this function ran once at startup and
+    only compared upward). Clearing first means a wipe is reflected
+    correctly the very next time this runs -- normal ongoing play is
+    unaffected, since every currently-owned print still gets counted
+    right back in below.
     """
+    card_prints.clear()
     for owned_cards in inventories.values():
         for owned_card in owned_cards:
             card_id = owned_card.get("card", {}).get("id")
@@ -4700,6 +5586,10 @@ def _compute_collection_progress(inv: list) -> dict:
         series_in_progress -- count of series with >=1 owned but not complete
         owned_card_count   -- distinct card ids (versions) this inventory owns
         total_card_count   -- distinct card ids (versions) that exist, from cards.json
+        owned_card_ids     -- set of every card id this inventory owns at least
+                              one copy of -- used by lmissing to show missing
+                              specific versions/stars per character, not just
+                              missing character names.
     """
     series_totals = _series_character_totals()
     series_name_sets = _series_character_name_sets()
@@ -4743,6 +5633,7 @@ def _compute_collection_progress(inv: list) -> dict:
         "series_in_progress": series_in_progress,
         "owned_card_count": owned_card_count,
         "total_card_count": total_card_count,
+        "owned_card_ids": owned_card_ids,
     }
 
 
@@ -4767,6 +5658,47 @@ def _match_series(query: str):
             return card.get("series")
 
     return None
+
+
+def _character_missing_stars(series: str, name: str, owned_card_ids: set) -> list:
+    """
+    For one character (identified by name+series, same grouping used
+    everywhere else -- CharacterVersionView, the version migration,
+    etc.), returns the sorted, deduplicated list of `stars` values
+    belonging to that character's cards that are NOT present in
+    `owned_card_ids` (matched by exact card id) -- i.e. exactly which
+    version(s) of this character are missing, using the actual star
+    numbers already on each card rather than a separate "version"
+    label. An empty list means every version of this character is
+    already owned.
+    """
+    missing_stars = set()
+    for card in cards:
+        if card.get("series") != series or card.get("name") != name:
+            continue
+        if card.get("id") not in owned_card_ids:
+            missing_stars.add(card.get("stars", 1))
+    return sorted(missing_stars)
+
+
+def _missing_character_lines(series: str, names, owned_card_ids: set) -> list:
+    """
+    For each character name in `names` (all within `series`), returns
+    one formatted "Name ★1, ★2" display line for any character missing
+    at least one version -- fully-collected characters (zero missing
+    versions) are omitted entirely. Shared by every lmissing display
+    mode (single-series, the overview's per-series pages, and the
+    comparison view) so this exact "Name ★star, ★star" formatting is
+    never re-implemented per caller.
+    """
+    lines = []
+    for name in sorted(names):
+        missing_stars = _character_missing_stars(series, name, owned_card_ids)
+        if not missing_stars:
+            continue
+        star_text = ", ".join(f"★{s}" for s in missing_stars)
+        lines.append(f"{name} {star_text}")
+    return lines
 
 
 async def _parse_missing_args(message, raw_args: str):
@@ -4893,17 +5825,28 @@ def _build_missing_overview_embed(target_user, incomplete_series: list, total_pa
 
 
 def _build_missing_series_embed(target_user, series: str, stats: dict, page_num=None, total_pages=None) -> discord.Embed:
-    """One full page for a single series: its missing character names, plus a collected/remaining summary."""
+    """
+    One full page for a single series: each character missing at least
+    one version, shown with the specific missing star number(s) (e.g.
+    "Gojo ★1, ★2, ★4") rather than just the character's name -- plus
+    the same character-based collected/remaining summary as before.
+    """
     total = stats["series_totals"].get(series, 0)
     owned_set = stats["per_series_owned"].get(series, set())
     all_names = stats["series_name_sets"].get(series, set())
+    owned_card_ids = stats.get("owned_card_ids", set())
+
+    # Collected/Remaining stay character-based, exactly as before --
+    # only the missing LIST below now shows specific missing versions.
     missing_names = sorted(all_names - owned_set)
     owned_count = len(owned_set)
     remaining = len(missing_names)
 
+    missing_lines = _missing_character_lines(series, all_names, owned_card_ids)
+
     lines = [f"**{series}**", PROGRESS_DIVIDER, ""]
-    if missing_names:
-        code_block = "\n".join(f"X {name}" for name in missing_names)
+    if missing_lines:
+        code_block = "\n".join(f"X {line}" for line in missing_lines)
         lines.append(f"```{code_block}```")
     else:
         lines.append("*Nothing missing here -- fully collected!*")
@@ -4922,15 +5865,16 @@ def _build_missing_series_embed(target_user, series: str, stats: dict, page_num=
     return embed
 
 
-def _build_missing_comparison_embed(series: str, other_user, missing_names: list) -> discord.Embed:
+def _build_missing_comparison_embed(series: str, other_user, missing_lines: list) -> discord.Embed:
     """
-    Comparison mode: only the character names that belong to `series`,
-    that other_user owns, and that the requester does not.
+    Comparison mode: one "Name ★star, ★star" line per character in
+    `series` that other_user owns a version of that the requester
+    doesn't -- specific missing versions, not just bare character names.
     """
     embed = discord.Embed(color=THEME_COLOR)
     embed.title = series
-    if missing_names:
-        embed.description = "\n\n".join(missing_names)
+    if missing_lines:
+        embed.description = "\n\n".join(missing_lines)
     else:
         embed.description = f"You already own every card from this series that {other_user.mention} has."
     return embed
@@ -5048,10 +5992,15 @@ class MailboxPaginationView(discord.ui.View):
     Paginates a user's mail, one letter per page -- same prev/next
     pagination row and button-state pattern as BadgesPaginationView,
     just with one letter instead of a chunk of badge blocks per page.
-    Adds a single "Read" button below the pagination row that marks the
-    currently-viewed letter as read; read letters stay visible (still
-    paginated through normally) but no longer count toward the unread
-    mail reminder.
+    Row 1 has "Read" (marks only the currently-viewed letter as read),
+    "Reply" (targets THAT letter's original sender, reusing the exact
+    same lmail @user send/persist flow), and "🚫 Block" (adds that
+    letter's sender to this mailbox owner's blocked-senders list, so
+    they can no longer send new mail here -- one-way, never affects the
+    owner's own ability to mail that sender back). Row 2 has "Read All"
+    (marks every unread letter in the whole mailbox as read at once).
+    Read letters stay visible (still paginated through normally) but no
+    longer count toward the unread mail reminder.
     """
     def __init__(self, letters: list, user_id: int):
         super().__init__(timeout=90)
@@ -5068,6 +6017,16 @@ class MailboxPaginationView(discord.ui.View):
         self.previous.disabled = (self.page <= 0)
         self.next.disabled = (self.page >= self.max_page)
         self.mark_read.disabled = bool(self.letters[self.page].get("read"))
+        self.read_all.disabled = not any(not l.get("read") for l in self.letters)
+
+        # Block button: disabled if the current letter's sender can't
+        # be identified/targeted at all (same validity check as Reply),
+        # or is already blocked, or is the viewer themselves.
+        letter = self.letters[self.page]
+        sender_id = letter.get("sender_id")
+        sender_valid = bool(sender_id) and str(sender_id).isdigit() and int(sender_id) != self.user_id
+        already_blocked = sender_valid and is_sender_blocked(sender_id, self.user_id)
+        self.block_sender_btn.disabled = not sender_valid or already_blocked
 
     def build_embed(self) -> discord.Embed:
         letter = self.letters[self.page]
@@ -5143,6 +6102,142 @@ class MailboxPaginationView(discord.ui.View):
                 )
 
         letter["read"] = True
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(label="Reply", style=discord.ButtonStyle.secondary, row=1)
+    async def reply_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your mailbox!", ephemeral=True)
+
+        letter = self.letters[self.page]
+        sender_id = letter.get("sender_id")
+
+        if not sender_id or not str(sender_id).isdigit():
+            return await interaction.response.send_message(
+                "This letter's sender can't be identified.", ephemeral=True
+            )
+
+        if int(sender_id) == self.user_id:
+            return await interaction.response.send_message(
+                "You can't reply to yourself.", ephemeral=True
+            )
+
+        bot = interaction.client
+        sender_user = bot.get_user(int(sender_id))
+        if sender_user is None:
+            try:
+                sender_user = await bot.fetch_user(int(sender_id))
+            except Exception:
+                sender_user = None
+
+        if sender_user is None:
+            return await interaction.response.send_message(
+                "This letter's sender could no longer be found.", ephemeral=True
+            )
+        if sender_user.bot:
+            return await interaction.response.send_message(
+                "You can't send mail to a bot.", ephemeral=True
+            )
+
+        await interaction.response.send_message(
+            f"✉️ Replying to **{sender_user.display_name}** -- check below!",
+            ephemeral=True
+        )
+
+        # Same send/persist flow as `lmail @user` -- see
+        # _run_mail_sending_flow. This mailbox view/message is left
+        # exactly as-is; the reply happens as its own follow-up prompt
+        # in the channel, same as running the command directly would.
+        await _run_mail_sending_flow(bot, interaction.channel, interaction.user, sender_user)
+
+    @discord.ui.button(label="🚫 Block", style=discord.ButtonStyle.danger, row=1)
+    async def block_sender_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your mailbox!", ephemeral=True)
+
+        letter = self.letters[self.page]
+        sender_id = letter.get("sender_id")
+
+        if not sender_id or not str(sender_id).isdigit():
+            return await interaction.response.send_message(
+                "This letter's sender can't be identified.", ephemeral=True
+            )
+
+        if int(sender_id) == self.user_id:
+            return await interaction.response.send_message(
+                "You can't block yourself.", ephemeral=True
+            )
+
+        # Blocking is one-way and only ever affects mail FROM sender_id
+        # TO this mailbox's owner -- it never touches the owner's own
+        # ability to mail sender_id back. Persisted through the exact
+        # same mail_lock/save_mail_local/mark_mail_dirty/rollback
+        # sequence every other mail mutation in this view already uses.
+        async with mail_lock:
+            newly_blocked = block_sender(self.user_id, sender_id)
+            if not newly_blocked:
+                return await interaction.response.send_message(
+                    f"**{letter.get('_sender_name', 'This user')}** is already blocked.", ephemeral=True
+                )
+            try:
+                save_mail_local()
+                mark_mail_dirty()
+            except Exception:
+                get_blocked_senders(self.user_id).remove(str(sender_id))
+                return await interaction.response.send_message(
+                    "❌ Something went wrong saving that. Please try again.", ephemeral=True
+                )
+
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+        await interaction.followup.send(
+            f"🚫 Blocked **{letter.get('_sender_name', 'this user')}** -- they can no longer send you mail.",
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="Read All", style=discord.ButtonStyle.secondary, row=2)
+    async def read_all(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This isn't your mailbox!", ephemeral=True)
+
+        async with mail_lock:
+            mailbox = get_mailbox(self.user_id)
+            # Snapshot exactly which letters were unread BEFORE touching
+            # anything, so a failed save can roll back precisely these
+            # (and only these) -- never letters that were already read
+            # coming in. A single pass + a single save_mail_local() call
+            # regardless of mailbox size, so this stays fast even at
+            # 50+ letters (no per-letter I/O).
+            newly_read_ids = {l.get("id") for l in mailbox if not l.get("read")}
+
+            if not newly_read_ids:
+                return await interaction.response.send_message(
+                    "You have no unread mail.", ephemeral=True
+                )
+
+            for real_letter in mailbox:
+                if real_letter.get("id") in newly_read_ids:
+                    real_letter["read"] = True
+
+            try:
+                save_mail_local()
+                mark_mail_dirty()
+            except Exception:
+                for real_letter in mailbox:
+                    if real_letter.get("id") in newly_read_ids:
+                        real_letter["read"] = False
+                return await interaction.response.send_message(
+                    "❌ Something went wrong saving your mail. Please try again.", ephemeral=True
+                )
+
+        # Reflect the change in this view's own (already-fetched) copy
+        # too, so the current page/footer update immediately without
+        # needing to reopen `lmail`.
+        for l in self.letters:
+            if l.get("id") in newly_read_ids:
+                l["read"] = True
+
         self._update_button_states()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
@@ -5722,7 +6817,7 @@ class CharacterVersionView(discord.ui.View):
             f"────────────────────\n"
             f"✦ **Claims:** **{claims}**\n"
             f"✦ **Level:** **{stars(card['stars'])}**\n"
-            f"✦ **Version:** **{card_version_label(card)}**\n"
+            f"✦ **Version:** **{card_version_display(card)}**\n"
         )
 
         embed.set_footer(
@@ -6627,6 +7722,25 @@ class TradeRequestView(discord.ui.View):
 
 MAX_TRADE_CARDS = 3
 
+# The "confirming" stage (both players locked, waiting on final Confirm
+# presses) used to disable its timeout entirely, on the assumption a
+# finalizing trade should never expire mid-transaction. In practice
+# that meant an abandoned trade -- one side locks and then never
+# presses Confirm -- had literally no expiration at all, leaving both
+# participants permanently unable to start a new trade. It now gets
+# its own bounded timeout instead of none.
+TRADE_CONFIRM_TIMEOUT_SECONDS = 300  # 5 minutes to finish confirming once both are locked
+
+# Backstop for active_trades: independent of any single view's own
+# on_timeout callback (library timer races, a swallowed exception during
+# the message edit, etc.), trade_expiration_sweep_loop periodically
+# force-clears any active_trades entry older than this, guaranteeing
+# expiration is reliable even if nobody ever interacts with the old
+# trade again. Generous enough to never fire before a trade's own
+# on_timeout would have already cleaned it up normally.
+TRADE_MAX_LIFETIME_SECONDS = TRADE_CONFIRM_TIMEOUT_SECONDS + 180 + 120  # confirm window + select/lock window + slack
+TRADE_SWEEP_INTERVAL_SECONDS = 60
+
 
 class TradeView(discord.ui.View):
     def __init__(self, user1, user2, user1_id, user2_id):
@@ -6714,18 +7828,14 @@ class TradeView(discord.ui.View):
         )
 
     async def on_timeout(self):
-        # Only relevant during selecting/locking -- the timeout is
-        # disabled entirely once both users lock in (see lock() above),
-        # so this shouldn't normally fire during "confirming", but guard
-        # anyway rather than assume.
-        if self.stage == "confirming":
-            return
-
-        if self.trade_id not in active_trades:
-            # Already declined/completed/removed some other way.
-            return
-
-        del active_trades[self.trade_id]
+        # Now fires for both the selecting/locking timeout AND the
+        # confirming-stage timeout (see TRADE_CONFIRM_TIMEOUT_SECONDS).
+        # Clearing active_trades happens FIRST and unconditionally --
+        # regardless of stage, and regardless of whether the message
+        # edit below succeeds -- so an abandoned trade can never
+        # permanently block either participant from starting a new one.
+        if self.trade_id in active_trades:
+            del active_trades[self.trade_id]
 
         for item in self.children:
             item.disabled = True
@@ -6759,10 +7869,10 @@ class TradeView(discord.ui.View):
 
         if self.user1_locked and self.user2_locked:
             self.stage = "confirming"
-            # The 3-minute timeout only applies to the main
-            # selecting/locking embed -- the final confirmation stage
-            # should never expire mid-transaction.
-            self.timeout = None
+            # Bounded timeout for the confirming stage too now (see
+            # TRADE_CONFIRM_TIMEOUT_SECONDS) -- an abandoned trade (one
+            # side locks and never confirms) used to never expire at all.
+            self.timeout = TRADE_CONFIRM_TIMEOUT_SECONDS
             try:
                 self.lock.emoji = "<:accept:1515633292605657088>"
             except Exception:
@@ -7782,6 +8892,19 @@ class Client(discord.Client):
         if _duo_sync_task is None or _duo_sync_task.done():
             _duo_sync_task = asyncio.create_task(duo_github_sync_loop())
 
+        # Same singleton-guard pattern, same reasoning, for
+        # version_system.json's own periodic GitHub sync.
+        global _version_system_sync_task
+        if _version_system_sync_task is None or _version_system_sync_task.done():
+            _version_system_sync_task = asyncio.create_task(version_system_github_sync_loop())
+
+        # Same singleton-guard pattern, same reasoning, for
+        # backup_status.json's own periodic GitHub sync (a safety net --
+        # `lbackup` itself already commits this file directly).
+        global _backup_status_sync_task
+        if _backup_status_sync_task is None or _backup_status_sync_task.done():
+            _backup_status_sync_task = asyncio.create_task(backup_status_github_sync_loop())
+
         # One-time migration: existing players get +5 extra drops/claims.
         # See _run_extra_bonus_migration_once() -- guarded so it can
         # never run twice and never applies to players created later.
@@ -7805,6 +8928,12 @@ class Client(discord.Client):
         global _merchant_check_task
         if _merchant_check_task is None or _merchant_check_task.done():
             _merchant_check_task = asyncio.create_task(merchant_check_loop())
+
+        # Backstop sweep for active_trades -- see trade_expiration_sweep_loop
+        # for why this exists alongside TradeView's own on_timeout.
+        global _trade_sweep_task
+        if _trade_sweep_task is None or _trade_sweep_task.done():
+            _trade_sweep_task = asyncio.create_task(trade_expiration_sweep_loop())
 
         # Sends any merchant arrival/departure announcement that was
         # detected before the client was ready (most commonly: a
@@ -7876,6 +9005,18 @@ class Client(discord.Client):
             traceback.print_exc()
 
         try:
+            await flush_version_system_to_github()
+        except Exception:
+            print("[versions] Failed to flush pending version system changes on shutdown:")
+            traceback.print_exc()
+
+        try:
+            await flush_backup_status_to_github()
+        except Exception:
+            print("[backup_status] Failed to flush pending backup status changes on shutdown:")
+            traceback.print_exc()
+
+        try:
             await flush_merchants_to_github()
         except Exception:
             print("[merchants] Failed to flush pending merchant state changes on shutdown:")
@@ -7897,18 +9038,25 @@ class Client(discord.Client):
         # UNREAD MAIL REMINDER
         # =========================
         # Fires on every recognized command (see _looks_like_bot_command's
-        # docstring for what "recognized" means here), not just `lmail`
-        # itself, and only while unread mail actually exists -- once
-        # everything's been marked read via the mailbox's Read button,
-        # this simply stops firing on its own. Sent as its own reply
-        # alongside whatever the command below does; never blocks or
-        # replaces that command's own response.
+        # docstring for what "recognized" means here) while unread mail
+        # exists, but at most once every MAIL_REMINDER_COOLDOWN_SECONDS
+        # per user -- so a chatty user running several commands in a row
+        # only gets nagged once per window, not on every single command.
+        # Once everything's been marked read via the mailbox's Read
+        # button, has_unread_mail() goes False and this simply stops
+        # firing on its own; the cooldown timestamp is only ever
+        # refreshed when a reminder is actually shown, so the very next
+        # command after new mail arrives still reminds immediately.
         if _looks_like_bot_command(content_lower) and has_unread_mail(user_id):
-            unread_count = unread_mail_count(user_id)
-            letter_word = "letter" if unread_count == 1 else "letters"
-            await reply(message,
-                f"📬 You have {unread_count} unread {letter_word}! Use `lmail` to open your mailbox."
-            )
+            now_ts = time.time()
+            last_shown = _last_mail_reminder_at.get(user_id, 0)
+            if now_ts - last_shown >= MAIL_REMINDER_COOLDOWN_SECONDS:
+                _last_mail_reminder_at[user_id] = now_ts
+                unread_count = unread_mail_count(user_id)
+                letter_word = "letter" if unread_count == 1 else "letters"
+                await reply(message,
+                    f"📬 You have {unread_count} unread {letter_word}! Use `lmail` to open your mailbox."
+                )
 
         # =========================
         # LUPDATEIMAGE COMMAND
@@ -8076,7 +9224,11 @@ class Client(discord.Client):
                             "stars": stars_val,
                             "weight": weight_for_stars(stars_val),
                             "image": save_path,
-                            "frame": frame_name
+                            "frame": frame_name,
+                            # Same character-grouped Common numbering the
+                            # startup migration assigns to every existing
+                            # card -- see _next_version_for_new_card.
+                            "version": _next_version_for_new_card(char_name, series, frame_name),
                         }
 
                         # Mutate in-memory first so the cards.json payload
@@ -8661,6 +9813,448 @@ class Client(discord.Client):
             return
 
         # =========================
+        # LGIVE COMMAND (owner-only: grant bonus drops/claims)
+        # =========================
+        if content_lower.startswith("lgive "):
+            # Explicit user-ID allowlist, never a role or username check.
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            parts = message.content.split()
+            if len(parts) < 4:
+                return await reply(message, 
+                    "Usage: `lgive @user <amount> <drops|claims>`"
+                )
+
+            # Resolve the target the same way lgw already does: a real
+            # mention first, otherwise a raw Discord ID -- cache lookup
+            # first, falling back to a fetch for one that isn't cached,
+            # so a valid id never silently fails just because the member
+            # wasn't already in Discord's cache. Owners can target
+            # themselves -- nothing here excludes message.author.
+            target = None
+            if message.mentions:
+                target = message.mentions[0]
+            elif parts[1].isdigit() and message.guild:
+                candidate_id = int(parts[1])
+                target = message.guild.get_member(candidate_id)
+                if target is None:
+                    try:
+                        target = await message.guild.fetch_member(candidate_id)
+                    except (discord.NotFound, discord.HTTPException):
+                        target = None
+
+            if target is None:
+                return await reply(message, 
+                    "Could not find that user. Use a mention or a valid Discord user ID."
+                )
+
+            try:
+                amount = int(parts[2])
+            except ValueError:
+                return await reply(message, 
+                    "Please provide a valid whole number amount (1-10)."
+                )
+
+            if amount < 1 or amount > 10:
+                return await reply(message, 
+                    "Amount must be between 1 and 10."
+                )
+
+            kind_token = parts[3].lower().rstrip("s")
+            if kind_token not in ("drop", "claim"):
+                return await reply(message, 
+                    "Please specify `drops` or `claims`."
+                )
+
+            # Reuses the EXACT existing bonus drop/claim system (see
+            # add_bonus/consume_bonus and their use in `ld` and the claim
+            # button) -- no separate reward mechanism, no changes to
+            # normal cooldown/drop/claim behavior for anyone. A granted
+            # bonus is only ever spent the next time that specific user
+            # would otherwise be on cooldown, exactly like a Duo bonus.
+            async with duo_lock:
+                add_bonus(target.id, kind_token, amount)
+                try:
+                    save_duo_local()
+                    mark_duo_dirty()
+                except Exception:
+                    add_bonus(target.id, kind_token, -amount)
+                    return await reply(message, 
+                        "❌ Failed to save. Please try again."
+                    )
+
+            kind_label = "claim" if kind_token == "claim" else "drop"
+            plural = "s" if amount != 1 else ""
+            return await reply(message, 
+                f"✅ Gave {target.mention} **{amount}** extra {kind_label}{plural}."
+            )
+
+        # =========================
+        # LBACKUP COMMAND (owner-only: force an immediate GitHub backup)
+        # =========================
+        # Every persistent JSON store this bot maintains -- filename,
+        # snapshot-to-bytes helper, and the lock that already guards it
+        # in its own periodic GitHub sync loop. Kept as one explicit list
+        # (rather than a scan of globals()) so adding a new persistent
+        # store later is a one-line addition here, matching the same
+        # explicit, unrolled style already used in on_ready()/close()
+        # for registering/flushing each store.
+        if content_lower == "lbackup":
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            # Snapshot every store's CURRENT local/in-memory state, each
+            # under its own lock, using the exact same _*_json_bytes()
+            # helper its own periodic sync loop already calls -- so this
+            # reuses the existing per-file serialization exactly, rather
+            # than reading raw files off disk (which could race a
+            # mutation that hasn't hit disk yet) or inventing a second
+            # snapshot mechanism. The dirty flag is cleared in the SAME
+            # lock scope as the snapshot -- exactly like every
+            # inventory_github_sync_loop-style loop already does -- so a
+            # mutation that lands after this snapshot is taken correctly
+            # stays (or becomes) dirty for the next periodic cycle,
+            # instead of being silently marked "synced" when it wasn't
+            # actually included in this commit.
+            global _inventories_dirty, _showcase_votes_dirty, _pending_recovery_dirty
+            global _mail_dirty, _duo_dirty, _merchants_dirty, _version_system_dirty
+            global _backup_status_dirty
+
+            backup_files = {}
+
+            async with inventories_lock:
+                backup_files["inventories.json"] = _inventories_json_bytes()
+                _inventories_dirty = False
+
+            async with showcase_votes_lock:
+                backup_files["showcase_votes.json"] = _showcase_votes_json_bytes()
+                _showcase_votes_dirty = False
+
+            async with pending_recovery_lock:
+                backup_files["pending_recovery.json"] = _pending_recovery_json_bytes()
+                _pending_recovery_dirty = False
+
+            async with mail_lock:
+                backup_files["mail.json"] = _mail_json_bytes()
+                _mail_dirty = False
+
+            async with duo_lock:
+                backup_files["duo.json"] = _duo_json_bytes()
+                _duo_dirty = False
+
+            async with merchants_lock:
+                backup_files["merchants.json"] = _merchants_json_bytes()
+                _merchants_dirty = False
+
+            async with version_system_lock:
+                backup_files["version_system.json"] = _version_system_json_bytes()
+                _version_system_dirty = False
+
+            # Tentatively stamp backup_status.json with THIS attempt's
+            # timestamp and fold it into the SAME commit as the 7 files
+            # above -- one atomic commit, not a separate follow-up one,
+            # so the timestamp can never end up out of sync with the
+            # data it describes. old_backup_status_snapshot/old_dirty
+            # are kept so a failed commit below can put backup_status
+            # back exactly how it was, in memory AND on the next
+            # periodic/shutdown sync -- "do NOT update the timestamp"
+            # on failure means the in-memory value too, not just the
+            # file.
+            old_backup_status_snapshot = dict(backup_status)
+            old_backup_status_dirty = _backup_status_dirty
+            attempted_backup_timestamp = time.time()
+
+            async with backup_status_lock:
+                backup_status["last_successful_backup_at"] = attempted_backup_timestamp
+                backup_files["backup_status.json"] = _backup_status_json_bytes()
+                _backup_status_dirty = False
+
+            # Reuses the exact same commit machinery every periodic sync
+            # loop and the shutdown flush already use -- one atomic
+            # commit containing all seven data files PLUS
+            # backup_status.json, instead of a second backup system.
+            # Current LOCAL data is what was just snapshotted above;
+            # nothing here ever downloads from or otherwise consults
+            # GitHub, so an older remote copy can never overwrite a
+            # newer local one.
+            try:
+                await github_commit_files(backup_files, "Manual backup (lbackup)")
+            except Exception:
+                print("[lbackup] Manual backup failed:")
+                traceback.print_exc()
+
+                # Restore every dirty flag so the normal periodic loops
+                # (and the shutdown flush) still retry each file on
+                # their own schedule -- exactly the same on-failure
+                # restore every individual flush_*_to_github() already
+                # does.
+                async with inventories_lock:
+                    _inventories_dirty = True
+                async with showcase_votes_lock:
+                    _showcase_votes_dirty = True
+                async with pending_recovery_lock:
+                    _pending_recovery_dirty = True
+                async with mail_lock:
+                    _mail_dirty = True
+                async with duo_lock:
+                    _duo_dirty = True
+                async with merchants_lock:
+                    _merchants_dirty = True
+                async with version_system_lock:
+                    _version_system_dirty = True
+
+                # The commit never went through, so this attempt did
+                # NOT successfully back anything up -- revert
+                # backup_status to exactly what it was before this
+                # command ran (local file, dirty flag, and in-memory
+                # dict alike), instead of leaving a timestamp that
+                # claims a backup happened when it didn't.
+                async with backup_status_lock:
+                    backup_status.clear()
+                    backup_status.update(old_backup_status_snapshot)
+                    _backup_status_dirty = old_backup_status_dirty
+                    try:
+                        save_backup_status_local()
+                    except Exception:
+                        print("[backup_status] Failed to revert backup_status.json locally after a failed lbackup:")
+                        traceback.print_exc()
+
+                return await reply(message,
+                    "❌ Backup failed -- the GitHub commit did not go through. "
+                    "Local data is untouched; nothing was lost. Check the logs for details."
+                )
+
+            # Commit succeeded -- persist backup_status.json's new value
+            # locally too (it's already committed to GitHub as part of
+            # the commit above; this just keeps the local file/disk copy
+            # in sync with it, same as save_*_local() does for every
+            # other store right after its own successful commit path).
+            try:
+                save_backup_status_local()
+            except Exception:
+                print("[backup_status] Backup succeeded on GitHub, but failed to save backup_status.json locally:")
+                traceback.print_exc()
+
+            file_list = "\n".join(f"• `{name}`" for name in backup_files.keys())
+            embed = discord.Embed(
+                color=discord.Color.green(),
+                title="✅ Backup Complete",
+                description=f"Successfully committed **{len(backup_files)}** file(s) to GitHub using current local data."
+            )
+            embed.add_field(name="Files Backed Up", value=file_list, inline=False)
+            embed.set_footer(text=f"Backed up at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))} UTC")
+            return await reply(message, embed=embed)
+
+        # =========================
+        # LBACKUPSTATUS COMMAND (owner-only: read-only backup/sync status)
+        # =========================
+        if content_lower == "lbackupstatus":
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            # (filename, dirty-flag value, upload-in-progress value,
+            # sync-task handle, loader function) for every persistent
+            # store -- read-only, nothing here is written or mutated.
+            # The loaders reused below are the exact same
+            # _load_*_json() functions each store's own startup sync
+            # already calls to decide "valid or not"; calling them here
+            # again is safe/idempotent since they only read from disk.
+            stores = [
+                ("inventories.json", _inventories_dirty, _inventory_upload_in_progress, _inventory_sync_task, _load_inventories_json),
+                ("showcase_votes.json", _showcase_votes_dirty, _showcase_votes_upload_in_progress, _showcase_votes_sync_task, _load_showcase_votes_json),
+                ("pending_recovery.json", _pending_recovery_dirty, _pending_recovery_upload_in_progress, _pending_recovery_sync_task, _load_pending_recovery_json),
+                ("mail.json", _mail_dirty, _mail_upload_in_progress, _mail_sync_task, _load_mail_json),
+                ("duo.json", _duo_dirty, _duo_upload_in_progress, _duo_sync_task, _load_duo_json),
+                ("merchants.json", _merchants_dirty, _merchants_upload_in_progress, _merchants_sync_task, _load_merchants_json),
+                ("version_system.json", _version_system_dirty, _version_system_upload_in_progress, _version_system_sync_task, _load_version_system_json),
+                ("backup_status.json", _backup_status_dirty, _backup_status_upload_in_progress, _backup_status_sync_task, _load_backup_status_json),
+            ]
+
+            exists_lines = []
+            dirty_lines = []
+            in_progress_lines = []
+            unhealthy_lines = []
+            loops_running = 0
+
+            for filename, is_dirty, in_progress, sync_task, loader in stores:
+                exists = os.path.exists(filename)
+                exists_lines.append(f"{'✅' if exists else '❌'} `{filename}`")
+
+                if is_dirty:
+                    dirty_lines.append(f"• `{filename}`")
+
+                if in_progress:
+                    in_progress_lines.append(f"• `{filename}`")
+
+                if sync_task is not None and not sync_task.done():
+                    loops_running += 1
+
+                # A store is "healthy" here if its own loader considers
+                # the local file valid (exists, parses, right shape) --
+                # same definition of valid/invalid the startup sync
+                # already uses, just called read-only after the fact.
+                if exists and loader() is None:
+                    unhealthy_lines.append(f"• `{filename}` -- exists but failed local validation")
+                elif not exists:
+                    unhealthy_lines.append(f"• `{filename}` -- missing locally")
+
+            any_dirty = bool(dirty_lines)
+            any_in_progress = bool(in_progress_lines)
+            all_healthy = not unhealthy_lines
+
+            embed = discord.Embed(
+                color=discord.Color.green() if (all_healthy and not any_in_progress) else discord.Color.orange(),
+                title="💾 Backup/Sync Status",
+                description="Read-only snapshot of persistence state. Nothing here is modified."
+            )
+            embed.add_field(name="📁 Local Files", value="\n".join(exists_lines), inline=False)
+            embed.add_field(
+                name="🔄 Pending (Dirty) Changes",
+                value="\n".join(dirty_lines) if any_dirty else "✅ None -- everything is synced.",
+                inline=False
+            )
+            embed.add_field(
+                name="⏳ GitHub Sync In Progress",
+                value="\n".join(in_progress_lines) if any_in_progress else "✅ No sync currently running.",
+                inline=False
+            )
+            embed.add_field(
+                name="🧵 Background Sync Loops",
+                value=f"{loops_running}/{len(stores)} running",
+                inline=True
+            )
+            last_backup_at = backup_status.get("last_successful_backup_at")
+            if last_backup_at:
+                last_backup_value = (
+                    f"<t:{int(last_backup_at)}:R> "
+                    f"(<t:{int(last_backup_at)}:F>)"
+                )
+            else:
+                last_backup_value = "⚠️ No successful `lbackup` has been recorded yet."
+
+            embed.add_field(
+                name="🕐 Last Successful Backup",
+                value=last_backup_value,
+                inline=False
+            )
+            embed.add_field(
+                name="🩺 File Health",
+                value="\n".join(unhealthy_lines) if unhealthy_lines else "✅ All persistent files appear healthy.",
+                inline=False
+            )
+            embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))} UTC")
+
+            return await reply(message, embed=embed)
+
+        # =========================
+        # LFIXUSER COMMAND (owner-only: diagnostic view of one user's data)
+        # =========================
+        # Diagnostic-only for now, deliberately -- no repair actions are
+        # implemented yet (per spec). Structured as "resolve target ->
+        # gather read-only diagnostics -> render embed" specifically so
+        # a future revision can add actual repair actions (e.g. buttons
+        # on this same embed, or a confirmation view) without needing to
+        # rewrite the target-resolution or data-gathering parts.
+        if content_lower.startswith("lfixuser"):
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            parts = message.content.split()
+            if len(parts) < 2:
+                return await reply(message,
+                    "Usage: `lfixuser @user` or `lfixuser <user_id>`"
+                )
+
+            # Same explicit mention-first, then raw-ID resolution as
+            # `lgive` above -- deliberately NOT resolve_target_user()
+            # (which falls back to the command author when nothing
+            # matches), since silently inspecting the owner's own data
+            # because a target was mistyped would be the wrong failure
+            # mode for a repair tool.
+            target = None
+            if message.mentions:
+                target = message.mentions[0]
+            elif parts[1].isdigit() and message.guild:
+                candidate_id = int(parts[1])
+                target = message.guild.get_member(candidate_id)
+                if target is None:
+                    try:
+                        target = await message.guild.fetch_member(candidate_id)
+                    except (discord.NotFound, discord.HTTPException):
+                        target = None
+
+            if target is None:
+                return await reply(message,
+                    "Could not find that user. Use a mention or a valid Discord user ID."
+                )
+
+            target_key = str(target.id)
+
+            # Reads only -- deliberately NOT get_inventory()/get_mailbox()/
+            # get_bonus(), since those setdefault a fresh empty entry
+            # into inventories/mail/duo on first access. A read-only
+            # diagnostic command must never create a persistent-store
+            # entry for a user as a side effect of merely looking them up.
+            inv = inventories.get(target_key, [])
+            malformed_entries = sum(
+                1 for entry in inv
+                if not isinstance(entry, dict) or "card" not in entry or "print" not in entry
+            )
+
+            bonus = duo.get("bonus", {}).get(target_key, {"drop": 0, "claim": 0})
+
+            now = time.time()
+            if target.id in drop_cooldowns:
+                drop_remaining = int(DROP_COOLDOWN - (now - drop_cooldowns[target.id]))
+                drop_status = "ready" if drop_remaining <= 0 else f"on cooldown -- {format_time(drop_remaining)} left"
+            else:
+                drop_status = "ready (no cooldown on record)"
+
+            if target.id in claim_cooldowns:
+                claim_remaining = int(CLAIM_COOLDOWN - (now - claim_cooldowns[target.id]))
+                claim_status = "ready" if claim_remaining <= 0 else f"on cooldown -- {format_time(claim_remaining)} left"
+            else:
+                claim_status = "ready (no cooldown on record)"
+
+            mailbox = mail.get(target_key, [])
+            unread_count = sum(1 for letter in mailbox if not letter.get("read"))
+
+            recovery_status = "Not pending recovery"
+            if target_key in pending_recovery:
+                detected_at = pending_recovery[target_key]
+                days_elapsed = (now - detected_at) / 86400
+                days_left = max(0, RECOVERY_PENDING_DAYS - days_elapsed)
+                recovery_status = f"⚠️ Pending recovery -- {days_left:.1f} day(s) until transfer"
+
+            embed = discord.Embed(
+                color=discord.Color.blue(),
+                title=f"🔧 User Data Diagnostic: {target}",
+                description="Read-only diagnostic view. **No changes have been made.** "
+                            "Repair actions will be added in a future update."
+            )
+            embed.add_field(name="🆔 User ID", value=f"`{target.id}`", inline=True)
+            embed.add_field(name="🎴 Inventory Size", value=str(len(inv)), inline=True)
+            embed.add_field(
+                name="⚠️ Malformed Inventory Entries",
+                value=str(malformed_entries) if malformed_entries else "✅ None",
+                inline=True
+            )
+            embed.add_field(name="🎁 Bonus Drops", value=str(bonus.get("drop", 0)), inline=True)
+            embed.add_field(name="🎁 Bonus Claims", value=str(bonus.get("claim", 0)), inline=True)
+            embed.add_field(name="⏱️ Drop Cooldown", value=drop_status, inline=False)
+            embed.add_field(name="⏱️ Claim Cooldown", value=claim_status, inline=False)
+            embed.add_field(
+                name="📬 Mail",
+                value=f"{len(mailbox)} total, {unread_count} unread",
+                inline=True
+            )
+            embed.add_field(name="♻️ Recovery Status", value=recovery_status, inline=False)
+            embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))} UTC")
+
+            return await reply(message, embed=embed)
+
+        # =========================
         # LTAG COMMAND
         # =========================
         if content_lower.startswith("ltag "):
@@ -8984,50 +10578,8 @@ class Client(discord.Client):
             if target_user.bot:
                 return await reply(message, "You can't send mail to a bot.")
 
-            await reply(
-                message,
-                f"✉️ What would you like to send to **{target_user.display_name}**? "
-                "Type your message now."
-            )
-
-            def check(m):
-                return m.author.id == message.author.id and m.channel.id == message.channel.id
-
-            try:
-                mail_msg = await self.wait_for("message", check=check, timeout=180)
-            except asyncio.TimeoutError:
-                return await reply(message, "❌ Timed out waiting for your mail message.")
-
-            mail_content = mail_msg.content.strip()
-            if not mail_content:
-                return await reply(
-                    mail_msg,
-                    "❌ Mail message can't be empty. Please run `lmail @user` again."
-                )
-
-            letter = {
-                "id": str(uuid.uuid4()),
-                "sender_id": str(message.author.id),
-                "receiver_id": str(target_user.id),
-                "timestamp": time.time(),
-                "message": mail_content,
-                "read": False,
-            }
-
-            async with mail_lock:
-                mailbox = get_mailbox(target_user.id)
-                mailbox.append(letter)
-                try:
-                    save_mail_local()
-                    mark_mail_dirty()
-                except Exception:
-                    mailbox.remove(letter)
-                    return await reply(
-                        mail_msg,
-                        "❌ Something went wrong saving your mail. Please try again."
-                    )
-
-            return await reply(mail_msg, f"✅ Mail sent to **{target_user.display_name}**!")
+            await _run_mail_sending_flow(self, message.channel, message.author, target_user)
+            return
 
         # =========================
         # LDUO COMMAND
@@ -9086,6 +10638,30 @@ class Client(discord.Client):
             sent = await reply(message, embed=view.get_embed(), view=view)
             view.message = sent
             return
+
+        # =========================
+        # LDUOPROGRESS COMMAND
+        # =========================
+        if content_lower == "lduoprogress":
+            challenge_id, challenge = find_active_duo(user_id)
+            if not challenge:
+                return await reply(message, "You don't currently have an active Duo Challenge. Start one with `lduo @user`!")
+
+            partner_id = challenge.get("player_a") if challenge.get("player_b") == str(user_id) else challenge.get("player_b")
+            partner_user = None
+            if partner_id:
+                try:
+                    partner_user = self.get_user(int(partner_id))
+                    if partner_user is None:
+                        partner_user = await self.fetch_user(int(partner_id))
+                except Exception:
+                    partner_user = None
+
+            if partner_user is None:
+                return await reply(message, "Your Duo partner could no longer be found.")
+
+            embed = build_duo_progress_embed(self, challenge, user_id, partner_user)
+            return await reply(message, embed=embed)
 
         # =========================
         # LBADGES COMMAND
@@ -9513,7 +11089,7 @@ class Client(discord.Client):
                 f"✦ **Owner:** <@{viewing_user_id}>\n"
                 f"✦ **Print:** **{print_display}**\n"
                 f"✦ **Level:** **{stars(star_val)}**\n"
-                f"✦ **Version:** **{card_version_label(card)}**\n"
+                f"✦ **Version:** **{card_version_display(card)}**\n"
             )
             image_path = render_card_final(card, print_num, force_real_print=is_merchant_reward)
 
@@ -9902,11 +11478,28 @@ class Client(discord.Client):
                 other_inv = get_inventory(other_user.id)
                 other_stats = _compute_collection_progress(other_inv)
 
-                your_owned = stats["per_series_owned"].get(matched_series, set())
-                their_owned = other_stats["per_series_owned"].get(matched_series, set())
-                missing_names = sorted(their_owned - your_owned)
+                your_ids = stats.get("owned_card_ids", set())
+                their_ids = other_stats.get("owned_card_ids", set())
 
-                embed = _build_missing_comparison_embed(matched_series, other_user, missing_names)
+                # Only cards actually in this series that other_user owns
+                # and the requester doesn't -- grouped by character, with
+                # the specific missing star number(s) shown (same "Name
+                # ★star, ★star" format lmissing uses everywhere else),
+                # not just bare character names.
+                missing_by_name = {}
+                for card in cards:
+                    if card.get("series") != matched_series:
+                        continue
+                    card_id = card.get("id")
+                    if card_id in their_ids and card_id not in your_ids:
+                        missing_by_name.setdefault(card.get("name", "Unknown"), set()).add(card.get("stars", 1))
+
+                missing_lines = [
+                    f"{name} " + ", ".join(f"★{s}" for s in sorted(star_set))
+                    for name, star_set in sorted(missing_by_name.items())
+                ]
+
+                embed = _build_missing_comparison_embed(matched_series, other_user, missing_lines)
                 return await reply(message, embed=embed)
 
             # --- Single-series view: only that series, no overview page ---
@@ -9944,5 +11537,6 @@ class Client(discord.Client):
 
 # --- Run Bot Connection ---
 client = Client(intents=intents)
+
 TOKEN = os.getenv("TOKEN")
 client.run(TOKEN)
