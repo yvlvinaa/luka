@@ -9453,11 +9453,17 @@ class Client(discord.Client):
                         status = f"**{minutes}m {secs}s remaining**"
                     else:
                         status = f"**{secs}s remaining**"
-                # Duo bonus uses: only shown once 2+ are banked -- with
-                # exactly 1 remaining, the cooldown displays normally
-                # (it's still there, just silently spent on the next use).
-                if bonus_count >= 2:
-                    status = f"{status} (x{bonus_count})"
+                # Duo bonus uses: the multiplier shown is the TOTAL
+                # number of times this action can be done back-to-back
+                # right now -- this use plus whatever's banked -- so 1
+                # banked bonus (which lets you go again once more) reads
+                # as "(x2)", not "(x1)". With 0 banked, nothing is shown
+                # at all -- there's no multiplier over the normal rate.
+                # Always reflects duo["bonus"] as it currently stands
+                # (get_bonus() reads it live), so this can never show a
+                # stale count.
+                if bonus_count >= 1:
+                    status = f"{status} (x{bonus_count + 1})"
                 return status
 
             # Drop status
@@ -9823,30 +9829,79 @@ class Client(discord.Client):
             parts = message.content.split()
             if len(parts) < 4:
                 return await reply(message, 
-                    "Usage: `lgive @user <amount> <drops|claims>`"
+                    "Usage: `lgive @user <amount> <drops|claims>`\n"
+                    "Also works with `lgive @everyone <amount> <drops|claims>` "
+                    "and `lgive @role <amount> <drops|claims>`."
                 )
 
-            # Resolve the target the same way lgw already does: a real
-            # mention first, otherwise a raw Discord ID -- cache lookup
-            # first, falling back to a fetch for one that isn't cached,
-            # so a valid id never silently fails just because the member
-            # wasn't already in Discord's cache. Owners can target
-            # themselves -- nothing here excludes message.author.
-            target = None
-            if message.mentions:
-                target = message.mentions[0]
-            elif parts[1].isdigit() and message.guild:
-                candidate_id = int(parts[1])
-                target = message.guild.get_member(candidate_id)
-                if target is None:
-                    try:
-                        target = await message.guild.fetch_member(candidate_id)
-                    except (discord.NotFound, discord.HTTPException):
-                        target = None
+            target_token = parts[1]
 
-            if target is None:
+            # Resolve WHO this grant applies to. Four forms, checked in
+            # this order (none of their patterns overlap, so order only
+            # matters for which error message a malformed target gets):
+            #   1. literal "@everyone" -- checked against the raw text,
+            #      not message.mention_everyone, since Discord leaves
+            #      "@everyone" in message.content as-is even when the
+            #      author lacks permission to actually ping everyone.
+            #   2. an actual role mention (<@&id>) -- message.role_mentions.
+            #   3. a user mention (<@id>) -- message.mentions, same as before.
+            #   4. a raw numeric Discord user ID -- same cache-then-fetch
+            #      fallback as before.
+            # In every case bots are filtered out entirely (never
+            # granted to), and each resulting member is still subject
+            # to the exact same amount below -- "per recipient", not
+            # split across the group.
+            target_members = None
+            target_label = None
+            bots_skipped = 0
+
+            if target_token.lower() == "@everyone":
+                if not message.guild:
+                    return await reply(message, "This can only be used in a server.")
+                all_members = message.guild.members
+                target_members = [m for m in all_members if not m.bot]
+                bots_skipped = len(all_members) - len(target_members)
+                target_label = "@everyone"
+
+            elif message.role_mentions:
+                role = message.role_mentions[0]
+                target_members = [m for m in role.members if not m.bot]
+                bots_skipped = len(role.members) - len(target_members)
+                target_label = f"the **{role.name}** role"
+
+            elif message.mentions:
+                mentioned = message.mentions[0]
+                if mentioned.bot:
+                    return await reply(message, "Can't give bonuses to a bot.")
+                target_members = [mentioned]
+                target_label = mentioned.mention
+
+            elif target_token.isdigit() and message.guild:
+                candidate_id = int(target_token)
+                member = message.guild.get_member(candidate_id)
+                if member is None:
+                    try:
+                        member = await message.guild.fetch_member(candidate_id)
+                    except (discord.NotFound, discord.HTTPException):
+                        member = None
+                if member is None:
+                    return await reply(message, 
+                        "Could not find that user. Use a mention or a valid Discord user ID."
+                    )
+                if member.bot:
+                    return await reply(message, "Can't give bonuses to a bot.")
+                target_members = [member]
+                target_label = member.mention
+
+            if target_members is None:
                 return await reply(message, 
-                    "Could not find that user. Use a mention or a valid Discord user ID."
+                    "Could not find that user, role, or `@everyone`. "
+                    "Use a mention, a role mention, `@everyone`, or a valid Discord user ID."
+                )
+
+            if not target_members:
+                return await reply(message, 
+                    "No eligible (non-bot) members found for that target."
                 )
 
             try:
@@ -9873,21 +9928,38 @@ class Client(discord.Client):
             # normal cooldown/drop/claim behavior for anyone. A granted
             # bonus is only ever spent the next time that specific user
             # would otherwise be on cooldown, exactly like a Duo bonus.
+            #
+            # Every resolved member is granted under this SAME lock
+            # acquisition and saved with ONE save_duo_local() call, so a
+            # large @everyone/role batch either fully lands or fully
+            # rolls back together on failure, rather than saving after
+            # every single member (which could leave a batch half-applied
+            # if something failed partway through).
             async with duo_lock:
-                add_bonus(target.id, kind_token, amount)
+                for member in target_members:
+                    add_bonus(member.id, kind_token, amount)
                 try:
                     save_duo_local()
                     mark_duo_dirty()
                 except Exception:
-                    add_bonus(target.id, kind_token, -amount)
+                    for member in target_members:
+                        add_bonus(member.id, kind_token, -amount)
                     return await reply(message, 
                         "❌ Failed to save. Please try again."
                     )
 
             kind_label = "claim" if kind_token == "claim" else "drop"
             plural = "s" if amount != 1 else ""
+
+            if len(target_members) == 1:
+                return await reply(message, 
+                    f"✅ Gave {target_members[0].mention} **{amount}** extra {kind_label}{plural}."
+                )
+
+            skipped_note = f" (skipped {bots_skipped} bot{'s' if bots_skipped != 1 else ''})" if bots_skipped else ""
             return await reply(message, 
-                f"✅ Gave {target.mention} **{amount}** extra {kind_label}{plural}."
+                f"✅ Gave **{amount}** extra {kind_label}{plural} to **{len(target_members)}** "
+                f"member(s) in {target_label}{skipped_note}."
             )
 
         # =========================
