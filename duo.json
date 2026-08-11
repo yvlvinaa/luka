@@ -198,38 +198,6 @@
       "started_at": 1786255944.808648,
       "channel_id": 1532127325238329375
     },
-    "9ad7a5fc-245c-4c5a-ac9b-580f5e394741": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Ichigo Kurosaki",
-        "Atsushi Nakajima",
-        "Wanderer",
-        "Lisa",
-        "Jade Leech",
-        "Riki Nendou",
-        "Leonard Mitchell",
-        "Lohen",
-        "Durandal & Rita Rossweisse",
-        "Melon",
-        "Izuku Midoriya",
-        "Fluttershy",
-        "Eishia Stilza",
-        "Shin Hae-In",
-        "Yoimiya",
-        "Hokuto Hidaka",
-        "Eve",
-        "Kanon Matsubara",
-        "Rody Lamoree"
-      ],
-      "id": "9ad7a5fc-245c-4c5a-ac9b-580f5e394741",
-      "player_a": "1200857762922496121",
-      "player_b": "1292805744315338814",
-      "started_at": 1786283108.0457625,
-      "channel_id": 1528833910467727483
-    },
     "6df0c8e3-2a86-446f-9131-946fd716b31a": {
       "type": "claim_count",
       "target": 60,
@@ -1556,6 +1524,18 @@
         "timestamp": 1786409052.8760228,
         "partner_id": "953055801252143175"
       }
+    ],
+    "1200857762922496121": [
+      {
+        "timestamp": 1786423092.3809495,
+        "partner_id": "1292805744315338814"
+      }
+    ],
+    "1292805744315338814": [
+      {
+        "timestamp": 1786423092.3809495,
+        "partner_id": "1200857762922496121"
+      }
     ]
   },
   "cooldowns": {
@@ -1772,7 +1752,9 @@
     "1466515237976150272": 1786402487.114354,
     "1310677632769327257": 1786402487.114354,
     "953055801252143175": 1786409052.8760228,
-    "1185475801248964658": 1786409052.8760228
+    "1185475801248964658": 1786409052.8760228,
+    "1200857762922496121": 1786423092.3809495,
+    "1292805744315338814": 1786423092.3809495
   },
   "bonus": {
     "777925664358531102": {
@@ -4400,8 +4382,8 @@
       "claim": 0
     },
     "1200857762922496121": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "961131830470402048": {
       "drop": 0,
