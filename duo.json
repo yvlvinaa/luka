@@ -235,7 +235,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 28,
+      "progress": 29,
       "id": "e64c78f3-43b6-4a07-861c-d0604babcbed",
       "player_a": "877234029911506965",
       "player_b": "1470506603139829883",
@@ -246,7 +246,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 37,
+      "progress": 38,
       "id": "a3d5ce58-3535-4137-bf81-5e13782fd63f",
       "player_a": "869324549735477248",
       "player_b": "944204682409160705",
@@ -338,7 +338,8 @@
         "Present Mic",
         "Tamayo",
         "Reiji Sakamaki",
-        "Aiki Hirose"
+        "Aiki Hirose",
+        "Qin Xian"
       ],
       "id": "5a4253ab-3287-4cb9-ac71-5ca166496c0f",
       "player_a": "1491470589951742104",
@@ -363,7 +364,8 @@
         "Amber",
         "Violet Winters",
         "Kaeya",
-        "Rody Lamoree"
+        "Rody Lamoree",
+        "Atsushi Nakajima"
       ],
       "id": "24040942-6487-4ac8-94ed-52d3c70975ba",
       "player_a": "706017428857159730",
@@ -425,7 +427,8 @@
         "Ace Attorney",
         "Danganronpa",
         "Jujutsu Kaisen",
-        "The Quintessential Quintuplets"
+        "The Quintessential Quintuplets",
+        "Fragaria Memories"
       ],
       "id": "b7dfd965-237a-45da-9a74-8a791bd8f270",
       "player_a": "1409796045118115913",
@@ -491,6 +494,20 @@
       "player_b": "905681087836094485",
       "started_at": 1786501184.57131,
       "channel_id": 1531541704279199866
+    },
+    "df5330bf-3869-4796-bcd3-69b90c46e1b1": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "No Home"
+      ],
+      "id": "df5330bf-3869-4796-bcd3-69b90c46e1b1",
+      "player_a": "1151621892256567386",
+      "player_b": "1388585624939794543",
+      "started_at": 1786503485.376085,
+      "channel_id": 1532111145840934953
     }
   },
   "weekly": {
@@ -2449,7 +2466,7 @@
       "claim": 0
     },
     "971877408066125975": {
-      "drop": 11,
+      "drop": 10,
       "claim": 7
     },
     "727441845789130804": {
@@ -2885,7 +2902,7 @@
       "claim": 0
     },
     "992501588218351719": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "1380882911276040324": {
@@ -4041,8 +4058,8 @@
       "claim": 10
     },
     "891662969107255338": {
-      "drop": 4,
-      "claim": 7
+      "drop": 0,
+      "claim": 4
     },
     "1530785407686545559": {
       "drop": 0,
