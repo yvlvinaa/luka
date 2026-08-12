@@ -59,7 +59,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 5,
+      "progress": 6,
       "id": "2c19f953-492b-4129-964d-04b98ebe19c8",
       "player_a": "688313291532926976",
       "player_b": "839144758415851561",
@@ -407,6 +407,30 @@
       "player_b": "1026147833260290109",
       "started_at": 1786518133.0511405,
       "channel_id": 1531181038607270038
+    },
+    "80e92f48-f7a9-4cc3-9d21-9cd7946e06ff": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [],
+      "id": "80e92f48-f7a9-4cc3-9d21-9cd7946e06ff",
+      "player_a": "955846279815131227",
+      "player_b": "882468210534924389",
+      "started_at": 1786519026.4734178,
+      "channel_id": 1531499782944591882
+    },
+    "54bcec85-d325-4459-a1f4-544729de70f5": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [],
+      "id": "54bcec85-d325-4459-a1f4-544729de70f5",
+      "player_a": "716071317987786814",
+      "player_b": "1439628725288173759",
+      "started_at": 1786519049.3008046,
+      "channel_id": 1531082959912829170
     }
   },
   "weekly": {
@@ -4889,8 +4913,8 @@
       "claim": 3
     },
     "1369624242710118453": {
-      "drop": 2,
-      "claim": 2
+      "drop": 0,
+      "claim": 0
     },
     "1511874798936915990": {
       "drop": 13,
@@ -4958,7 +4982,7 @@
     },
     "1125980590076870696": {
       "drop": 0,
-      "claim": 5
+      "claim": 4
     },
     "702687727178743932": {
       "drop": 0,
@@ -5113,8 +5137,8 @@
       "claim": 0
     },
     "839144758415851561": {
-      "drop": 11,
-      "claim": 10
+      "drop": 0,
+      "claim": 0
     },
     "829499859332759603": {
       "drop": 7,
@@ -7101,8 +7125,8 @@
       "claim": 11
     },
     "1454944029287518311": {
-      "drop": 12,
-      "claim": 11
+      "drop": 7,
+      "claim": 5
     },
     "707804751848276120": {
       "drop": 13,
@@ -8257,6 +8281,10 @@
       "claim": 0
     },
     "878193412120133672": {
+      "drop": 0,
+      "claim": 0
+    },
+    "882468210534924389": {
       "drop": 0,
       "claim": 0
     }
