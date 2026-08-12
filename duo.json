@@ -191,7 +191,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 3,
+      "progress": 4,
       "id": "626aab4f-8443-467d-ac30-82ddfcd44843",
       "player_a": "1513671121067573281",
       "player_b": "1255325260778307604",
@@ -426,7 +426,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 18,
+      "progress": 19,
       "id": "b1b41af1-f730-4d57-8780-04825031ce28",
       "player_a": "1248433917904683160",
       "player_b": "752564296583479388",
@@ -437,7 +437,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 34,
+      "progress": 35,
       "id": "795a1a3a-53fc-48ea-8328-8ae69fcbf214",
       "player_a": "790383429224366080",
       "player_b": "1329046143929155605",
@@ -606,6 +606,18 @@
       "player_b": "712829195926896690",
       "started_at": 1786578081.806126,
       "channel_id": 1531216458607231146
+    },
+    "f126851b-6fea-4417-9014-0995e7eedd8c": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [],
+      "id": "f126851b-6fea-4417-9014-0995e7eedd8c",
+      "player_a": "1330415378114940989",
+      "player_b": "649690391884595210",
+      "started_at": 1786578399.9892998,
+      "channel_id": 1533657266970951741
     }
   },
   "weekly": {
