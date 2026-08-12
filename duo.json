@@ -437,7 +437,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 30,
+      "progress": 31,
       "id": "795a1a3a-53fc-48ea-8328-8ae69fcbf214",
       "player_a": "790383429224366080",
       "player_b": "1329046143929155605",
@@ -475,7 +475,9 @@
         "Rarity",
         "Caitlyn Kiramman",
         "MEIKO",
-        "Freminet"
+        "Freminet",
+        "Antag",
+        "Yui Komori"
       ],
       "id": "cf6edf0a-58c1-409c-9a88-574a0befd6d4",
       "player_a": "837077284845518888",
@@ -498,7 +500,8 @@
         "CookieRun Series",
         "Neverness to Everness",
         "Servamp",
-        "Path To Nowhere"
+        "Path To Nowhere",
+        "Roxana"
       ],
       "id": "e55757b7-a8c8-4fb3-874a-218e4893570f",
       "player_a": "1189593480671002746",
@@ -557,7 +560,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 6,
+      "progress": 7,
       "id": "c741ede1-bec8-4335-b17e-e04b7a537856",
       "player_a": "1241420729933758514",
       "player_b": "870354420049776710",
@@ -568,7 +571,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 10,
+      "progress": 11,
       "id": "2b9b717c-1b84-4778-b8ba-624eec85befa",
       "player_a": "1183826856449953822",
       "player_b": "1095575350035091476",
@@ -585,6 +588,18 @@
       "player_b": "756187180493439007",
       "started_at": 1786574470.6328752,
       "channel_id": 1536879074939506758
+    },
+    "7397ec45-9b7f-4827-9681-ace23ae8d931": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [],
+      "id": "7397ec45-9b7f-4827-9681-ace23ae8d931",
+      "player_a": "1499001091801612329",
+      "player_b": "1535822737875144814",
+      "started_at": 1786575754.9266672,
+      "channel_id": 1535828053157224508
     }
   },
   "weekly": {
@@ -6527,7 +6542,7 @@
       "claim": 9
     },
     "1380648650459320321": {
-      "drop": 2,
+      "drop": 1,
       "claim": 0
     },
     "1527068554589896795": {
@@ -8471,7 +8486,7 @@
       "claim": 11
     },
     "1138577922282758206": {
-      "drop": 13,
+      "drop": 12,
       "claim": 11
     },
     "601289807418884097": {
