@@ -246,7 +246,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 1,
+      "progress": 2,
       "id": "01b63d51-ec0b-462e-9b84-ad9ea19cef68",
       "player_a": "475789322478551040",
       "player_b": "633087806042013696",
@@ -470,6 +470,21 @@
       "player_b": "609515385997492264",
       "started_at": 1786555495.1624303,
       "channel_id": 1535186057824444457
+    },
+    "cd3f6bbd-b714-4659-97b2-0b84a0b8f7d5": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Koushi Sugawara",
+        "Kwak Suhwan"
+      ],
+      "id": "cd3f6bbd-b714-4659-97b2-0b84a0b8f7d5",
+      "player_a": "1530785407686545559",
+      "player_b": "1476297419900719195",
+      "started_at": 1786556544.760414,
+      "channel_id": 1531438250777120939
     }
   },
   "weekly": {
@@ -6383,7 +6398,7 @@
     },
     "1380648650459320321": {
       "drop": 7,
-      "claim": 4
+      "claim": 3
     },
     "1527068554589896795": {
       "drop": 6,
