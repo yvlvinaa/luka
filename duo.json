@@ -549,7 +549,9 @@
         "Wait For Me After School",
         "Genshin Impact",
         "Gokurakugai",
-        "Neverness to Everness"
+        "Neverness to Everness",
+        "Lost in the Cloud",
+        "Honkai: Star Rail"
       ],
       "id": "7397ec45-9b7f-4827-9681-ace23ae8d931",
       "player_a": "1499001091801612329",
@@ -572,7 +574,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 1,
+      "progress": 3,
       "id": "91f32540-b1f4-4dd7-814d-effebc7673f7",
       "player_a": "1194615343394607124",
       "player_b": "875492710973329439",
@@ -589,6 +591,21 @@
       "player_b": "1332117178790580338",
       "started_at": 1786577680.8894086,
       "channel_id": 1533479490229895248
+    },
+    "28483d5d-0852-4720-bfe6-e2893263a342": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Nagisa Ran",
+        "Yukito Tsukishiro"
+      ],
+      "id": "28483d5d-0852-4720-bfe6-e2893263a342",
+      "player_a": "1119621204609872014",
+      "player_b": "712829195926896690",
+      "started_at": 1786578081.806126,
+      "channel_id": 1531216458607231146
     }
   },
   "weekly": {
@@ -3041,8 +3058,8 @@
       "claim": 0
     },
     "1271962211606204560": {
-      "drop": 1,
-      "claim": 1
+      "drop": 0,
+      "claim": 0
     },
     "899806964710801499": {
       "drop": 0,
@@ -6733,7 +6750,7 @@
       "claim": 11
     },
     "1249883308075258034": {
-      "drop": 1,
+      "drop": 0,
       "claim": 1
     },
     "1329240598468890687": {
