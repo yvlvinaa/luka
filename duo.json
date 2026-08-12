@@ -125,7 +125,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 7,
+      "progress": 8,
       "id": "2a0c343d-36fb-434a-8545-0d0df02c1f01",
       "player_a": "946804868851585115",
       "player_b": "1487234092520181931",
@@ -411,37 +411,6 @@
       "started_at": 1786555495.1624303,
       "channel_id": 1535186057824444457
     },
-    "cd3f6bbd-b714-4659-97b2-0b84a0b8f7d5": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Koushi Sugawara",
-        "Kwak Suhwan",
-        "Puruth",
-        "Eden Seonwoo",
-        "Ciel Phantomhive",
-        "Eternal Sugar Cookie",
-        "Chiaki Nanami",
-        "Opera",
-        "Yue",
-        "You Huo & Qin Jiu",
-        "Uta",
-        "Tooru Oikawa",
-        "Baizhi",
-        "The Knight",
-        "Sebek Zigvolt",
-        "Mizi",
-        "Ken Kaneki",
-        "Barbatos"
-      ],
-      "id": "cd3f6bbd-b714-4659-97b2-0b84a0b8f7d5",
-      "player_a": "1530785407686545559",
-      "player_b": "1476297419900719195",
-      "started_at": 1786556544.760414,
-      "channel_id": 1531438250777120939
-    },
     "e9cc16c8-54a8-4114-a532-3a009a63e797": {
       "type": "claim_rarity4",
       "target": 10,
@@ -468,7 +437,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 13,
+      "progress": 14,
       "id": "795a1a3a-53fc-48ea-8328-8ae69fcbf214",
       "player_a": "790383429224366080",
       "player_b": "1329046143929155605",
@@ -479,7 +448,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 4,
+      "progress": 5,
       "id": "fcea9dd2-7739-4410-bb98-0b795d3402d0",
       "player_a": "763857440189317180",
       "player_b": "829499859332759603",
@@ -2264,6 +2233,18 @@
         "timestamp": 1786553741.9739614,
         "partner_id": "507114142256332802"
       }
+    ],
+    "1530785407686545559": [
+      {
+        "timestamp": 1786567520.5882604,
+        "partner_id": "1476297419900719195"
+      }
+    ],
+    "1476297419900719195": [
+      {
+        "timestamp": 1786567520.5882604,
+        "partner_id": "1530785407686545559"
+      }
     ]
   },
   "cooldowns": {
@@ -2530,7 +2511,9 @@
     "451857895064207380": 1786549655.8234072,
     "944839588822798387": 1786551849.2597115,
     "507114142256332802": 1786553741.9739614,
-    "592915291365965834": 1786553741.9739614
+    "592915291365965834": 1786553741.9739614,
+    "1530785407686545559": 1786567520.5882604,
+    "1476297419900719195": 1786567520.5882604
   },
   "bonus": {
     "777925664358531102": {
@@ -3974,7 +3957,7 @@
       "claim": 3
     },
     "1476297419900719195": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1388585624939794543": {
@@ -4358,7 +4341,7 @@
       "claim": 0
     },
     "1530785407686545559": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1367588215250223296": {
