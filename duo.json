@@ -501,7 +501,8 @@
         "Neverness to Everness",
         "Servamp",
         "Path To Nowhere",
-        "Roxana"
+        "Roxana",
+        "Great Pretender"
       ],
       "id": "e55757b7-a8c8-4fb3-874a-218e4893570f",
       "player_a": "1189593480671002746",
@@ -548,7 +549,8 @@
         "The Hunter's Gonna Lay Low",
         "You and I are Polar Opposites",
         "A Silent Voice",
-        "Duet Night Abyss"
+        "Duet Night Abyss",
+        "Diabolik Lovers"
       ],
       "id": "c6cbe34c-3947-4dbb-b95b-5d346e903f5a",
       "player_a": "1271962211606204560",
@@ -594,12 +596,26 @@
       "target": 15,
       "label": "Claim cards from 15 different series together",
       "progress": 0,
-      "series_seen": [],
+      "series_seen": [
+        "Wuthering Waves",
+        "Idoly Pride"
+      ],
       "id": "7397ec45-9b7f-4827-9681-ace23ae8d931",
       "player_a": "1499001091801612329",
       "player_b": "1535822737875144814",
       "started_at": 1786575754.9266672,
       "channel_id": 1535828053157224508
+    },
+    "af6a74b3-2b1a-4f71-afcf-61ebb6cd43fa": {
+      "type": "claim_rarity4",
+      "target": 10,
+      "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
+      "progress": 0,
+      "id": "af6a74b3-2b1a-4f71-afcf-61ebb6cd43fa",
+      "player_a": "768617097021358121",
+      "player_b": "755557729237729312",
+      "started_at": 1786576394.5361433,
+      "channel_id": 1531193777237135370
     }
   },
   "weekly": {
@@ -4851,7 +4867,7 @@
     },
     "755557729237729312": {
       "drop": 13,
-      "claim": 11
+      "claim": 9
     },
     "330662869249032193": {
       "drop": 0,
@@ -5050,7 +5066,7 @@
       "claim": 11
     },
     "1278803670192099482": {
-      "drop": 3,
+      "drop": 2,
       "claim": 0
     },
     "1299813814262566957": {
@@ -8350,7 +8366,7 @@
       "claim": 11
     },
     "768617097021358121": {
-      "drop": 12,
+      "drop": 11,
       "claim": 10
     },
     "764667124525826080": {
