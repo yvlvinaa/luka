@@ -202,7 +202,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 48,
+      "progress": 50,
       "id": "943ae194-ebdb-45f5-ac01-f72e8daed52f",
       "player_a": "496377185842626561",
       "player_b": "839539916580847626",
@@ -235,7 +235,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 39,
+      "progress": 40,
       "id": "a3d5ce58-3535-4137-bf81-5e13782fd63f",
       "player_a": "869324549735477248",
       "player_b": "944204682409160705",
@@ -279,7 +279,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 17,
+      "progress": 18,
       "id": "70e4e929-167a-4ed2-8612-99ebb445832b",
       "player_a": "832177388027641937",
       "player_b": "960693362149703680",
@@ -447,7 +447,8 @@
         "Genshin Impact",
         "DC",
         "Attack on Titan",
-        "Kuroko's Basketball"
+        "Kuroko's Basketball",
+        "Re: Zero - Starting Life in Another World"
       ],
       "id": "df5330bf-3869-4796-bcd3-69b90c46e1b1",
       "player_a": "1151621892256567386",
@@ -463,7 +464,9 @@
       "characters_seen": [
         "Edgar",
         "Isha",
-        "Mika Kagehira"
+        "Mika Kagehira",
+        "Maka Albarn",
+        "Riki Nendou"
       ],
       "id": "635ba8a2-996a-4f33-80f0-7f5fce58af8c",
       "player_a": "1064312739150954570",
@@ -481,6 +484,20 @@
       "player_b": "1066269748293287997",
       "started_at": 1786503918.1603296,
       "channel_id": 1533592470443786443
+    },
+    "8a90af24-bdbb-47cf-859e-092ceb9bce36": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Rimuru Tempest"
+      ],
+      "id": "8a90af24-bdbb-47cf-859e-092ceb9bce36",
+      "player_a": "653774824883093523",
+      "player_b": "860205470815223809",
+      "started_at": 1786505254.5399454,
+      "channel_id": 1528212833622298644
     }
   },
   "weekly": {
@@ -2434,8 +2451,8 @@
       "claim": 6
     },
     "1224818851464613952": {
-      "drop": 1,
-      "claim": 1
+      "drop": 0,
+      "claim": 0
     },
     "946804868851585115": {
       "drop": 0,
@@ -2467,7 +2484,7 @@
     },
     "511453213426450433": {
       "drop": 0,
-      "claim": 4
+      "claim": 3
     },
     "870418340072530011": {
       "drop": 0,
@@ -2514,8 +2531,8 @@
       "claim": 0
     },
     "247066385849647107": {
-      "drop": 1,
-      "claim": 1
+      "drop": 0,
+      "claim": 0
     },
     "784651032084086794": {
       "drop": 0,
@@ -2790,7 +2807,7 @@
       "claim": 11
     },
     "885453562631553024": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "753042849666302022": {
@@ -4214,12 +4231,12 @@
       "claim": 11
     },
     "953472774591111248": {
-      "drop": 11,
+      "drop": 10,
       "claim": 11
     },
     "1331001427966820442": {
       "drop": 0,
-      "claim": 2
+      "claim": 1
     },
     "821574312216756224": {
       "drop": 0,
@@ -4742,8 +4759,8 @@
       "claim": 11
     },
     "752564296583479388": {
-      "drop": 4,
-      "claim": 5
+      "drop": 3,
+      "claim": 3
     },
     "1289283733991719016": {
       "drop": 0,
@@ -5098,7 +5115,7 @@
       "claim": 6
     },
     "1150617231793848352": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "992526647804825600": {
@@ -6102,7 +6119,7 @@
       "claim": 4
     },
     "286820427957927936": {
-      "drop": 5,
+      "drop": 2,
       "claim": 0
     },
     "989729842700382298": {
@@ -6382,7 +6399,7 @@
       "claim": 11
     },
     "858551655456309258": {
-      "drop": 13,
+      "drop": 12,
       "claim": 10
     },
     "1236601038568427550": {
@@ -8202,14 +8219,18 @@
       "claim": 0
     },
     "910315138916171808": {
-      "drop": 1,
-      "claim": 1
+      "drop": 0,
+      "claim": 0
     },
     "1383087932990296156": {
       "drop": 0,
       "claim": 0
     },
     "1391805909709226146": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1361415369641820240": {
       "drop": 0,
       "claim": 0
     }
