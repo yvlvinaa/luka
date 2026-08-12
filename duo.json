@@ -202,7 +202,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 55,
+      "progress": 56,
       "id": "943ae194-ebdb-45f5-ac01-f72e8daed52f",
       "player_a": "496377185842626561",
       "player_b": "839539916580847626",
@@ -268,7 +268,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 26,
+      "progress": 27,
       "id": "75a0219e-7336-40ee-b8fe-11c9f6a21866",
       "player_a": "977162721520918538",
       "player_b": "327615356745285642",
@@ -429,7 +429,8 @@
         "Danganronpa",
         "Dr. Stone",
         "Land of the Lustrous",
-        "Given"
+        "Given",
+        "Vocaloid"
       ],
       "id": "df5330bf-3869-4796-bcd3-69b90c46e1b1",
       "player_a": "1151621892256567386",
@@ -489,13 +490,30 @@
         "Haku Kusanagi",
         "Spoiler",
         "Ortho Shroud",
-        "Satoru Gojo"
+        "Satoru Gojo",
+        "Mithrun",
+        "Richeh"
       ],
       "id": "8a90af24-bdbb-47cf-859e-092ceb9bce36",
       "player_a": "653774824883093523",
       "player_b": "860205470815223809",
       "started_at": 1786505254.5399454,
       "channel_id": 1528212833622298644
+    },
+    "29fa8863-fb01-490e-bfaa-db048c837459": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "Fate Series",
+        "Saiyuki"
+      ],
+      "id": "29fa8863-fb01-490e-bfaa-db048c837459",
+      "player_a": "1028692731029110846",
+      "player_b": "925445064254181386",
+      "started_at": 1786509306.6232302,
+      "channel_id": 1529800541885038633
     }
   },
   "weekly": {
@@ -2603,7 +2621,7 @@
       "claim": 11
     },
     "1009181235282710528": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "1200759841245892653": {
@@ -3672,7 +3690,7 @@
     },
     "725183995893121095": {
       "drop": 5,
-      "claim": 1
+      "claim": 0
     },
     "1155911168058200104": {
       "drop": 0,
@@ -4155,8 +4173,8 @@
       "claim": 0
     },
     "649690391884595210": {
-      "drop": 4,
-      "claim": 10
+      "drop": 0,
+      "claim": 8
     },
     "1242938583430467777": {
       "drop": 0,
@@ -4855,8 +4873,8 @@
       "claim": 0
     },
     "1517189515729571875": {
-      "drop": 5,
-      "claim": 2
+      "drop": 4,
+      "claim": 1
     },
     "1183810631086899357": {
       "drop": 13,
@@ -5027,7 +5045,7 @@
       "claim": 11
     },
     "1518842132184563743": {
-      "drop": 7,
+      "drop": 6,
       "claim": 3
     },
     "1189420556085375001": {
@@ -5863,7 +5881,7 @@
       "claim": 0
     },
     "1245246607533015095": {
-      "drop": 3,
+      "drop": 2,
       "claim": 0
     },
     "1185846776788426752": {
@@ -5919,8 +5937,8 @@
       "claim": 11
     },
     "703260157982801931": {
-      "drop": 9,
-      "claim": 9
+      "drop": 3,
+      "claim": 3
     },
     "921245094848376914": {
       "drop": 13,
@@ -6388,7 +6406,7 @@
     },
     "1497352708301127713": {
       "drop": 0,
-      "claim": 2
+      "claim": 1
     },
     "1196264657149775915": {
       "drop": 0,
@@ -6411,8 +6429,8 @@
       "claim": 11
     },
     "858551655456309258": {
-      "drop": 12,
-      "claim": 9
+      "drop": 11,
+      "claim": 8
     },
     "1236601038568427550": {
       "drop": 13,
