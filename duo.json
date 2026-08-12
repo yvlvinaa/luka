@@ -360,7 +360,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 30,
+      "progress": 31,
       "id": "9ddb7ca7-4e1e-46ff-accd-1e2648f7ef03",
       "player_a": "764446760004354048",
       "player_b": "1468926708064325632",
@@ -455,7 +455,8 @@
         "Ciel Phantomhive",
         "Eternal Sugar Cookie",
         "Chiaki Nanami",
-        "Opera"
+        "Opera",
+        "Yue"
       ],
       "id": "cd3f6bbd-b714-4659-97b2-0b84a0b8f7d5",
       "player_a": "1530785407686545559",
@@ -473,6 +474,17 @@
       "player_b": "863457388815188059",
       "started_at": 1786558074.3907654,
       "channel_id": 1530510529154777168
+    },
+    "b1b41af1-f730-4d57-8780-04825031ce28": {
+      "type": "claim_count",
+      "target": 60,
+      "label": "Claim 60 cards together",
+      "progress": 0,
+      "id": "b1b41af1-f730-4d57-8780-04825031ce28",
+      "player_a": "1248433917904683160",
+      "player_b": "752564296583479388",
+      "started_at": 1786561541.7698836,
+      "channel_id": 1533919206343442757
     }
   },
   "weekly": {
@@ -5293,7 +5305,7 @@
       "claim": 0
     },
     "829499859332759603": {
-      "drop": 5,
+      "drop": 4,
       "claim": 3
     },
     "1150617231793848352": {
