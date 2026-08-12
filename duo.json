@@ -202,7 +202,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 54,
+      "progress": 55,
       "id": "a3d5ce58-3535-4137-bf81-5e13782fd63f",
       "player_a": "869324549735477248",
       "player_b": "944204682409160705",
@@ -454,7 +454,8 @@
         "Qiuyuan",
         "Kei Mikhail Ignatov",
         "Langa Hasegawa",
-        "Fu Orostor"
+        "Fu Orostor",
+        "Gyro Zeppeli"
       ],
       "id": "1c0a6d52-3008-4d00-adab-9433fa8b1405",
       "player_a": "960884355805351977",
@@ -462,42 +463,11 @@
       "started_at": 1786523329.3601527,
       "channel_id": 1526976300479283441
     },
-    "e6174c9d-c598-4d92-b1d5-a97d1dc332f7": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Jinx",
-        "Hifumi Izanami",
-        "Robin",
-        "Vergil",
-        "Lacrimosa",
-        "Seiko Shinohara",
-        "Sonny Brisko",
-        "Lee Yeo-woon",
-        "Ronin",
-        "Subaru Natsuki",
-        "Taylor Hernandez",
-        "Dottore",
-        "Rafayel",
-        "Agent Choi",
-        "Jingran",
-        "Silver Wolf",
-        "Varka",
-        "Amahiko Tendo"
-      ],
-      "id": "e6174c9d-c598-4d92-b1d5-a97d1dc332f7",
-      "player_a": "1122003954436407336",
-      "player_b": "417141882611826688",
-      "started_at": 1786523420.7026093,
-      "channel_id": 1526976300479283441
-    },
     "9ddb7ca7-4e1e-46ff-accd-1e2648f7ef03": {
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 0,
+      "progress": 1,
       "id": "9ddb7ca7-4e1e-46ff-accd-1e2648f7ef03",
       "player_a": "764446760004354048",
       "player_b": "1468926708064325632",
@@ -2129,6 +2099,18 @@
         "timestamp": 1786529923.1297772,
         "partner_id": "954126116073898014"
       }
+    ],
+    "1122003954436407336": [
+      {
+        "timestamp": 1786530199.3892207,
+        "partner_id": "417141882611826688"
+      }
+    ],
+    "417141882611826688": [
+      {
+        "timestamp": 1786530199.3892207,
+        "partner_id": "1122003954436407336"
+      }
     ]
   },
   "cooldowns": {
@@ -2387,7 +2369,9 @@
     "1028692731029110846": 1786514888.9471412,
     "925445064254181386": 1786514888.9471412,
     "954126116073898014": 1786529923.1297772,
-    "1026221051862073415": 1786529923.1297772
+    "1026221051862073415": 1786529923.1297772,
+    "1122003954436407336": 1786530199.3892207,
+    "417141882611826688": 1786530199.3892207
   },
   "bonus": {
     "777925664358531102": {
@@ -3519,7 +3503,7 @@
       "claim": 11
     },
     "954126116073898014": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "1530396629436469271": {
@@ -4463,7 +4447,7 @@
       "claim": 2
     },
     "417141882611826688": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "658702243100491791": {
@@ -4663,8 +4647,8 @@
       "claim": 0
     },
     "1175901339067367518": {
-      "drop": 12,
-      "claim": 11
+      "drop": 11,
+      "claim": 10
     },
     "527328519634812929": {
       "drop": 6,
@@ -5703,8 +5687,8 @@
       "claim": 11
     },
     "1122003954436407336": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1028538307975589939": {
       "drop": 0,
