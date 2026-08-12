@@ -338,7 +338,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 0,
+      "progress": 1,
       "id": "07fa55e1-dda1-433a-a46f-f9ba63f1f5de",
       "player_a": "1266998768851746897",
       "player_b": "900758030038224937",
@@ -493,7 +493,8 @@
         "The Disastrous Life of Saiki K",
         "Zenless Zone Zero",
         "Toilet-bound Hanako-kun",
-        "The Summer Hikaru Died"
+        "The Summer Hikaru Died",
+        "Charisma House"
       ],
       "id": "04e5390c-28ee-4943-beaf-39a0fcd07d46",
       "player_a": "479372052638203905",
@@ -546,7 +547,9 @@
         "Persona",
         "HELLSING",
         "Wait For Me After School",
-        "Genshin Impact"
+        "Genshin Impact",
+        "Gokurakugai",
+        "Neverness to Everness"
       ],
       "id": "7397ec45-9b7f-4827-9681-ace23ae8d931",
       "player_a": "1499001091801612329",
@@ -569,12 +572,23 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 0,
+      "progress": 1,
       "id": "91f32540-b1f4-4dd7-814d-effebc7673f7",
       "player_a": "1194615343394607124",
       "player_b": "875492710973329439",
       "started_at": 1786577618.460252,
       "channel_id": 1533657266970951741
+    },
+    "37102b82-2de0-42ea-a4e2-fdd3ef5e02e4": {
+      "type": "claim_count",
+      "target": 60,
+      "label": "Claim 60 cards together",
+      "progress": 1,
+      "id": "37102b82-2de0-42ea-a4e2-fdd3ef5e02e4",
+      "player_a": "975180513394438165",
+      "player_b": "1332117178790580338",
+      "started_at": 1786577680.8894086,
+      "channel_id": 1533479490229895248
     }
   },
   "weekly": {
