@@ -169,7 +169,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 47,
+      "progress": 48,
       "id": "a3794db9-6e83-493c-9817-0ef33939ff1f",
       "player_a": "1454914344792883305",
       "player_b": "1506759467910303784",
@@ -360,7 +360,8 @@
         "Billy Kid",
         "Merold",
         "Bai Liu",
-        "Spiderman"
+        "Spiderman",
+        "Riko Amanai"
       ],
       "id": "635ba8a2-996a-4f33-80f0-7f5fce58af8c",
       "player_a": "1064312739150954570",
@@ -459,7 +460,8 @@
         "Gyro Zeppeli",
         "Till",
         "Meursault",
-        "Logan Fields"
+        "Logan Fields",
+        "Diona"
       ],
       "id": "1c0a6d52-3008-4d00-adab-9433fa8b1405",
       "player_a": "960884355805351977",
@@ -471,12 +473,24 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 6,
+      "progress": 7,
       "id": "9ddb7ca7-4e1e-46ff-accd-1e2648f7ef03",
       "player_a": "764446760004354048",
       "player_b": "1468926708064325632",
       "started_at": 1786529605.9895375,
       "channel_id": 1526976300479283441
+    },
+    "b3e50e42-9131-4642-a893-9464a4f12a83": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [],
+      "id": "b3e50e42-9131-4642-a893-9464a4f12a83",
+      "player_a": "812696195142385664",
+      "player_b": "1427701023102734481",
+      "started_at": 1786533993.467892,
+      "channel_id": 1531403070758584370
     }
   },
   "weekly": {
@@ -2560,7 +2574,7 @@
     },
     "1353808862452519045": {
       "drop": 4,
-      "claim": 2
+      "claim": 1
     },
     "1224818851464613952": {
       "drop": 0,
@@ -6351,8 +6365,8 @@
       "claim": 11
     },
     "1362472737230160184": {
-      "drop": 13,
-      "claim": 11
+      "drop": 0,
+      "claim": 3
     },
     "188902905640648706": {
       "drop": 0,
