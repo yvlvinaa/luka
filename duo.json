@@ -390,7 +390,8 @@
         "Ushirono Natsu",
         "Yor Forger",
         "Kirisaki Shidou",
-        "Satoru Gojo"
+        "Satoru Gojo",
+        "Stark"
       ],
       "id": "b3e50e42-9131-4642-a893-9464a4f12a83",
       "player_a": "812696195142385664",
@@ -424,7 +425,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 8,
+      "progress": 9,
       "id": "300c406a-f0c2-4d69-a4a0-71473e082d3b",
       "player_a": "1028046694992064512",
       "player_b": "934498436575813693",
@@ -459,7 +460,9 @@
         "Yue",
         "You Huo & Qin Jiu",
         "Uta",
-        "Tooru Oikawa"
+        "Tooru Oikawa",
+        "Baizhi",
+        "The Knight"
       ],
       "id": "cd3f6bbd-b714-4659-97b2-0b84a0b8f7d5",
       "player_a": "1530785407686545559",
@@ -499,6 +502,29 @@
       "player_b": "1329046143929155605",
       "started_at": 1786562794.4824436,
       "channel_id": 1535987597606920322
+    },
+    "fcea9dd2-7739-4410-bb98-0b795d3402d0": {
+      "type": "claim_count",
+      "target": 60,
+      "label": "Claim 60 cards together",
+      "progress": 1,
+      "id": "fcea9dd2-7739-4410-bb98-0b795d3402d0",
+      "player_a": "763857440189317180",
+      "player_b": "829499859332759603",
+      "started_at": 1786564379.5716279,
+      "channel_id": 1535144673574920194
+    },
+    "cf6edf0a-58c1-409c-9a88-574a0befd6d4": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [],
+      "id": "cf6edf0a-58c1-409c-9a88-574a0befd6d4",
+      "player_a": "837077284845518888",
+      "player_b": "1027686610260738118",
+      "started_at": 1786564439.6204724,
+      "channel_id": 1537171922863915169
     }
   },
   "weekly": {
@@ -5515,8 +5541,8 @@
       "claim": 0
     },
     "903905044322222081": {
-      "drop": 4,
-      "claim": 3
+      "drop": 1,
+      "claim": 0
     },
     "980156265445621770": {
       "drop": 0,
