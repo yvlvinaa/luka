@@ -191,7 +191,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 41,
+      "progress": 42,
       "id": "a3f8b72c-6900-4179-a3aa-7f23adedce46",
       "player_a": "1224818851464613952",
       "player_b": "247066385849647107",
@@ -213,7 +213,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 36,
+      "progress": 37,
       "id": "943ae194-ebdb-45f5-ac01-f72e8daed52f",
       "player_a": "496377185842626561",
       "player_b": "839539916580847626",
@@ -235,7 +235,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 24,
+      "progress": 25,
       "id": "e64c78f3-43b6-4a07-861c-d0604babcbed",
       "player_a": "877234029911506965",
       "player_b": "1470506603139829883",
@@ -246,7 +246,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 33,
+      "progress": 34,
       "id": "a3d5ce58-3535-4137-bf81-5e13782fd63f",
       "player_a": "869324549735477248",
       "player_b": "944204682409160705",
@@ -290,7 +290,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 12,
+      "progress": 13,
       "id": "70e4e929-167a-4ed2-8612-99ebb445832b",
       "player_a": "832177388027641937",
       "player_b": "960693362149703680",
@@ -301,7 +301,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 26,
+      "progress": 27,
       "id": "d4cdc104-22f9-477c-bb53-227e8fb86c65",
       "player_a": "954126116073898014",
       "player_b": "1026221051862073415",
@@ -319,33 +319,6 @@
       "started_at": 1786491551.8236194,
       "channel_id": 1532909619268288704
     },
-    "8695742e-d53d-44b0-836e-a4f92fbd8e4d": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Danganronpa",
-        "One Piece",
-        "The Disastrous Life of Saiki K",
-        "Ensemble Stars!",
-        "Given",
-        "Witch Hat Atelier",
-        "Genshin Impact",
-        "Magical Girl Witch Trials",
-        "Flashlight",
-        "Got Dropped into a Ghost Story, Still Gotta Work",
-        "Virtual Strangers",
-        "Red Thread Quest",
-        "TURNING",
-        "Cosmic Princess Kaguya"
-      ],
-      "id": "8695742e-d53d-44b0-836e-a4f92fbd8e4d",
-      "player_a": "1524678223408136192",
-      "player_b": "1314228383449743441",
-      "started_at": 1786492606.3335404,
-      "channel_id": 1530263626445885543
-    },
     "5a4253ab-3287-4cb9-ac71-5ca166496c0f": {
       "type": "claim_characters",
       "target": 20,
@@ -361,7 +334,8 @@
         "Yelan",
         "Lee Yeo-woon",
         "Woo Jinhyeong",
-        "Kaito Fuji"
+        "Kaito Fuji",
+        "Present Mic"
       ],
       "id": "5a4253ab-3287-4cb9-ac71-5ca166496c0f",
       "player_a": "1491470589951742104",
@@ -387,7 +361,8 @@
         "Van Morozov",
         "Phainon",
         "Ryota Kise",
-        "Shinku"
+        "Shinku",
+        "Qiu Tong"
       ],
       "id": "7f5b55a5-95c5-4acc-9100-4050a44da0d5",
       "player_a": "784651032084086794",
@@ -488,7 +463,8 @@
         "Got Dropped into a Ghost Story, Still Gotta Work",
         "Zenless Zone Zero",
         "Code Geass",
-        "Persona"
+        "Persona",
+        "Tokyo Ghoul"
       ],
       "id": "dc2496fd-ebd7-4412-840c-73a1ab2a8029",
       "player_a": "770651160695537697",
@@ -507,7 +483,8 @@
         "Omega Complex",
         "I Love Amy",
         "My Hero Academia",
-        "Spinach Bouquet"
+        "Spinach Bouquet",
+        "Attack on Titan"
       ],
       "id": "95cba2af-59a4-431b-89e5-999972d13755",
       "player_a": "1035656286039191692",
@@ -1965,6 +1942,18 @@
         "timestamp": 1786495863.1875114,
         "partner_id": "1271399006370795542"
       }
+    ],
+    "1524678223408136192": [
+      {
+        "timestamp": 1786499019.1694727,
+        "partner_id": "1314228383449743441"
+      }
+    ],
+    "1314228383449743441": [
+      {
+        "timestamp": 1786499019.1694727,
+        "partner_id": "1524678223408136192"
+      }
     ]
   },
   "cooldowns": {
@@ -2200,7 +2189,9 @@
     "514565097981476875": 1786493059.9844162,
     "678022395063304203": 1786493667.1465688,
     "555155719473594379": 1786493667.1465688,
-    "1071304515460010016": 1786495863.1875114
+    "1071304515460010016": 1786495863.1875114,
+    "1524678223408136192": 1786499019.1694727,
+    "1314228383449743441": 1786499019.1694727
   },
   "bonus": {
     "777925664358531102": {
@@ -2328,7 +2319,7 @@
       "claim": 12
     },
     "679032802691252259": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "550577262173487104": {
@@ -2340,8 +2331,8 @@
       "claim": 0
     },
     "770651160695537697": {
-      "drop": 7,
-      "claim": 6
+      "drop": 6,
+      "claim": 5
     },
     "894445820613644318": {
       "drop": 0,
@@ -2612,8 +2603,8 @@
       "claim": 0
     },
     "919837402309210184": {
-      "drop": 4,
-      "claim": 3
+      "drop": 0,
+      "claim": 0
     },
     "661202852244488192": {
       "drop": 0,
@@ -3277,7 +3268,7 @@
     },
     "1264046804702597120": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "787241864892907530": {
       "drop": 0,
@@ -3596,7 +3587,7 @@
       "claim": 0
     },
     "725183995893121095": {
-      "drop": 7,
+      "drop": 6,
       "claim": 2
     },
     "1155911168058200104": {
@@ -3637,7 +3628,7 @@
     },
     "853382236208103425": {
       "drop": 0,
-      "claim": 3
+      "claim": 2
     },
     "770978445798277130": {
       "drop": 13,
@@ -4224,7 +4215,7 @@
       "claim": 11
     },
     "1210501746477244438": {
-      "drop": 3,
+      "drop": 2,
       "claim": 0
     },
     "1232906024068055105": {
@@ -4352,8 +4343,8 @@
       "claim": 11
     },
     "893125476917346326": {
-      "drop": 13,
-      "claim": 11
+      "drop": 0,
+      "claim": 3
     },
     "1474208864835731581": {
       "drop": 13,
@@ -4392,8 +4383,8 @@
       "claim": 11
     },
     "1314228383449743441": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "863934143897403472": {
       "drop": 13,
@@ -4408,7 +4399,7 @@
       "claim": 0
     },
     "759057066370400307": {
-      "drop": 1,
+      "drop": 0,
       "claim": 7
     },
     "1236788208428253284": {
@@ -4508,8 +4499,8 @@
       "claim": 11
     },
     "814791323029995522": {
-      "drop": 9,
-      "claim": 8
+      "drop": 0,
+      "claim": 2
     },
     "774812466504531979": {
       "drop": 0,
@@ -4664,8 +4655,8 @@
       "claim": 3
     },
     "1369865161086734426": {
-      "drop": 11,
-      "claim": 11
+      "drop": 8,
+      "claim": 7
     },
     "1231316819395084340": {
       "drop": 5,
@@ -4836,8 +4827,8 @@
       "claim": 0
     },
     "921277715670257746": {
-      "drop": 4,
-      "claim": 2
+      "drop": 3,
+      "claim": 1
     },
     "998695603359977553": {
       "drop": 13,
@@ -5153,7 +5144,7 @@
     },
     "1411686981468946664": {
       "drop": 0,
-      "claim": 2
+      "claim": 0
     },
     "1382961822310731869": {
       "drop": 0,
@@ -5484,7 +5475,7 @@
       "claim": 0
     },
     "1323065108263342213": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "996792324862529537": {
@@ -5525,15 +5516,15 @@
     },
     "769484060824698890": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "1482470698038460459": {
       "drop": 0,
       "claim": 2
     },
     "1169493041359364116": {
-      "drop": 4,
-      "claim": 3
+      "drop": 0,
+      "claim": 0
     },
     "697803266150629416": {
       "drop": 0,
@@ -5756,7 +5747,7 @@
       "claim": 10
     },
     "1523230534141218896": {
-      "drop": 4,
+      "drop": 3,
       "claim": 0
     },
     "1205851657901178892": {
@@ -5768,7 +5759,7 @@
       "claim": 0
     },
     "1519413994983526531": {
-      "drop": 4,
+      "drop": 3,
       "claim": 0
     },
     "1522524016441688124": {
@@ -5776,7 +5767,7 @@
       "claim": 0
     },
     "1523221251861254275": {
-      "drop": 4,
+      "drop": 3,
       "claim": 0
     },
     "1230827610280300586": {
@@ -5864,7 +5855,7 @@
       "claim": 0
     },
     "1259422786661912648": {
-      "drop": 4,
+      "drop": 3,
       "claim": 0
     },
     "865941269778530314": {
@@ -6212,8 +6203,8 @@
       "claim": 0
     },
     "1499001091801612329": {
-      "drop": 11,
-      "claim": 10
+      "drop": 3,
+      "claim": 0
     },
     "1410149111759638563": {
       "drop": 13,
@@ -6269,7 +6260,7 @@
     },
     "798204441329270784": {
       "drop": 0,
-      "claim": 8
+      "claim": 7
     },
     "1215387584528777288": {
       "drop": 13,
