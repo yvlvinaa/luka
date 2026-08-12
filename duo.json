@@ -393,7 +393,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 10,
+      "progress": 11,
       "id": "300c406a-f0c2-4d69-a4a0-71473e082d3b",
       "player_a": "1028046694992064512",
       "player_b": "934498436575813693",
@@ -432,7 +432,8 @@
         "Baizhi",
         "The Knight",
         "Sebek Zigvolt",
-        "Mizi"
+        "Mizi",
+        "Ken Kaneki"
       ],
       "id": "cd3f6bbd-b714-4659-97b2-0b84a0b8f7d5",
       "player_a": "1530785407686545559",
@@ -489,7 +490,10 @@
       "target": 20,
       "label": "Obtain 20 unique characters together",
       "progress": 0,
-      "characters_seen": [],
+      "characters_seen": [
+        "Feitan Portor",
+        "Marina"
+      ],
       "id": "cf6edf0a-58c1-409c-9a88-574a0befd6d4",
       "player_a": "837077284845518888",
       "player_b": "1027686610260738118",
@@ -502,13 +506,38 @@
       "label": "Claim cards from 15 different series together",
       "progress": 0,
       "series_seen": [
-        "Reverse: 1999"
+        "Reverse: 1999",
+        "Jujutsu Kaisen"
       ],
       "id": "e55757b7-a8c8-4fb3-874a-218e4893570f",
       "player_a": "1189593480671002746",
       "player_b": "1361415369641820240",
       "started_at": 1786565558.760181,
       "channel_id": 1536922657981988957
+    },
+    "04e5390c-28ee-4943-beaf-39a0fcd07d46": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [],
+      "id": "04e5390c-28ee-4943-beaf-39a0fcd07d46",
+      "player_a": "479372052638203905",
+      "player_b": "1070842549318721567",
+      "started_at": 1786566400.9905398,
+      "channel_id": 1531328140662542356
+    },
+    "c6cbe34c-3947-4dbb-b95b-5d346e903f5a": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [],
+      "id": "c6cbe34c-3947-4dbb-b95b-5d346e903f5a",
+      "player_a": "1271962211606204560",
+      "player_b": "1249883308075258034",
+      "started_at": 1786566407.7295372,
+      "channel_id": 1527893494230945912
     }
   },
   "weekly": {
