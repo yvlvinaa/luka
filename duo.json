@@ -290,7 +290,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 0,
+      "progress": 1,
       "id": "091e519c-aa76-4275-b074-25fb0d4f6e1a",
       "player_a": "1307722709567799318",
       "player_b": "1477098766308999384",
@@ -433,7 +433,8 @@
         "The Knight",
         "Sebek Zigvolt",
         "Mizi",
-        "Ken Kaneki"
+        "Ken Kaneki",
+        "Barbatos"
       ],
       "id": "cd3f6bbd-b714-4659-97b2-0b84a0b8f7d5",
       "player_a": "1530785407686545559",
@@ -456,7 +457,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 6,
+      "progress": 7,
       "id": "b1b41af1-f730-4d57-8780-04825031ce28",
       "player_a": "1248433917904683160",
       "player_b": "752564296583479388",
@@ -478,7 +479,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 3,
+      "progress": 4,
       "id": "fcea9dd2-7739-4410-bb98-0b795d3402d0",
       "player_a": "763857440189317180",
       "player_b": "829499859332759603",
@@ -520,7 +521,9 @@
       "target": 15,
       "label": "Claim cards from 15 different series together",
       "progress": 0,
-      "series_seen": [],
+      "series_seen": [
+        "Promise of Wizard"
+      ],
       "id": "04e5390c-28ee-4943-beaf-39a0fcd07d46",
       "player_a": "479372052638203905",
       "player_b": "1070842549318721567",
@@ -532,7 +535,10 @@
       "target": 15,
       "label": "Claim cards from 15 different series together",
       "progress": 0,
-      "series_seen": [],
+      "series_seen": [
+        "Arcane",
+        "Honkai: Star Rail"
+      ],
       "id": "c6cbe34c-3947-4dbb-b95b-5d346e903f5a",
       "player_a": "1271962211606204560",
       "player_b": "1249883308075258034",
@@ -5774,8 +5780,8 @@
       "claim": 8
     },
     "1041707673214783551": {
-      "drop": 3,
-      "claim": 2
+      "drop": 0,
+      "claim": 1
     },
     "763825862075613184": {
       "drop": 0,
@@ -8578,6 +8584,10 @@
       "claim": 0
     },
     "1089303956922048593": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1403518744684138548": {
       "drop": 0,
       "claim": 0
     }
