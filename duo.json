@@ -388,7 +388,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 26,
+      "progress": 27,
       "id": "9ddb7ca7-4e1e-46ff-accd-1e2648f7ef03",
       "player_a": "764446760004354048",
       "player_b": "1468926708064325632",
@@ -417,7 +417,8 @@
         "Ha Ian",
         "Ushirono Natsu",
         "Yor Forger",
-        "Kirisaki Shidou"
+        "Kirisaki Shidou",
+        "Satoru Gojo"
       ],
       "id": "b3e50e42-9131-4642-a893-9464a4f12a83",
       "player_a": "812696195142385664",
@@ -446,6 +447,28 @@
       "player_b": "1115364773039702116",
       "started_at": 1786544904.8482983,
       "channel_id": 1531250295693381762
+    },
+    "300c406a-f0c2-4d69-a4a0-71473e082d3b": {
+      "type": "claim_count",
+      "target": 60,
+      "label": "Claim 60 cards together",
+      "progress": 1,
+      "id": "300c406a-f0c2-4d69-a4a0-71473e082d3b",
+      "player_a": "1028046694992064512",
+      "player_b": "934498436575813693",
+      "started_at": 1786555318.4461615,
+      "channel_id": 1529985174555721880
+    },
+    "7b2510e6-771a-425b-9b10-e66a1f587bed": {
+      "type": "claim_rarity4",
+      "target": 10,
+      "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
+      "progress": 0,
+      "id": "7b2510e6-771a-425b-9b10-e66a1f587bed",
+      "player_a": "737098353485021206",
+      "player_b": "609515385997492264",
+      "started_at": 1786555495.1624303,
+      "channel_id": 1535186057824444457
     }
   },
   "weekly": {
@@ -4930,8 +4953,8 @@
       "claim": 2
     },
     "1421473448387022859": {
-      "drop": 13,
-      "claim": 11
+      "drop": 12,
+      "claim": 10
     },
     "658879787577901068": {
       "drop": 0,
