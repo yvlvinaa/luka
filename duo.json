@@ -158,7 +158,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 54,
+      "progress": 55,
       "id": "6df0c8e3-2a86-446f-9131-946fd716b31a",
       "player_a": "658241999740338178",
       "player_b": "1072663904343306401",
@@ -191,7 +191,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 55,
+      "progress": 57,
       "id": "a3f8b72c-6900-4179-a3aa-7f23adedce46",
       "player_a": "1224818851464613952",
       "player_b": "247066385849647107",
@@ -213,7 +213,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 46,
+      "progress": 47,
       "id": "943ae194-ebdb-45f5-ac01-f72e8daed52f",
       "player_a": "496377185842626561",
       "player_b": "839539916580847626",
@@ -301,7 +301,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 38,
+      "progress": 39,
       "id": "d4cdc104-22f9-477c-bb53-227e8fb86c65",
       "player_a": "954126116073898014",
       "player_b": "1026221051862073415",
@@ -365,7 +365,8 @@
         "Violet Winters",
         "Kaeya",
         "Rody Lamoree",
-        "Atsushi Nakajima"
+        "Atsushi Nakajima",
+        "Dante"
       ],
       "id": "24040942-6487-4ac8-94ed-52d3c70975ba",
       "player_a": "706017428857159730",
@@ -501,13 +502,40 @@
       "label": "Claim cards from 15 different series together",
       "progress": 0,
       "series_seen": [
-        "No Home"
+        "No Home",
+        "Death Note"
       ],
       "id": "df5330bf-3869-4796-bcd3-69b90c46e1b1",
       "player_a": "1151621892256567386",
       "player_b": "1388585624939794543",
       "started_at": 1786503485.376085,
       "channel_id": 1532111145840934953
+    },
+    "635ba8a2-996a-4f33-80f0-7f5fce58af8c": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Edgar",
+        "Isha"
+      ],
+      "id": "635ba8a2-996a-4f33-80f0-7f5fce58af8c",
+      "player_a": "1064312739150954570",
+      "player_b": "1352235126553313360",
+      "started_at": 1786503815.0745523,
+      "channel_id": 1529165420190372130
+    },
+    "68177b3f-71a7-47eb-82f2-174f2193cc4f": {
+      "type": "claim_rarity4",
+      "target": 10,
+      "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
+      "progress": 0,
+      "id": "68177b3f-71a7-47eb-82f2-174f2193cc4f",
+      "player_a": "1411686981468946664",
+      "player_b": "1066269748293287997",
+      "started_at": 1786503918.1603296,
+      "channel_id": 1533592470443786443
     }
   },
   "weekly": {
@@ -2894,8 +2922,8 @@
       "claim": 0
     },
     "1519685122847150156": {
-      "drop": 13,
-      "claim": 15
+      "drop": 12,
+      "claim": 14
     },
     "812696195142385664": {
       "drop": 0,
@@ -4138,8 +4166,8 @@
       "claim": 0
     },
     "999178897629384754": {
-      "drop": 13,
-      "claim": 11
+      "drop": 1,
+      "claim": 0
     },
     "777614591546621993": {
       "drop": 2,
@@ -4158,7 +4186,7 @@
       "claim": 0
     },
     "775555556987371530": {
-      "drop": 7,
+      "drop": 6,
       "claim": 0
     },
     "1126408914636910682": {
@@ -4226,8 +4254,8 @@
       "claim": 10
     },
     "1401266496537366751": {
-      "drop": 12,
-      "claim": 9
+      "drop": 9,
+      "claim": 7
     },
     "933083593025130546": {
       "drop": 0,
@@ -4730,8 +4758,8 @@
       "claim": 11
     },
     "752564296583479388": {
-      "drop": 13,
-      "claim": 10
+      "drop": 8,
+      "claim": 7
     },
     "1289283733991719016": {
       "drop": 0,
@@ -6006,8 +6034,8 @@
       "claim": 0
     },
     "1013300340122202122": {
-      "drop": 13,
-      "claim": 11
+      "drop": 0,
+      "claim": 1
     },
     "1328096032260755507": {
       "drop": 0,
@@ -6331,7 +6359,7 @@
     },
     "1189593480671002746": {
       "drop": 0,
-      "claim": 7
+      "claim": 6
     },
     "1056673480197804072": {
       "drop": 13,
@@ -7455,7 +7483,7 @@
     },
     "1321983283772391494": {
       "drop": 8,
-      "claim": 4
+      "claim": 2
     },
     "967704301302583306": {
       "drop": 13,
