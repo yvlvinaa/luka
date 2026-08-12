@@ -191,7 +191,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 44,
+      "progress": 46,
       "id": "a3f8b72c-6900-4179-a3aa-7f23adedce46",
       "player_a": "1224818851464613952",
       "player_b": "247066385849647107",
@@ -224,7 +224,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 36,
+      "progress": 37,
       "id": "c19e593c-acd2-4f88-8ab0-2d35bb943acc",
       "player_a": "507114142256332802",
       "player_b": "592915291365965834",
@@ -257,7 +257,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 0,
+      "progress": 1,
       "id": "4ae68839-1c8b-4dc7-9390-79e4034f723b",
       "player_a": "1378462940096761856",
       "player_b": "533041724638101505",
@@ -290,7 +290,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 14,
+      "progress": 15,
       "id": "70e4e929-167a-4ed2-8612-99ebb445832b",
       "player_a": "832177388027641937",
       "player_b": "960693362149703680",
@@ -301,7 +301,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 31,
+      "progress": 32,
       "id": "d4cdc104-22f9-477c-bb53-227e8fb86c65",
       "player_a": "954126116073898014",
       "player_b": "1026221051862073415",
@@ -452,7 +452,9 @@
         "Lee Jinwoo & Kwon Taeyoung",
         "Desscaras",
         "Shin Hae-In",
-        "Cloud Strife"
+        "Cloud Strife",
+        "Son Goku",
+        "Alhaitham"
       ],
       "id": "1e24807a-f6e9-4c5d-876a-84f4a23e3e8a",
       "player_a": "550577262173487104",
@@ -500,7 +502,9 @@
         "Attack on Titan",
         "Promise of Wizard",
         "Eighteen\u2019s Bed",
-        "Ballad of Sword & Wine"
+        "Ballad of Sword & Wine",
+        "Danganronpa",
+        "Sakamoto Days"
       ],
       "id": "95cba2af-59a4-431b-89e5-999972d13755",
       "player_a": "1035656286039191692",
@@ -536,7 +540,8 @@
         "NU: Carnival",
         "Kuroko's Basketball",
         "Neverness to Everness",
-        "Kimetsu no Yaiba"
+        "Kimetsu no Yaiba",
+        "Elevator Hitch"
       ],
       "id": "21992cf8-9ee5-44a1-920d-1c948307825f",
       "player_a": "1036336328029257770",
@@ -548,12 +553,23 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 0,
+      "progress": 1,
       "id": "01b63d51-ec0b-462e-9b84-ad9ea19cef68",
       "player_a": "475789322478551040",
       "player_b": "633087806042013696",
       "started_at": 1786499910.373196,
       "channel_id": 1532631150802112592
+    },
+    "dab8ef3d-d9eb-47ee-a778-73eac07bf82c": {
+      "type": "claim_rarity4",
+      "target": 10,
+      "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
+      "progress": 0,
+      "id": "dab8ef3d-d9eb-47ee-a778-73eac07bf82c",
+      "player_a": "768645666851258371",
+      "player_b": "488009745609916417",
+      "started_at": 1786500674.177078,
+      "channel_id": 1533867158411542568
     }
   },
   "weekly": {
@@ -2479,7 +2495,7 @@
       "claim": 2
     },
     "789571689406005269": {
-      "drop": 14,
+      "drop": 13,
       "claim": 11
     },
     "1427701023102734481": {
@@ -2699,7 +2715,7 @@
       "claim": 6
     },
     "1378462940096761856": {
-      "drop": 2,
+      "drop": 0,
       "claim": 0
     },
     "1217653646158860328": {
@@ -3723,7 +3739,7 @@
       "claim": 0
     },
     "712829195926896690": {
-      "drop": 2,
+      "drop": 1,
       "claim": 0
     },
     "1459318933445284007": {
@@ -3811,7 +3827,7 @@
       "claim": 11
     },
     "1159961492544823356": {
-      "drop": 13,
+      "drop": 12,
       "claim": 11
     },
     "716740471862329475": {
@@ -4239,7 +4255,7 @@
       "claim": 0
     },
     "1040680773788913754": {
-      "drop": 3,
+      "drop": 2,
       "claim": 2
     },
     "1062134503444852747": {
@@ -4523,7 +4539,7 @@
       "claim": 6
     },
     "1121901165865611264": {
-      "drop": 6,
+      "drop": 5,
       "claim": 8
     },
     "1016890011083350016": {
@@ -4707,8 +4723,8 @@
       "claim": 4
     },
     "1231316819395084340": {
-      "drop": 4,
-      "claim": 3
+      "drop": 3,
+      "claim": 2
     },
     "1125010005066784860": {
       "drop": 3,
@@ -5223,7 +5239,7 @@
       "claim": 0
     },
     "1026221051862073415": {
-      "drop": 2,
+      "drop": 1,
       "claim": 0
     },
     "1535157650696708189": {
@@ -5455,7 +5471,7 @@
       "claim": 0
     },
     "1278756606577737871": {
-      "drop": 13,
+      "drop": 12,
       "claim": 11
     },
     "1491470589951742104": {
@@ -5907,8 +5923,8 @@
       "claim": 0
     },
     "865941269778530314": {
-      "drop": 4,
-      "claim": 6
+      "drop": 0,
+      "claim": 4
     },
     "882154337428709406": {
       "drop": 13,
@@ -6243,7 +6259,7 @@
       "claim": 0
     },
     "1535822737875144814": {
-      "drop": 4,
+      "drop": 3,
       "claim": 0
     },
     "1150064332453986304": {
