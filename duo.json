@@ -191,7 +191,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 57,
+      "progress": 59,
       "id": "a3f8b72c-6900-4179-a3aa-7f23adedce46",
       "player_a": "1224818851464613952",
       "player_b": "247066385849647107",
@@ -235,7 +235,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 29,
+      "progress": 30,
       "id": "e64c78f3-43b6-4a07-861c-d0604babcbed",
       "player_a": "877234029911506965",
       "player_b": "1470506603139829883",
@@ -257,7 +257,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 1,
+      "progress": 2,
       "id": "4ae68839-1c8b-4dc7-9390-79e4034f723b",
       "player_a": "1378462940096761856",
       "player_b": "533041724638101505",
@@ -290,7 +290,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 16,
+      "progress": 17,
       "id": "70e4e929-167a-4ed2-8612-99ebb445832b",
       "player_a": "832177388027641937",
       "player_b": "960693362149703680",
@@ -301,7 +301,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 39,
+      "progress": 40,
       "id": "d4cdc104-22f9-477c-bb53-227e8fb86c65",
       "player_a": "954126116073898014",
       "player_b": "1026221051862073415",
@@ -340,7 +340,9 @@
         "Reiji Sakamaki",
         "Aiki Hirose",
         "Qin Xian",
-        "Chihaya Anon"
+        "Chihaya Anon",
+        "Minoru Mineta",
+        "Pantalone"
       ],
       "id": "5a4253ab-3287-4cb9-ac71-5ca166496c0f",
       "player_a": "1491470589951742104",
@@ -438,33 +440,6 @@
       "started_at": 1786497816.406463,
       "channel_id": 1535110208391483497
     },
-    "21992cf8-9ee5-44a1-920d-1c948307825f": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "NU: Carnival",
-        "Kuroko's Basketball",
-        "Neverness to Everness",
-        "Kimetsu no Yaiba",
-        "Elevator Hitch",
-        "Honkai: Star Rail",
-        "Danganronpa",
-        "Zenless Zone Zero",
-        "Bad Friend",
-        "Link Click",
-        "Neon Genesis Evangelion",
-        "NANA",
-        "#Gal x Gal Yuri",
-        "Wuthering Waves"
-      ],
-      "id": "21992cf8-9ee5-44a1-920d-1c948307825f",
-      "player_a": "1036336328029257770",
-      "player_b": "910315138916171808",
-      "started_at": 1786499488.1009827,
-      "channel_id": 1528064933755879534
-    },
     "01b63d51-ec0b-462e-9b84-ad9ea19cef68": {
       "type": "claim_rarity4",
       "target": 10,
@@ -506,7 +481,10 @@
       "series_seen": [
         "No Home",
         "Death Note",
-        "The S-classes That I Raised"
+        "The S-classes That I Raised",
+        "Genshin Impact",
+        "DC",
+        "Attack on Titan"
       ],
       "id": "df5330bf-3869-4796-bcd3-69b90c46e1b1",
       "player_a": "1151621892256567386",
@@ -521,7 +499,8 @@
       "progress": 0,
       "characters_seen": [
         "Edgar",
-        "Isha"
+        "Isha",
+        "Mika Kagehira"
       ],
       "id": "635ba8a2-996a-4f33-80f0-7f5fce58af8c",
       "player_a": "1064312739150954570",
@@ -2025,6 +2004,18 @@
         "timestamp": 1786502532.027592,
         "partner_id": "1035656286039191692"
       }
+    ],
+    "1036336328029257770": [
+      {
+        "timestamp": 1786504632.9155478,
+        "partner_id": "910315138916171808"
+      }
+    ],
+    "910315138916171808": [
+      {
+        "timestamp": 1786504632.9155478,
+        "partner_id": "1036336328029257770"
+      }
     ]
   },
   "cooldowns": {
@@ -2265,7 +2256,9 @@
     "1314228383449743441": 1786499019.1694727,
     "808726481580326943": 1786502159.5113275,
     "1170978352543301676": 1786502441.8286514,
-    "755211531674845235": 1786502532.027592
+    "755211531674845235": 1786502532.027592,
+    "1036336328029257770": 1786504632.9155478,
+    "910315138916171808": 1786504632.9155478
   },
   "bonus": {
     "777925664358531102": {
@@ -2341,7 +2334,7 @@
       "claim": 11
     },
     "886247125292306432": {
-      "drop": 2,
+      "drop": 1,
       "claim": 0
     },
     "1038095869674799134": {
@@ -2809,7 +2802,7 @@
       "claim": 11
     },
     "885453562631553024": {
-      "drop": 2,
+      "drop": 1,
       "claim": 0
     },
     "753042849666302022": {
@@ -3365,7 +3358,7 @@
       "claim": 0
     },
     "749958760532934736": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "1175711320868405288": {
@@ -3582,7 +3575,7 @@
     },
     "1113230728415690843": {
       "drop": 0,
-      "claim": 2
+      "claim": 1
     },
     "872293015698415668": {
       "drop": 13,
@@ -3741,7 +3734,7 @@
       "claim": 0
     },
     "909551241967861770": {
-      "drop": 4,
+      "drop": 3,
       "claim": 0
     },
     "863797671818952754": {
@@ -4090,7 +4083,7 @@
     },
     "891662969107255338": {
       "drop": 0,
-      "claim": 4
+      "claim": 3
     },
     "1530785407686545559": {
       "drop": 0,
@@ -4629,7 +4622,7 @@
       "claim": 0
     },
     "1428341890025259091": {
-      "drop": 10,
+      "drop": 3,
       "claim": 11
     },
     "1271546566334873630": {
@@ -4653,8 +4646,8 @@
       "claim": 11
     },
     "979996890651324426": {
-      "drop": 13,
-      "claim": 11
+      "drop": 9,
+      "claim": 9
     },
     "1299833889166065743": {
       "drop": 0,
@@ -4761,7 +4754,7 @@
       "claim": 11
     },
     "752564296583479388": {
-      "drop": 6,
+      "drop": 4,
       "claim": 5
     },
     "1289283733991719016": {
@@ -5237,8 +5230,8 @@
       "claim": 11
     },
     "727051094429007873": {
-      "drop": 13,
-      "claim": 11
+      "drop": 8,
+      "claim": 6
     },
     "1423323604044742666": {
       "drop": 0,
@@ -5653,8 +5646,8 @@
       "claim": 4
     },
     "604257673713549341": {
-      "drop": 14,
-      "claim": 11
+      "drop": 11,
+      "claim": 10
     },
     "897070243296452619": {
       "drop": 13,
@@ -5945,8 +5938,8 @@
       "claim": 11
     },
     "1339200602844168246": {
-      "drop": 13,
-      "claim": 11
+      "drop": 0,
+      "claim": 0
     },
     "1245367398421368903": {
       "drop": 13,
@@ -6346,11 +6339,11 @@
     },
     "714616741350604942": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "1036336328029257770": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1455757033608577086": {
       "drop": 0,
@@ -6362,7 +6355,7 @@
     },
     "1189593480671002746": {
       "drop": 0,
-      "claim": 6
+      "claim": 5
     },
     "1056673480197804072": {
       "drop": 13,
@@ -7485,8 +7478,8 @@
       "claim": 11
     },
     "1321983283772391494": {
-      "drop": 8,
-      "claim": 2
+      "drop": 0,
+      "claim": 0
     },
     "967704301302583306": {
       "drop": 13,
@@ -8221,8 +8214,8 @@
       "claim": 0
     },
     "910315138916171808": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1383087932990296156": {
       "drop": 0,
