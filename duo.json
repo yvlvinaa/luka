@@ -393,7 +393,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 25,
+      "progress": 26,
       "id": "300c406a-f0c2-4d69-a4a0-71473e082d3b",
       "player_a": "1028046694992064512",
       "player_b": "934498436575813693",
@@ -426,7 +426,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 20,
+      "progress": 21,
       "id": "b1b41af1-f730-4d57-8780-04825031ce28",
       "player_a": "1248433917904683160",
       "player_b": "752564296583479388",
@@ -437,7 +437,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 36,
+      "progress": 37,
       "id": "795a1a3a-53fc-48ea-8328-8ae69fcbf214",
       "player_a": "790383429224366080",
       "player_b": "1329046143929155605",
@@ -448,7 +448,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 18,
+      "progress": 19,
       "id": "fcea9dd2-7739-4410-bb98-0b795d3402d0",
       "player_a": "763857440189317180",
       "player_b": "829499859332759603",
@@ -535,32 +535,6 @@
       "started_at": 1786574470.6328752,
       "channel_id": 1536879074939506758
     },
-    "7397ec45-9b7f-4827-9681-ace23ae8d931": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Wuthering Waves",
-        "Idoly Pride",
-        "Haikyuu!!",
-        "Persona",
-        "HELLSING",
-        "Wait For Me After School",
-        "Genshin Impact",
-        "Gokurakugai",
-        "Neverness to Everness",
-        "Lost in the Cloud",
-        "Honkai: Star Rail",
-        "School Bus Graveyard",
-        "Robber x Lover"
-      ],
-      "id": "7397ec45-9b7f-4827-9681-ace23ae8d931",
-      "player_a": "1499001091801612329",
-      "player_b": "1535822737875144814",
-      "started_at": 1786575754.9266672,
-      "channel_id": 1535828053157224508
-    },
     "af6a74b3-2b1a-4f71-afcf-61ebb6cd43fa": {
       "type": "claim_rarity4",
       "target": 10,
@@ -602,7 +576,8 @@
       "characters_seen": [
         "Nagisa Ran",
         "Yukito Tsukishiro",
-        "Ryunosuke Akutagawa"
+        "Ryunosuke Akutagawa",
+        "Shen Qingqiu"
       ],
       "id": "28483d5d-0852-4720-bfe6-e2893263a342",
       "player_a": "1119621204609872014",
@@ -2369,6 +2344,18 @@
         "timestamp": 1786577434.0171037,
         "partner_id": "1027686610260738118"
       }
+    ],
+    "1499001091801612329": [
+      {
+        "timestamp": 1786579323.1123583,
+        "partner_id": "1535822737875144814"
+      }
+    ],
+    "1535822737875144814": [
+      {
+        "timestamp": 1786579323.1123583,
+        "partner_id": "1499001091801612329"
+      }
     ]
   },
   "cooldowns": {
@@ -2639,7 +2626,9 @@
     "1530785407686545559": 1786567520.5882604,
     "1476297419900719195": 1786567520.5882604,
     "1249883308075258034": 1786577212.480413,
-    "837077284845518888": 1786577434.0171037
+    "837077284845518888": 1786577434.0171037,
+    "1499001091801612329": 1786579323.1123583,
+    "1535822737875144814": 1786579323.1123583
   },
   "bonus": {
     "777925664358531102": {
@@ -6643,7 +6632,7 @@
       "claim": 0
     },
     "1535822737875144814": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1150064332453986304": {
@@ -6651,7 +6640,7 @@
       "claim": 0
     },
     "1499001091801612329": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1410149111759638563": {
@@ -6768,7 +6757,7 @@
     },
     "1249883308075258034": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "1329240598468890687": {
       "drop": 13,
