@@ -13,6 +13,7 @@ import requests
 import tempfile
 import json
 import base64
+import copy
 import functools
 import traceback
 import uuid
@@ -6375,6 +6376,16 @@ class CardView(discord.ui.View):
         if self._priority_blocks(user_id):
             return
 
+        # Checked BEFORE any cooldown/bonus logic below. This used to run
+        # AFTER the bonus-claim consumption block, which meant a user who
+        # clicked an already-claimed slot while on cooldown had their
+        # bonus claim spent and then got nothing -- an extra claim must
+        # only ever be spent once a card is actually about to be granted.
+        if which == 1 and self.card1_claimed:
+            return await interaction.response.send_message("Already claimed.", ephemeral=True)
+        if which == 2 and self.card2_claimed:
+            return await interaction.response.send_message("Already claimed.", ephemeral=True)
+
         now = time.time()
 
         if user_id in claim_cooldowns:
@@ -6403,11 +6414,6 @@ class CardView(discord.ui.View):
                 return await interaction.response.send_message(
                     f"Wait {format_time(remaining)} before claiming again.", ephemeral=True
                 )
-
-        if which == 1 and self.card1_claimed:
-            return await interaction.response.send_message("Already claimed.", ephemeral=True)
-        if which == 2 and self.card2_claimed:
-            return await interaction.response.send_message("Already claimed.", ephemeral=True)
 
         card = self.card1 if which == 1 else self.card2
 
@@ -9827,11 +9833,49 @@ class Client(discord.Client):
                 return
 
             parts = message.content.split()
+
+            # `lgive reset` -- resets EVERY user's banked extra
+            # drops/claims back to 0. Checked before the normal
+            # usage-length guard below since this form only ever has 2
+            # parts ("lgive" "reset"). Uses the exact same bonus storage
+            # (duo["bonus"]) and duo persistence (duo_lock/
+            # save_duo_local/mark_duo_dirty) as add_bonus/consume_bonus
+            # above -- no separate storage, no changes to cooldowns,
+            # inventories, or anything else.
+            if len(parts) >= 2 and parts[1].lower() == "reset":
+                async with duo_lock:
+                    # Deep-copy snapshot of the ENTIRE bonus dict so a
+                    # failed save can restore it exactly as it was,
+                    # rather than leaving some users reset and others
+                    # not -- atomic across all users, not just per-user.
+                    previous_bonus = copy.deepcopy(duo["bonus"])
+
+                    reset_count = 0
+                    for user_bonus in duo["bonus"].values():
+                        if user_bonus.get("drop", 0) or user_bonus.get("claim", 0):
+                            reset_count += 1
+                        user_bonus["drop"] = 0
+                        user_bonus["claim"] = 0
+
+                    try:
+                        save_duo_local()
+                        mark_duo_dirty()
+                    except Exception:
+                        duo["bonus"] = previous_bonus
+                        return await reply(message,
+                            "❌ Failed to save the reset. No extra drops/claims were changed."
+                        )
+
+                return await reply(message,
+                    f"✅ Reset extra drops and extra claims to **0** for all users "
+                    f"({reset_count} user(s) had a nonzero balance)."
+                )
+
             if len(parts) < 4:
                 return await reply(message, 
                     "Usage: `lgive @user <amount> <drops|claims>`\n"
-                    "Also works with `lgive @everyone <amount> <drops|claims>` "
-                    "and `lgive @role <amount> <drops|claims>`."
+                    "Also works with `lgive @everyone <amount> <drops|claims>`, "
+                    "`lgive @role <amount> <drops|claims>`, and `lgive reset`."
                 )
 
             target_token = parts[1]
