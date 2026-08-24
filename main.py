@@ -658,6 +658,15 @@ def card_version_display(card):
     """
     version = card.get("version")
     if version:
+        # Display-only capitalization fix: "common"/"rare" should read as
+        # "Common"/"Rare" to the user, without touching the underlying
+        # `version` metadata (still lowercase "common"/"rare" internally,
+        # e.g. for the version/unlock system's own comparisons). "V1",
+        # "V2", etc. are already capitalized and pass through unchanged.
+        if version == "common":
+            return "Common"
+        if version == "rare":
+            return "Rare"
         return version
     return card_version_label(card).lower()
 
@@ -1876,6 +1885,21 @@ def block_sender(receiver_id, sender_id) -> bool:
     if sender_key in blocked:
         return False
     blocked.append(sender_key)
+    return True
+
+
+def unblock_sender(receiver_id, sender_id) -> bool:
+    """
+    Removes sender_id from receiver_id's blocked-senders list, in
+    memory. Mirrors block_sender() exactly, in reverse. Returns True if
+    this newly unblocked them, False if they weren't blocked to begin
+    with (so the caller can show an accurate message either way).
+    """
+    blocked = get_blocked_senders(receiver_id)
+    sender_key = str(sender_id)
+    if sender_key not in blocked:
+        return False
+    blocked.remove(sender_key)
     return True
 
 
@@ -6020,14 +6044,16 @@ class MailboxPaginationView(discord.ui.View):
         self.mark_read.disabled = bool(self.letters[self.page].get("read"))
         self.read_all.disabled = not any(not l.get("read") for l in self.letters)
 
-        # Block button: disabled if the current letter's sender can't
-        # be identified/targeted at all (same validity check as Reply),
-        # or is already blocked, or is the viewer themselves.
+        # Block button: disabled only if the current letter's sender
+        # can't be identified/targeted at all (same validity check as
+        # Reply), or is the viewer themselves. It no longer disables
+        # once already blocked -- the button is now a toggle, so it
+        # stays enabled and its handler decides block vs. unblock based
+        # on the sender's current state.
         letter = self.letters[self.page]
         sender_id = letter.get("sender_id")
         sender_valid = bool(sender_id) and str(sender_id).isdigit() and int(sender_id) != self.user_id
-        already_blocked = sender_valid and is_sender_blocked(sender_id, self.user_id)
-        self.block_sender_btn.disabled = not sender_valid or already_blocked
+        self.block_sender_btn.disabled = not sender_valid
 
     def build_embed(self) -> discord.Embed:
         letter = self.letters[self.page]
@@ -6175,27 +6201,55 @@ class MailboxPaginationView(discord.ui.View):
         # ability to mail sender_id back. Persisted through the exact
         # same mail_lock/save_mail_local/mark_mail_dirty/rollback
         # sequence every other mail mutation in this view already uses.
+        #
+        # This button is a toggle: it checks the sender's CURRENT
+        # blocked state and performs the opposite action, so the same
+        # "🚫 Block" button both blocks and unblocks -- no separate
+        # Unblock button.
+        currently_blocked = is_sender_blocked(sender_id, self.user_id)
+
         async with mail_lock:
-            newly_blocked = block_sender(self.user_id, sender_id)
-            if not newly_blocked:
-                return await interaction.response.send_message(
-                    f"**{letter.get('_sender_name', 'This user')}** is already blocked.", ephemeral=True
+            if currently_blocked:
+                changed = unblock_sender(self.user_id, sender_id)
+            else:
+                changed = block_sender(self.user_id, sender_id)
+
+            if not changed:
+                # Someone else already flipped this state concurrently;
+                # nothing to persist, just report the current reality.
+                msg = (
+                    f"**{letter.get('_sender_name', 'This user')}** is already blocked."
+                    if not currently_blocked
+                    else f"**{letter.get('_sender_name', 'This user')}** isn't blocked."
                 )
+                return await interaction.response.send_message(msg, ephemeral=True)
+
             try:
                 save_mail_local()
                 mark_mail_dirty()
             except Exception:
-                get_blocked_senders(self.user_id).remove(str(sender_id))
+                # Roll back the in-memory change so it stays consistent
+                # with mail.json.
+                if currently_blocked:
+                    block_sender(self.user_id, sender_id)
+                else:
+                    get_blocked_senders(self.user_id).remove(str(sender_id))
                 return await interaction.response.send_message(
                     "❌ Something went wrong saving that. Please try again.", ephemeral=True
                 )
 
         self._update_button_states()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
-        await interaction.followup.send(
-            f"🚫 Blocked **{letter.get('_sender_name', 'this user')}** -- they can no longer send you mail.",
-            ephemeral=True
-        )
+        if currently_blocked:
+            await interaction.followup.send(
+                f"✅ Unblocked **{letter.get('_sender_name', 'this user')}** -- they can send you mail again.",
+                ephemeral=True
+            )
+        else:
+            await interaction.followup.send(
+                f"🚫 Blocked **{letter.get('_sender_name', 'this user')}** -- they can no longer send you mail.",
+                ephemeral=True
+            )
 
     @discord.ui.button(label="Read All", style=discord.ButtonStyle.secondary, row=2)
     async def read_all(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -9502,7 +9556,7 @@ class Client(discord.Client):
             )
             embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
             embed.set_thumbnail(
-                url="https://media.discordapp.net/attachments/1505599262120087633/1521878802123198634/IMG_9608.jpg?ex=6a466f95&is=6a451e15&hm=cd768ebbfc75ea69ea3a4940c1a57b709bd32b4d9aeaac0ffebb4df475e6ec93&=&format=webp&width=1148&height=666"
+                url="https://cdn.discordapp.com/attachments/1505599262120087633/1541552738616348742/IMG_9608.jpg"
             )
             embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(now))} UTC")
 
@@ -9873,14 +9927,13 @@ class Client(discord.Client):
 
             if len(parts) < 4:
                 return await reply(message, 
-                    "Usage: `lgive @user <amount> <drops|claims>`\n"
-                    "Also works with `lgive @everyone <amount> <drops|claims>`, "
-                    "`lgive @role <amount> <drops|claims>`, and `lgive reset`."
+                    "Usage: `lgive @everyone <amount> <drops|claims>`\n"
+                    "Also works with `lgive @role <amount> <drops|claims>` and `lgive reset`."
                 )
 
             target_token = parts[1]
 
-            # Resolve WHO this grant applies to. Four forms, checked in
+            # Resolve WHO this grant applies to. Two forms, checked in
             # this order (none of their patterns overlap, so order only
             # matters for which error message a malformed target gets):
             #   1. literal "@everyone" -- checked against the raw text,
@@ -9888,9 +9941,9 @@ class Client(discord.Client):
             #      "@everyone" in message.content as-is even when the
             #      author lacks permission to actually ping everyone.
             #   2. an actual role mention (<@&id>) -- message.role_mentions.
-            #   3. a user mention (<@id>) -- message.mentions, same as before.
-            #   4. a raw numeric Discord user ID -- same cache-then-fetch
-            #      fallback as before.
+            # (Single-user targeting -- via user mention or raw user ID --
+            # has been intentionally removed from `lgive`; only batch
+            # grants to @everyone or a role remain.)
             # In every case bots are filtered out entirely (never
             # granted to), and each resulting member is still subject
             # to the exact same amount below -- "per recipient", not
@@ -9913,34 +9966,10 @@ class Client(discord.Client):
                 bots_skipped = len(role.members) - len(target_members)
                 target_label = f"the **{role.name}** role"
 
-            elif message.mentions:
-                mentioned = message.mentions[0]
-                if mentioned.bot:
-                    return await reply(message, "Can't give bonuses to a bot.")
-                target_members = [mentioned]
-                target_label = mentioned.mention
-
-            elif target_token.isdigit() and message.guild:
-                candidate_id = int(target_token)
-                member = message.guild.get_member(candidate_id)
-                if member is None:
-                    try:
-                        member = await message.guild.fetch_member(candidate_id)
-                    except (discord.NotFound, discord.HTTPException):
-                        member = None
-                if member is None:
-                    return await reply(message, 
-                        "Could not find that user. Use a mention or a valid Discord user ID."
-                    )
-                if member.bot:
-                    return await reply(message, "Can't give bonuses to a bot.")
-                target_members = [member]
-                target_label = member.mention
-
             if target_members is None:
                 return await reply(message, 
-                    "Could not find that user, role, or `@everyone`. "
-                    "Use a mention, a role mention, `@everyone`, or a valid Discord user ID."
+                    "Could not find that role or `@everyone`. "
+                    "Use a role mention or `@everyone`."
                 )
 
             if not target_members:
