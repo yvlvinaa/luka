@@ -3794,6 +3794,20 @@ def _version_index(version) -> int:
     return 0
 
 
+def _lup_version_sort_key(card: dict):
+    """
+    Sort key for ordering a character's cards in `lup` display:
+    Common first, then V1/V2/V3/... in ascending NUMERIC order (not
+    alphabetical, so V2 sorts before V10), then all Rare cards last.
+    Based purely on the card's stored `version` metadata -- never on
+    cards.json's list order or creation order.
+    """
+    version = card.get("version")
+    if version == "rare" or not _is_common_card(card):
+        return (1, 0)
+    return (0, _version_index(version))
+
+
 def is_base_common_card(card: dict) -> bool:
     """A character's BASE Common card -- the first Common ever created
     for that character. Exactly one card per character satisfies this
@@ -11286,7 +11300,10 @@ class Client(discord.Client):
                     if c.get("name", "").lower() == chosen_card.get("name", "").lower()
                     and c.get("series", "").lower() == chosen_card.get("series", "").lower()
                 ]
-                all_versions.sort(key=lambda x: x.get("stars", 1))
+                # Display order: Common -> V1 -> V2 -> ... -> Rare, based
+                # on each card's actual stored `version` metadata (never
+                # cards.json's list order). See _lup_version_sort_key.
+                all_versions.sort(key=_lup_version_sort_key)
 
                 view = CharacterVersionView(
                     all_versions,
@@ -11347,7 +11364,10 @@ class Client(discord.Client):
                     if c.get("name", "").lower() == unique_results[0].get("name", "").lower()
                     and c.get("series", "").lower() == unique_results[0].get("series", "").lower()
                 ]
-                all_versions.sort(key=lambda x: x.get("stars", 1))
+                # Display order: Common -> V1 -> V2 -> ... -> Rare, based
+                # on each card's actual stored `version` metadata (never
+                # cards.json's list order). See _lup_version_sort_key.
+                all_versions.sort(key=_lup_version_sort_key)
 
                 view = CharacterVersionView(
                     all_versions,
