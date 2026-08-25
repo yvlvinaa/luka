@@ -3332,6 +3332,64 @@ async def _flush_pending_merchant_announcements() -> None:
         await _announce_merchant_event(arrived=arrived)
 
 
+async def _force_merchant_active_state(active: bool) -> bool:
+    """
+    Testing-only helper for lmerchantcontrol (owner-only). Flips ONLY
+    the timing half of _merchant_is_active()'s check -- each current
+    merchant's "expires_ts" -- for every merchant in the CURRENT batch,
+    without touching stock, wants, rewards, template_id, or id. No
+    merchant is rerolled, no offer/reward changes.
+
+    On `active=True` ("arrive") this also clears next_generation_at back
+    to None. That mirrors exactly what a REAL arrival does in
+    _apply_merchant_regeneration_check, and is required to keep the
+    system's own invariant intact: next_generation_at must only ever be
+    non-None while every merchant is inactive. Without this, reviving an
+    already-inactive (cooldown-pending) batch via `arrive` would leave
+    that cooldown timestamp sitting there unused -- and if the batch is
+    later forced inactive again (naturally or via `leave`) after that
+    stale timestamp has already passed, the very next
+    _apply_merchant_regeneration_check call would see
+    `now >= next_generation_at` immediately and regenerate on the spot,
+    skipping the 2-day cooldown entirely. `active=False` ("leave") still
+    never sets/clears next_generation_at itself -- that half is entirely
+    _apply_merchant_regeneration_check's job, untouched, exactly as
+    before.
+
+    Reuses the exact same persistence (save_merchants_local/
+    mark_merchants_dirty) and the exact same _announce_merchant_event()
+    every real arrival/departure already uses, so `lmerchants` and the
+    announcement channel both reflect this exactly like a real
+    transition would -- no second/parallel state, no new system.
+
+    Returns False (and does nothing else) if there's no current
+    merchant batch to flip at all.
+    """
+    global merchants
+    now = time.time()
+
+    async with merchants_lock:
+        current = merchants.get("merchants") or []
+        if not current:
+            return False
+
+        for m in current:
+            m["expires_ts"] = (now + MERCHANT_DURATION_SECONDS) if active else (now - 1)
+
+        if active:
+            merchants["next_generation_at"] = None
+
+        try:
+            save_merchants_local()
+            mark_merchants_dirty()
+        except Exception:
+            print("[merchants] Failed to persist a testing arrive/leave state change:")
+            traceback.print_exc()
+
+    await _announce_merchant_event(arrived=active)
+    return True
+
+
 async def check_and_update_merchants() -> bool:
     """
     The single entry point for merchant lifecycle progression: call
@@ -8101,7 +8159,7 @@ class MerchantListView(discord.ui.View):
         if not active:
             embed = discord.Embed(
                 color=THEME_COLOR,
-                description="No merchants are around right now. Check back later!"
+                description="The merchants haven't arrived yet. check the channel for updates!"
             )
             self.accept.disabled = True
             self.previous.disabled = True
@@ -11167,6 +11225,38 @@ class Client(discord.Client):
             sent = await message.channel.send(**send_kwargs)
             list_view.message = sent
             return
+
+        # =========================
+        # MERCHANT ADMIN TESTING (lmerchantcontrol arrive|leave)
+        # =========================
+        if content_lower.startswith("lmerchantcontrol "):
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            action = content_lower[len("lmerchantcontrol "):].strip()
+
+            if action not in ("arrive", "leave"):
+                return await reply(message, 
+                    "Usage: `lmerchantcontrol arrive` or `lmerchantcontrol leave`."
+                )
+
+            did_something = await _force_merchant_active_state(active=(action == "arrive"))
+
+            if not did_something:
+                return await reply(message, 
+                    "There's no current merchant batch to flip -- nothing to do."
+                )
+
+            if action == "arrive":
+                return await reply(message, 
+                    "✅ The current merchants now count as active/arrived. "
+                    "Check `lmerchants` and the announcement channel."
+                )
+            else:
+                return await reply(message, 
+                    "✅ The current merchants now count as inactive/left. "
+                    "Check `lmerchants` and the announcement channel."
+                )
 
         # =========================
         # MERCHANT TRADE: ADD CARD TO OFFER (madd <card_number>)
