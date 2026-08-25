@@ -126,7 +126,7 @@ MAX_PINNED_CARDS = 3
 # Channel where a "new card added" announcement is posted after a
 # successful laddcard. Set to 0 to disable; if the channel can't be found
 # the notification is just skipped, never an error.
-CARD_UPDATES_CHANNEL_ID = 1526133115536539668
+CARD_UPDATES_CHANNEL_ID = 1540008425818169364
 
 # =========================
 # BADGES & SHOWCASE CONFIG
@@ -3248,7 +3248,7 @@ def _apply_merchant_regeneration_check(state: dict, now: float) -> bool:
 # Set to 0 to disable; if the channel can't be found (or the bot isn't
 # actually connected yet -- see below), the announcement is simply
 # skipped, never an error, and never affects the merchant system itself.
-MERCHANT_ANNOUNCEMENT_CHANNEL_ID = 1535051733464776796
+MERCHANT_ANNOUNCEMENT_CHANNEL_ID = 1540149945284431942
 
 # Arrival/departure announcements detected before the client is ready
 # (see the "not ready yet" branch in _announce_merchant_event below)
@@ -9569,12 +9569,11 @@ class Client(discord.Client):
                 )
             )
             embed.set_author(name=message.author.display_name, icon_url=message.author.display_avatar.url)
-            embed.set_thumbnail(
-                url="https://cdn.discordapp.com/attachments/1505599262120087633/1541552738616348742/IMG_9608.jpg"
-            )
+            embed.set_thumbnail(url="attachment://cooldown.png")
             embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(now))} UTC")
 
-            await reply(message, embed=embed)
+            cooldown_image_file = discord.File("cooldown.png", filename="cooldown.png")
+            await reply(message, embed=embed, file=cooldown_image_file)
             return
 
         # =========================
