@@ -2,6 +2,34 @@
   "727441845789130804": [
     {
       "card": {
+        "id": "natsumi_common",
+        "name": "Natsumi Nishi",
+        "series": "You and I are Polar Opposites",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/natsumi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787701832.075631
+    },
+    {
+      "card": {
+        "id": "karma_common",
+        "name": "Karma Akabane",
+        "series": "Assassination Classroom",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/karma_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787701828.701035
+    },
+    {
+      "card": {
         "id": "hook_common",
         "name": "Hook",
         "series": "Honkai: Star Rail",
@@ -284,6 +312,20 @@
   "1241420729933758514": [
     {
       "card": {
+        "id": "yuri_common",
+        "name": "Yuri",
+        "series": "Doki Doki Literature Club!",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/yuri_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787701835.7851014
+    },
+    {
+      "card": {
         "id": "flins_common",
         "name": "Flins",
         "series": "Genshin Impact",
@@ -511,5 +553,6 @@
     }
   ],
   "1034747093887234068": [],
-  "155149108183695360": []
+  "155149108183695360": [],
+  "1149535834756874250": []
 }
