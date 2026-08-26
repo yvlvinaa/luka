@@ -2,6 +2,20 @@
   "727441845789130804": [
     {
       "card": {
+        "id": "kyoko_common",
+        "name": "Kyoko Kirigiri",
+        "series": "Danganronpa",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/kyoko_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787781299.977918
+    },
+    {
+      "card": {
         "id": "arata_common",
         "name": "Arata Shindo",
         "series": "PSYCHO-PASS",
@@ -1017,20 +1031,6 @@
   "770651160695537697": [
     {
       "card": {
-        "id": "jack_common",
-        "name": "Jack Howl",
-        "series": "Twisted Wonderland",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/jack_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787781121.0461757
-    },
-    {
-      "card": {
         "id": "nana_common",
         "name": "Nana Osaki",
         "series": "NANA",
@@ -1642,34 +1642,6 @@
   "661202852244488192": [
     {
       "card": {
-        "id": "tooru_common_2",
-        "name": "Tooru Oikawa",
-        "series": "Haikyuu!!",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/tooru_common_2.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787780830.776787
-    },
-    {
-      "card": {
-        "id": "sanhua_common",
-        "name": "Sanhua",
-        "series": "Wuthering Waves",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/sanhua_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787749957.1827824
-    },
-    {
-      "card": {
         "id": "park_common_2",
         "name": "Park Minseong",
         "series": "Got Dropped into a Ghost Story, Still Gotta Work",
@@ -1681,6 +1653,20 @@
       },
       "print": 1,
       "claimed_at": 1787779644.3802795
+    },
+    {
+      "card": {
+        "id": "osamu_common",
+        "name": "Osamu Dazai",
+        "series": "Bungo Stray Dogs",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/osamu_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787778847.5848057
     },
     {
       "card": {
@@ -2034,34 +2020,6 @@
     }
   ],
   "1228978576028729384": [
-    {
-      "card": {
-        "id": "tim_common",
-        "name": "Red Robin",
-        "series": "DC",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/tim_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787780808.5720053
-    },
-    {
-      "card": {
-        "id": "osamu_common",
-        "name": "Osamu Dazai",
-        "series": "Bungo Stray Dogs",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/osamu_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787778847.5848057
-    },
     {
       "card": {
         "id": "coco_common",
@@ -2453,6 +2411,20 @@
       },
       "print": 1,
       "claimed_at": 1787750638.8922613
+    },
+    {
+      "card": {
+        "id": "sanhua_common",
+        "name": "Sanhua",
+        "series": "Wuthering Waves",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/sanhua_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787749957.1827824
     },
     {
       "card": {
