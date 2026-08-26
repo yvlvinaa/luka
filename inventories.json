@@ -1248,6 +1248,20 @@
   "661202852244488192": [
     {
       "card": {
+        "id": "john_common",
+        "name": "Hellblazer",
+        "series": "DC",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/john_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787755146.005337
+    },
+    {
+      "card": {
         "id": "kohaku_common",
         "name": "Kohaku",
         "series": "Dr. Stone",
@@ -1591,6 +1605,21 @@
   "1000002084667658290": [
     {
       "card": {
+        "id": "shin_common",
+        "name": "Shin Asakura",
+        "series": "Sakamoto Days",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/shin_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787755206.430465,
+      "tags": "ft"
+    },
+    {
+      "card": {
         "id": "eve_common",
         "name": "Eve",
         "series": "Path To Nowhere",
@@ -1601,7 +1630,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787751612.349008
+      "claimed_at": 1787751612.349008,
+      "tags": "ft"
     },
     {
       "card": {
@@ -1615,7 +1645,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787750587.5344937
+      "claimed_at": 1787750587.5344937,
+      "tags": "ft"
     }
   ],
   "1091891524935098378": [
