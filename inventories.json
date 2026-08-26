@@ -894,6 +894,20 @@
   "870354420049776710": [
     {
       "card": {
+        "id": "korekiyo_common",
+        "name": "Korekiyo Shinguji",
+        "series": "Danganronpa",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/korekiyo_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787748356.5949392
+    },
+    {
+      "card": {
         "id": "yoon_common_3",
         "name": "Yoon Ga-eul",
         "series": "The Hunter\u2019s Gonna Lay Low",
@@ -1066,6 +1080,20 @@
   "661202852244488192": [
     {
       "card": {
+        "id": "shion_common",
+        "name": "Shion Tatsunami",
+        "series": "Saihate Station",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/shion_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787748238.365597
+    },
+    {
+      "card": {
         "id": "sebek_common",
         "name": "Sebek Zigvolt",
         "series": "Twisted Wonderland",
@@ -1109,5 +1137,21 @@
       "claimed_at": 1787744206.8869166
     }
   ],
-  "1530213985624920219": []
+  "1530213985624920219": [],
+  "1095353184471490620": [
+    {
+      "card": {
+        "id": "clorinde_common",
+        "name": "Clorinde",
+        "series": "Genshin Impact",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/clorinde_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787748232.2793524
+    }
+  ]
 }
