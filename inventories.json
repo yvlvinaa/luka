@@ -1036,6 +1036,20 @@
   "982952116039598161": [
     {
       "card": {
+        "id": "sephiroth_common",
+        "name": "Sephiroth",
+        "series": "Final Fantasy",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/sephiroth_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787750516.9532332
+    },
+    {
+      "card": {
         "id": "alexandrina_common",
         "name": "Alexandrina",
         "series": "Zenless Zone Zero",
@@ -1267,6 +1281,20 @@
   "1095353184471490620": [
     {
       "card": {
+        "id": "kanae_common",
+        "name": "Kanae",
+        "series": "Nijisanji",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/kanae_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787750454.9729962
+    },
+    {
+      "card": {
         "id": "clorinde_common",
         "name": "Clorinde",
         "series": "Genshin Impact",
@@ -1279,5 +1307,6 @@
       "print": 1,
       "claimed_at": 1787748232.2793524
     }
-  ]
+  ],
+  "1000002084667658290": []
 }
