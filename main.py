@@ -3866,6 +3866,64 @@ def _lup_version_sort_key(card: dict):
     return (0, _version_index(version))
 
 
+def _normalize_version_token(token: str):
+    """
+    Normalizes a user-typed version argument (for `lsetdate`/
+    `ldateversion`) into the exact string stored on card["version"]:
+    "common", "rare", or "V<n>" (any case/whitespace on input). Returns
+    None if the token doesn't match any of those shapes -- callers
+    treat that as an invalid version, never guess.
+    """
+    token = (token or "").strip().lower()
+    if token == "common":
+        return "common"
+    if token == "rare":
+        return "rare"
+    if token.startswith("v") and token[1:].isdigit() and token[1:]:
+        return f"V{int(token[1:])}"
+    return None
+
+
+def _schedule_version_sort_key(version: str):
+    """Same Common-then-numeric-then-Rare ordering as
+    _lup_version_sort_key(), but for a bare version STRING (used by
+    `ldateversion`, which has no card object to check)."""
+    if version == "rare":
+        return (1, 0)
+    return (0, _version_index(version))
+
+
+def _parse_relative_unlock_time(time_str: str):
+    """
+    Parses the free-form time argument `lsetdate` accepts (everything
+    after the version token) into an absolute unix timestamp. Accepts
+    "now" and "clear" are handled by the caller before this is ever
+    called -- this only handles "<amount> <unit>", e.g. "4 days", "12
+    hours", "30 minutes", "1 week" -- singular/plural and
+    minute/hour/day/week (and short forms min/hr/wk) all accepted,
+    case-insensitively. Returns None if the string doesn't match that
+    shape, so the caller can show a usage error rather than silently
+    misinterpreting it.
+    """
+    match = re.match(
+        r'^\s*(\d+(?:\.\d+)?)\s*(minute|min|hour|hr|day|week|wk)s?\s*$',
+        (time_str or "").strip(),
+        re.IGNORECASE
+    )
+    if not match:
+        return None
+
+    amount = float(match.group(1))
+    unit = match.group(2).lower()
+    seconds_per_unit = {
+        "minute": 60, "min": 60,
+        "hour": 3600, "hr": 3600,
+        "day": 86400,
+        "week": 604800, "wk": 604800,
+    }
+    return time.time() + amount * seconds_per_unit[unit]
+
+
 def is_base_common_card(card: dict) -> bool:
     """A character's BASE Common card -- the first Common ever created
     for that character. Exactly one card per character satisfies this
@@ -3926,6 +3984,13 @@ def _card_is_eligible_to_drop(card, now, base_by_character, prev_common_by_card_
           * a character's Rare card(s) are eligible once that
             character's base Common has been claimed
             RARE_UNLOCK_CLAIMS times.
+      - On top of ALL of the above (never instead of it): if this
+        card's version-tier has an owner-set `lsetdate` release time
+        (see LSETDATE COMMAND) that hasn't arrived yet, the card is NOT
+        eligible even if its claim requirement above is already
+        satisfied -- both conditions must hold. A version with no
+        `lsetdate` entry is entirely unaffected by this and behaves
+        exactly as it did before `lsetdate` existed.
     Claims are always read per exact card id from `card_prints` --
     never shared across characters or versions.
     """
@@ -3933,36 +3998,44 @@ def _card_is_eligible_to_drop(card, now, base_by_character, prev_common_by_card_
     # 4-star cards) has nothing to gate its Rare behind -- no base
     # Common to sit through the 5-day base-card period for, and no
     # base-Common claim count to reach RARE_UNLOCK_CLAIMS on. Its Rare
-    # is therefore automatically eligible to drop, unconditionally.
-    # This must be checked BEFORE the base-card-period short-circuit
-    # below (which otherwise only ever lets base Commons through), or a
-    # Common-less character would have zero eligible cards for the
-    # entire 5-day period. Characters that DO have a Common card are
-    # completely unaffected -- base_by_character.get(...) is not None
-    # for them, so they fall straight through to the unchanged logic
-    # below, including the existing 50-claim Rare unlock rule.
+    # is therefore automatically eligible to drop, unconditionally --
+    # including with respect to `lsetdate`: this exception is checked
+    # BEFORE the release-date gate below and returns immediately, so no
+    # schedule can ever delay it.
     if not _is_common_card(card) and base_by_character.get(_card_character_key(card)) is None:
         return True
 
     if base_card_period_active(now):
-        return is_base_common_card(card)
-
-    if is_base_common_card(card):
-        return True
-
-    if _is_common_card(card):
+        claim_requirement_met = is_base_common_card(card)
+    elif is_base_common_card(card):
+        claim_requirement_met = True
+    elif _is_common_card(card):
         prev = prev_common_by_card_id.get(card.get("id"))
         if prev is None:
             # No known previous version to chain off of (e.g. a data
             # inconsistency) -- never eligible rather than guessing.
-            return False
-        return card_prints.get(prev["id"], 0) >= COMMON_VERSION_UNLOCK_CLAIMS
+            claim_requirement_met = False
+        else:
+            claim_requirement_met = card_prints.get(prev["id"], 0) >= COMMON_VERSION_UNLOCK_CLAIMS
+    else:
+        # Rare (character has a base Common, so the normal 50-claim rule applies).
+        base = base_by_character.get(_card_character_key(card))
+        claim_requirement_met = base is not None and card_prints.get(base["id"], 0) >= RARE_UNLOCK_CLAIMS
 
-    # Rare.
-    base = base_by_character.get(_card_character_key(card))
-    if base is None:
+    if not claim_requirement_met:
         return False
-    return card_prints.get(base["id"], 0) >= RARE_UNLOCK_CLAIMS
+
+    # `lsetdate` release-date gate: an ADDITIONAL requirement on top of
+    # the claim check above, never a replacement for it. If this
+    # version has a scheduled release time and it hasn't arrived yet,
+    # the card stays ineligible even though its claim requirement is
+    # already satisfied -- e.g. V1 hitting 75 claims does not unlock V2
+    # early if `lsetdate V2 5 days` hasn't finished counting down yet.
+    scheduled_at = version_system.get("scheduled_unlocks", {}).get(card.get("version"))
+    if scheduled_at is not None and now < scheduled_at:
+        return False
+
+    return True
 
 
 def _next_version_for_new_card(char_name: str, series: str, frame_name: str) -> str:
@@ -4386,6 +4459,179 @@ async def _sync_backup_status_from_github_at_startup() -> dict:
 
 backup_status = asyncio.run(_sync_backup_status_from_github_at_startup())
 backup_status_lock = asyncio.Lock()
+
+
+# =========================
+# MAINTENANCE MODE (maintenance.json)
+# =========================
+# Tracks exactly one thing: whether owner-declared maintenance mode is
+# currently on (see `lmaintenance start`/`lmaintenance end` below).
+# Persisted/synced with the exact same local-first + GitHub-backfill +
+# debounced-sync + shutdown-flush pipeline every other piece of state
+# in this file already uses (mail.json, duo.json, backup_status.json,
+# ...) -- no second persistence system, just that same one reused for
+# one more small piece of state, so maintenance mode survives a Railway
+# redeploy instead of silently turning back off.
+#
+# maintenance = { "active": bool, "since": float (unix timestamp of the
+#   last start/end toggle) }. Defaults to inactive if the key is
+# missing entirely (e.g. a brand new bot that's never had maintenance
+# toggled).
+
+def _load_maintenance_json():
+    """Loads and validates the local maintenance.json. Same
+    missing-vs-invalid contract as every other loader in this file --
+    returns the parsed dict if valid, None if
+    missing/unreadable/malformed/not a dict."""
+    try:
+        with open('maintenance.json', 'r') as f:
+            raw = f.read().strip()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        print("[maintenance] Failed to read maintenance.json:")
+        traceback.print_exc()
+        return None
+
+    if not raw:
+        return None
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        print("[maintenance] maintenance.json contains invalid JSON:")
+        traceback.print_exc()
+        return None
+
+    if not isinstance(parsed, dict):
+        return None
+
+    return parsed
+
+
+def _maintenance_json_bytes() -> bytes:
+    return json.dumps(maintenance, indent=2).encode("utf-8")
+
+
+def save_maintenance_local() -> None:
+    """Writes the current in-memory `maintenance` dict to
+    maintenance.json, atomically -- same role as
+    save_backup_status_local()/save_version_system_local()."""
+    try:
+        _atomic_write_bytes("maintenance.json", _maintenance_json_bytes())
+    except Exception:
+        print("[maintenance] Failed to save maintenance.json locally:")
+        traceback.print_exc()
+        raise
+
+
+_maintenance_sync_task = None
+_maintenance_dirty = False
+_maintenance_upload_in_progress = False
+
+
+def mark_maintenance_dirty() -> None:
+    """Marks maintenance.json as having local changes not yet pushed to
+    GitHub. Must be called while holding maintenance_lock, immediately
+    after a successful save_maintenance_local()."""
+    global _maintenance_dirty
+    _maintenance_dirty = True
+
+
+async def maintenance_github_sync_loop():
+    """
+    Background task: same debounced-commit pattern as
+    backup_status_github_sync_loop()/version_system_github_sync_loop().
+    Wakes up every INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS and, only if
+    there are unpushed local changes, performs exactly one GitHub
+    commit.
+    """
+    global _maintenance_dirty, _maintenance_upload_in_progress
+    while True:
+        await asyncio.sleep(INVENTORY_GITHUB_SYNC_INTERVAL_SECONDS)
+
+        if not _maintenance_dirty or _maintenance_upload_in_progress:
+            continue
+
+        async with maintenance_lock:
+            if not _maintenance_dirty:
+                continue
+            data = _maintenance_json_bytes()
+            _maintenance_dirty = False
+
+        _maintenance_upload_in_progress = True
+        try:
+            await github_commit_files({"maintenance.json": data}, "Batched maintenance state sync")
+        except Exception:
+            print("[maintenance] Periodic GitHub sync failed (will retry next cycle):")
+            traceback.print_exc()
+            async with maintenance_lock:
+                _maintenance_dirty = True
+        finally:
+            _maintenance_upload_in_progress = False
+
+
+async def flush_maintenance_to_github() -> None:
+    """Best-effort final push on graceful shutdown -- same mechanism as
+    flush_backup_status_to_github()/flush_version_system_to_github()."""
+    global _maintenance_dirty
+
+    async with maintenance_lock:
+        if not _maintenance_dirty:
+            return
+        data = _maintenance_json_bytes()
+        _maintenance_dirty = False
+
+    try:
+        await github_commit_files({"maintenance.json": data}, "Final maintenance state sync (shutdown)")
+        print("[maintenance] Flushed maintenance state changes to GitHub before shutdown.")
+    except Exception:
+        async with maintenance_lock:
+            _maintenance_dirty = True
+        print("[maintenance] Failed to flush maintenance state changes to GitHub on shutdown "
+              "(they remain saved locally):")
+        traceback.print_exc()
+
+
+async def _sync_maintenance_from_github_at_startup() -> dict:
+    """
+    Startup-only, single load into memory -- same local-wins,
+    GitHub-as-backfill priority as _sync_backup_status_from_github_at_startup()
+    and every other _sync_*_from_github_at_startup() in this file. The
+    local file is always created here if it doesn't already exist (even
+    if that just means writing "{}"/inactive) -- so it's always present
+    from the bot's very first startup onward.
+    """
+    state = _load_maintenance_json()
+    if state is not None:
+        print("[maintenance] Loaded maintenance.json from local disk.")
+    else:
+        print("[maintenance] Local maintenance.json is missing/unreadable/malformed -- trying GitHub as a backfill.")
+        remote_bytes = await github_get_file("maintenance.json")
+        if remote_bytes is None:
+            state = {}
+        else:
+            try:
+                remote_data = json.loads(remote_bytes.decode("utf-8") or "{}")
+                state = remote_data if isinstance(remote_data, dict) else {}
+            except Exception:
+                print("[maintenance] Downloaded maintenance.json from GitHub was not valid JSON -- starting fresh.")
+                traceback.print_exc()
+                state = {}
+
+    if not os.path.exists('maintenance.json'):
+        try:
+            _atomic_write_bytes("maintenance.json", json.dumps(state, indent=2).encode("utf-8"))
+            print("[maintenance] Created maintenance.json (maintenance mode off by default).")
+        except Exception:
+            print("[maintenance] Failed to create maintenance.json:")
+            traceback.print_exc()
+
+    return state
+
+
+maintenance = asyncio.run(_sync_maintenance_from_github_at_startup())
+maintenance_lock = asyncio.Lock()
 
 
 def _rebuild_card_prints_from_inventories() -> None:
@@ -9037,6 +9283,13 @@ class Client(discord.Client):
         if _backup_status_sync_task is None or _backup_status_sync_task.done():
             _backup_status_sync_task = asyncio.create_task(backup_status_github_sync_loop())
 
+        # Same singleton-guard pattern, same reasoning, for
+        # maintenance.json's own periodic GitHub sync (a safety net --
+        # `lmaintenance` itself already saves+marks this file directly).
+        global _maintenance_sync_task
+        if _maintenance_sync_task is None or _maintenance_sync_task.done():
+            _maintenance_sync_task = asyncio.create_task(maintenance_github_sync_loop())
+
         # One-time migration: existing players get +5 extra drops/claims.
         # See _run_extra_bonus_migration_once() -- guarded so it can
         # never run twice and never applies to players created later.
@@ -9149,6 +9402,12 @@ class Client(discord.Client):
             traceback.print_exc()
 
         try:
+            await flush_maintenance_to_github()
+        except Exception:
+            print("[maintenance] Failed to flush pending maintenance state changes on shutdown:")
+            traceback.print_exc()
+
+        try:
             await flush_merchants_to_github()
         except Exception:
             print("[merchants] Failed to flush pending merchant state changes on shutdown:")
@@ -9165,6 +9424,21 @@ class Client(discord.Client):
         content_lower = content.lower()
         user_id = message.author.id
         inv = get_inventory(user_id)
+
+        # =========================
+        # MAINTENANCE MODE GATE
+        # =========================
+        # While maintenance mode is active (see `lmaintenance` below),
+        # every normal-user command is blocked with a friendly notice;
+        # owners are completely exempt so they can keep managing the
+        # bot (including turning maintenance back off) while it's on.
+        # _looks_like_bot_command() is the exact same "does this look
+        # like an attempt to run one of our commands" signal the
+        # unread-mail reminder below already uses, so this never
+        # intercepts ordinary chat messages -- only actual `l...`
+        # command attempts.
+        if maintenance.get("active") and user_id not in OWNER_USER_IDS and _looks_like_bot_command(content_lower):
+            return await reply(message, "🛠️ The bot is currently under maintenance. Please try again shortly.")
 
         # =========================
         # UNREAD MAIL REMINDER
@@ -10362,6 +10636,210 @@ class Client(discord.Client):
             embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))} UTC")
 
             return await reply(message, embed=embed)
+
+        # =========================
+        # LSETDATE COMMAND (owner-only: additional release-date gate on a version)
+        # =========================
+        # Persists into version_system.json's "scheduled_unlocks" dict
+        # (reusing that store's exact existing local-first/GitHub-sync
+        # pipeline -- no new file/sync loop needed). See
+        # _card_is_eligible_to_drop() for how this is actually applied:
+        # an ADDITIONAL requirement on top of the normal per-character
+        # claim threshold, never a replacement/bypass for it -- a
+        # version only drops once BOTH are satisfied.
+        if content_lower.startswith("lsetdate "):
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            parts = message.content.split()
+            if len(parts) < 3:
+                return await reply(message,
+                    "Usage: `lsetdate <version> <amount unit>`, `lsetdate <version> now`, or `lsetdate <version> clear`\n"
+                    "e.g. `lsetdate V2 5 days`, `lsetdate V3 12 hours`, `lsetdate V2 now`, `lsetdate V2 clear`."
+                )
+
+            version_token = _normalize_version_token(parts[1])
+            if version_token is None:
+                return await reply(message,
+                    "Invalid version. Use `common`, `rare`, or a numbered version like `V1`, `V2`, `V3`, ..."
+                )
+
+            action_str = " ".join(parts[2:]).strip()
+
+            if action_str.lower() == "clear":
+                async with version_system_lock:
+                    scheduled = version_system.setdefault("scheduled_unlocks", {})
+                    if version_token not in scheduled:
+                        return await reply(message, f"**{version_token}** doesn't have a scheduled release date set.")
+                    previous_value = scheduled.pop(version_token)
+                    try:
+                        save_version_system_local()
+                        mark_version_system_dirty()
+                    except Exception:
+                        scheduled[version_token] = previous_value
+                        return await reply(message, "❌ Something went wrong saving that. Please try again.")
+                return await reply(message,
+                    f"✅ Cleared the scheduled release date for **{version_token}** -- "
+                    f"it now follows the normal claim-based unlock only."
+                )
+
+            if action_str.lower() == "now":
+                unlock_at = time.time()
+            else:
+                unlock_at = _parse_relative_unlock_time(action_str)
+                if unlock_at is None:
+                    return await reply(message,
+                        "Couldn't parse that time. Use e.g. `5 days`, `12 hours`, `30 minutes`, `1 week`, `now`, or `clear`."
+                    )
+
+            async with version_system_lock:
+                scheduled = version_system.setdefault("scheduled_unlocks", {})
+                had_previous = version_token in scheduled
+                previous_value = scheduled.get(version_token)
+                scheduled[version_token] = unlock_at
+                try:
+                    save_version_system_local()
+                    mark_version_system_dirty()
+                except Exception:
+                    if had_previous:
+                        scheduled[version_token] = previous_value
+                    else:
+                        scheduled.pop(version_token, None)
+                    return await reply(message, "❌ Something went wrong saving that. Please try again.")
+
+            if unlock_at <= time.time():
+                when_text = "immediately (the date requirement is already satisfied)"
+            else:
+                when_text = f"<t:{int(unlock_at)}:F> (<t:{int(unlock_at)}:R>)"
+
+            return await reply(message,
+                f"✅ **{version_token}** now also requires reaching {when_text} before it can drop, "
+                f"**in addition to** its normal claim requirement -- whichever finishes last is what counts."
+            )
+
+        # =========================
+        # LDATEVERSION COMMAND (owner-only: read-only unlock schedule)
+        # =========================
+        if content_lower == "ldateversion":
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            scheduled = version_system.get("scheduled_unlocks", {}) or {}
+            now = time.time()
+
+            embed = discord.Embed(
+                color=discord.Color.blurple(),
+                title="📅 Version Release-Date Schedule",
+                description=(
+                    "Read-only snapshot of `lsetdate` release-date requirements. "
+                    "A version still also needs its normal claim threshold met -- "
+                    "this only shows the date half of that. Nothing here is modified."
+                )
+            )
+
+            if not scheduled:
+                embed.add_field(
+                    name="No scheduled release dates",
+                    value="Use `lsetdate <version> <amount unit>` to schedule one.",
+                    inline=False
+                )
+            else:
+                lines = []
+                for version_token in sorted(scheduled.keys(), key=_schedule_version_sort_key):
+                    unlock_at = scheduled[version_token]
+                    if unlock_at <= now:
+                        status = "✅ Date requirement met"
+                    else:
+                        status = f"<t:{int(unlock_at)}:F> (<t:{int(unlock_at)}:R>)"
+                    lines.append(f"**{version_token}** -- {status}")
+                embed.add_field(name="Scheduled Versions", value="\n".join(lines), inline=False)
+
+            embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))} UTC")
+            return await reply(message, embed=embed)
+
+        # =========================
+        # LMERCHANTSTATUS COMMAND (owner-only: read-only merchant status)
+        # =========================
+        # Purely reads the existing `merchants` state -- never calls
+        # check_and_update_merchants() or any other function that could
+        # regenerate/mutate/persist merchant state. `lmerchants` remains
+        # the only command that ever changes it.
+        if content_lower == "lmerchantstatus":
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            now = time.time()
+            active_merchants = get_active_merchants()
+
+            embed = discord.Embed(
+                color=discord.Color.green() if active_merchants else discord.Color.red(),
+                title="🛒 Merchant Status",
+                description="Read-only snapshot of merchant availability. Nothing here is modified."
+            )
+
+            if active_merchants:
+                soonest_expiry = min(m.get("expires_ts", now) for m in active_merchants)
+                embed.add_field(name="Status", value=f"🟢 Active -- {len(active_merchants)} merchant(s) trading", inline=False)
+                embed.add_field(
+                    name="Time Remaining",
+                    value=f"<t:{int(soonest_expiry)}:R> (<t:{int(soonest_expiry)}:F>)",
+                    inline=False
+                )
+            else:
+                next_generation_at = merchants.get("next_generation_at")
+                embed.add_field(name="Status", value="🔴 Inactive -- no merchants currently trading", inline=False)
+                if next_generation_at:
+                    embed.add_field(
+                        name="Merchants Return",
+                        value=f"<t:{int(next_generation_at)}:R> (<t:{int(next_generation_at)}:F>)",
+                        inline=False
+                    )
+                else:
+                    embed.add_field(
+                        name="Merchants Return",
+                        value="⏳ Unknown -- pending the next scheduled check.",
+                        inline=False
+                    )
+
+            embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))} UTC")
+            return await reply(message, embed=embed)
+
+        # =========================
+        # LMAINTENANCE COMMAND (owner-only: persistent maintenance mode)
+        # =========================
+        if content_lower == "lmaintenance start" or content_lower == "lmaintenance end":
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            turning_on = content_lower.endswith("start")
+
+            async with maintenance_lock:
+                previous_state = dict(maintenance)
+                maintenance["active"] = turning_on
+                maintenance["since"] = time.time()
+                try:
+                    save_maintenance_local()
+                    mark_maintenance_dirty()
+                except Exception:
+                    maintenance.clear()
+                    maintenance.update(previous_state)
+                    return await reply(message, "❌ Something went wrong saving that. Please try again.")
+
+            if turning_on:
+                return await reply(message,
+                    "🛠️ Maintenance mode is now **ON**. Normal commands are blocked for everyone except owners."
+                )
+            else:
+                return await reply(message, "✅ Maintenance mode is now **OFF**. Normal commands are available again.")
+
+        if content_lower == "lmaintenance":
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            status_text = "🛠️ **ON**" if maintenance.get("active") else "✅ **OFF**"
+            return await reply(message,
+                f"Maintenance mode is currently {status_text}. Usage: `lmaintenance start` / `lmaintenance end`."
+            )
 
         # =========================
         # LFIXUSER COMMAND (owner-only: diagnostic view of one user's data)
