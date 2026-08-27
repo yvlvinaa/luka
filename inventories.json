@@ -5052,6 +5052,21 @@
   "1000002084667658290": [
     {
       "card": {
+        "id": "eichi_common",
+        "name": "Eichi Tenshouin",
+        "series": "Ensemble Stars!",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/eichi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787852097.3284962,
+      "tags": "ft"
+    },
+    {
+      "card": {
         "id": "jeong_common_2",
         "name": "Jeong Ildu",
         "series": "Special Civil Servant",
@@ -5062,7 +5077,8 @@
         "version": "common"
       },
       "print": 2,
-      "claimed_at": 1787850218.4531472
+      "claimed_at": 1787850218.4531472,
+      "tags": "ft"
     },
     {
       "card": {
@@ -5202,7 +5218,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787843615.503577
+      "claimed_at": 1787843615.503577,
+      "tags": "ft"
     },
     {
       "card": {
@@ -5231,7 +5248,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787842037.0756938
+      "claimed_at": 1787842037.0756938,
+      "tags": "ft"
     },
     {
       "card": {
@@ -5273,7 +5291,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787840766.1859765
+      "claimed_at": 1787840766.1859765,
+      "tags": "ft"
     },
     {
       "card": {
@@ -5287,7 +5306,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787840083.947755
+      "claimed_at": 1787840083.947755,
+      "tags": "ft"
     },
     {
       "card": {
@@ -7137,6 +7157,20 @@
   "745734578005737623": [
     {
       "card": {
+        "id": "jang_common_2",
+        "name": "Jang Heowoon",
+        "series": "Got Dropped into a Ghost Story, Still Gotta Work",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/jang_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787852097.5187294
+    },
+    {
+      "card": {
         "id": "haruka_common_2",
         "name": "Haruka Nanase",
         "series": "Free! Iwatobi Swim Club",
@@ -7323,6 +7357,20 @@
   "831140416312180756": [],
   "1542529568618061936": [],
   "968501068524818542": [
+    {
+      "card": {
+        "id": "mo_common",
+        "name": "Mo Ran",
+        "series": "The Husky and His White Cat Shizun",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/mo_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787852162.6072395
+    },
     {
       "card": {
         "id": "himmel_common",
@@ -7626,6 +7674,20 @@
   "1135702746692059330": [
     {
       "card": {
+        "id": "hyoma_common",
+        "name": "Hyoma Chigiri",
+        "series": "BLUELOCK",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/hyoma_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787852133.882763
+    },
+    {
+      "card": {
         "id": "jude_common",
         "name": "Jude Callahan",
         "series": "Sweet Venom",
@@ -7652,6 +7714,22 @@
       },
       "print": 1,
       "claimed_at": 1787851538.276979
+    }
+  ],
+  "875877141449949276": [
+    {
+      "card": {
+        "id": "ten_common",
+        "name": "Ten Murakumo",
+        "series": "18TRIP",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/ten_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787852135.5723312
     }
   ]
 }
