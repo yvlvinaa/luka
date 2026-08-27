@@ -2844,7 +2844,8 @@
       },
       "print": 1,
       "claimed_at": 1787848708.5510602,
-      "pinned": true
+      "pinned": true,
+      "showcased": true
     },
     {
       "card": {
@@ -3254,21 +3255,6 @@
       "print": 1,
       "claimed_at": 1787869395.7110202,
       "tags": "\ud83c\udf81\u2705"
-    },
-    {
-      "card": {
-        "id": "gyutaro_common",
-        "name": "Gyutaro",
-        "series": "Kimetsu no Yaiba",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/gyutaro_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787868973.3314176,
-      "tags": "S"
     },
     {
       "card": {
@@ -4234,6 +4220,20 @@
     }
   ],
   "1228978576028729384": [
+    {
+      "card": {
+        "id": "han_common_2",
+        "name": "Han Yoojin",
+        "series": "The S-classes That I Raised",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/han_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787870471.1068804
+    },
     {
       "card": {
         "id": "leona_common",
@@ -5950,6 +5950,35 @@
     }
   ],
   "1000002084667658290": [
+    {
+      "card": {
+        "id": "gyutaro_common",
+        "name": "Gyutaro",
+        "series": "Kimetsu no Yaiba",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/gyutaro_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787868973.3314176,
+      "tags": "S"
+    },
+    {
+      "card": {
+        "id": "ame-chan_common_2",
+        "name": "Ame-chan & KAngel",
+        "series": "Needy Streamer Overload",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/ame-chan_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787870563.7030501
+    },
     {
       "card": {
         "id": "alhaitham_common",
@@ -8223,6 +8252,20 @@
   "1310677632769327257": [
     {
       "card": {
+        "id": "gambit_rare",
+        "name": "Gambit",
+        "series": "Marvel",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/gambit_rare.png",
+        "frame": "red",
+        "version": "rare"
+      },
+      "print": 1,
+      "claimed_at": 1787870661.6524296
+    },
+    {
+      "card": {
         "id": "till_common",
         "name": "Till",
         "series": "Alien Stage",
@@ -9418,6 +9461,20 @@
     }
   ],
   "875877141449949276": [
+    {
+      "card": {
+        "id": "morvay_common",
+        "name": "Morvay",
+        "series": "NU: Carnival",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/morvay_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787870647.3139966
+    },
     {
       "card": {
         "id": "melissa_common",
