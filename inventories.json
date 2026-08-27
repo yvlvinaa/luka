@@ -3148,6 +3148,20 @@
   "1095353184471490620": [
     {
       "card": {
+        "id": "cassandra_common",
+        "name": "Black Bat",
+        "series": "DC",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/cassandra_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787823126.3097532
+    },
+    {
+      "card": {
         "id": "john_common",
         "name": "Hellblazer",
         "series": "DC",
@@ -3358,6 +3372,20 @@
     }
   ],
   "1000002084667658290": [
+    {
+      "card": {
+        "id": "yu_rare",
+        "name": "Yu Narukami",
+        "series": "Persona",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/yu_rare.png",
+        "frame": "blue",
+        "version": "rare"
+      },
+      "print": 1,
+      "claimed_at": 1787822855.2935781
+    },
     {
       "card": {
         "id": "tim_common",
@@ -4130,5 +4158,6 @@
       "print": 2,
       "claimed_at": 1787820341.8621583
     }
-  ]
+  ],
+  "1070404986057531452": []
 }
