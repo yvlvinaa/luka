@@ -2,6 +2,20 @@
   "727441845789130804": [
     {
       "card": {
+        "id": "vivian_common",
+        "name": "Vivian Hugo",
+        "series": "BLUELOCK",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/vivian_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787864959.8081043
+    },
+    {
+      "card": {
         "id": "paimon_common",
         "name": "Paimon",
         "series": "Genshin Impact",
@@ -7537,6 +7551,20 @@
   "1070404986057531452": [
     {
       "card": {
+        "id": "noi_rare",
+        "name": "Noi Konazawa",
+        "series": "Cosmic Princess Kaguya",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/noi_rare.png",
+        "frame": "pink",
+        "version": "rare"
+      },
+      "print": 2,
+      "claimed_at": 1787865198.0483212
+    },
+    {
+      "card": {
         "id": "kuzuha_common",
         "name": "Kuzuha",
         "series": "Nijisanji",
@@ -9088,5 +9116,6 @@
       "print": 3,
       "claimed_at": 1787859360.9954557
     }
-  ]
+  ],
+  "429457053791158281": []
 }
