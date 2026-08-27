@@ -4282,6 +4282,20 @@
   "1228978576028729384": [
     {
       "card": {
+        "id": "dan_common",
+        "name": "Dan Heng",
+        "series": "Honkai: Star Rail",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/dan_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787871996.4028683
+    },
+    {
+      "card": {
         "id": "fu_common_3",
         "name": "Fu Hua & Rita Rossweisse",
         "series": "Honkai Impact 3rd",
@@ -6994,6 +7008,20 @@
     }
   ],
   "1091891524935098378": [
+    {
+      "card": {
+        "id": "harumi_common",
+        "name": "Harumi Kurose",
+        "series": "Our Walk Home",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/harumi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787872087.0175962
+    },
     {
       "card": {
         "id": "kou_common_2",
@@ -9812,6 +9840,20 @@
   "1388187436894523645": [
     {
       "card": {
+        "id": "talia_common",
+        "name": "Talia Al Ghul",
+        "series": "DC",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/talia_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787872009.4640875
+    },
+    {
+      "card": {
         "id": "belle_common",
         "name": "Belle",
         "series": "Zenless Zone Zero",
@@ -9837,7 +9879,8 @@
       },
       "print": 1,
       "claimed_at": 1787870055.2164376,
-      "tags": "\ud83d\udc30"
+      "tags": "\ud83d\udc30",
+      "showcased": true
     },
     {
       "card": {
