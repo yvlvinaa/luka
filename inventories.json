@@ -918,6 +918,20 @@
   "1241420729933758514": [
     {
       "card": {
+        "id": "kurusu_common",
+        "name": "Kurusu Seira",
+        "series": "Selection Project",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/kurusu_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787846603.0505683
+    },
+    {
+      "card": {
         "id": "bae_common",
         "name": "Bae Changdeok",
         "series": "After A Meal",
@@ -1748,7 +1762,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787844218.1915553
+      "claimed_at": 1787844218.1915553,
+      "tags": "\ud83c\udfa4"
     },
     {
       "card": {
@@ -1876,7 +1891,8 @@
       "print": 2,
       "claimed_at": 1787837212.289193,
       "showcased": true,
-      "pinned": true
+      "pinned": true,
+      "tags": "\ud83d\udc0d"
     },
     {
       "card": {
@@ -4791,6 +4807,20 @@
   "1000002084667658290": [
     {
       "card": {
+        "id": "oboro_common",
+        "name": "Oboro Shirakumo",
+        "series": "My Hero Academia",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/oboro_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787840645.0964692
+    },
+    {
+      "card": {
         "id": "jotaro_common",
         "name": "Jotaro Kujo",
         "series": "Jojo\u02bcs Bizarre Adventure",
@@ -6078,6 +6108,20 @@
   "1028692731029110846": [
     {
       "card": {
+        "id": "mafuyu_common_2",
+        "name": "Mafuyu Seba",
+        "series": "Sakamoto Days",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/mafuyu_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787846469.8261032
+    },
+    {
+      "card": {
         "id": "simeon_common",
         "name": "Simeon",
         "series": "Obey Me!",
@@ -6304,6 +6348,20 @@
     }
   ],
   "1070404986057531452": [
+    {
+      "card": {
+        "id": "yu_rare_2",
+        "name": "Yu Fan & Chen Jingshen",
+        "series": "Wait For Me After School",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/yu_rare_2.png",
+        "frame": "green",
+        "version": "rare"
+      },
+      "print": 1,
+      "claimed_at": 1787846448.3056548
+    },
     {
       "card": {
         "id": "shiina_common",
@@ -6782,6 +6840,20 @@
   "968501068524818542": [
     {
       "card": {
+        "id": "boothill_common",
+        "name": "Boothill",
+        "series": "Honkai: Star Rail",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/boothill_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787846640.7913153
+    },
+    {
+      "card": {
         "id": "stargazer_common",
         "name": "Stargazer",
         "series": "Path To Nowhere",
@@ -6935,20 +7007,6 @@
       },
       "print": 1,
       "claimed_at": 1787841262.725977
-    },
-    {
-      "card": {
-        "id": "oboro_common",
-        "name": "Oboro Shirakumo",
-        "series": "My Hero Academia",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/oboro_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787840645.0964692
     }
   ]
 }
