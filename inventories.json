@@ -1696,6 +1696,34 @@
   "870354420049776710": [
     {
       "card": {
+        "id": "qiao_common",
+        "name": "Qiao Ling",
+        "series": "Link Click",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/qiao_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787846390.981605
+    },
+    {
+      "card": {
+        "id": "han_common",
+        "name": "Han Seo-in",
+        "series": "Backlight",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/han_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787846367.8689284
+    },
+    {
+      "card": {
         "id": "cheongryeo_common",
         "name": "Cheongryeo",
         "series": "Debut or Die",
@@ -1847,7 +1875,8 @@
       },
       "print": 2,
       "claimed_at": 1787837212.289193,
-      "showcased": true
+      "showcased": true,
+      "pinned": true
     },
     {
       "card": {
@@ -3366,6 +3395,20 @@
     }
   ],
   "1228978576028729384": [
+    {
+      "card": {
+        "id": "rosaria_common",
+        "name": "Rosaria",
+        "series": "Genshin Impact",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/rosaria_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787846161.1392157
+    },
     {
       "card": {
         "id": "eichi_common",
