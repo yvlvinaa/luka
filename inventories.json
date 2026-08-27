@@ -2189,20 +2189,6 @@
     },
     {
       "card": {
-        "id": "qiao_common",
-        "name": "Qiao Ling",
-        "series": "Link Click",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/qiao_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787846390.981605
-    },
-    {
-      "card": {
         "id": "han_common",
         "name": "Han Seo-in",
         "series": "Backlight",
@@ -2775,6 +2761,20 @@
   "982952116039598161": [
     {
       "card": {
+        "id": "koboshi_common",
+        "name": "Koboshi Uematsu",
+        "series": "Pita-Ten",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/koboshi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787868634.2122416
+    },
+    {
+      "card": {
         "id": "noi_rare",
         "name": "Noi Konazawa",
         "series": "Cosmic Princess Kaguya",
@@ -3183,6 +3183,21 @@
   "661202852244488192": [
     {
       "card": {
+        "id": "samatoki_common",
+        "name": "Samatoki Aohitsugi",
+        "series": "Hypnosis Mic",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/samatoki_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787868656.9651518,
+      "tags": "\ud83c\udf81\u2705"
+    },
+    {
+      "card": {
         "id": "jingliu_common",
         "name": "Jingliu",
         "series": "Honkai: Star Rail",
@@ -3193,7 +3208,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787867579.9096632
+      "claimed_at": 1787867579.9096632,
+      "tags": "\ud83c\udf81\u2705"
     },
     {
       "card": {
@@ -9475,5 +9491,34 @@
   "429457053791158281": [],
   "429305856241172480": [],
   "1225070865935368265": [],
-  "1388187436894523645": []
+  "1388187436894523645": [
+    {
+      "card": {
+        "id": "qiao_common",
+        "name": "Qiao Ling",
+        "series": "Link Click",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/qiao_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787846390.981605
+    },
+    {
+      "card": {
+        "id": "rita_common",
+        "name": "Rita Rossweisse",
+        "series": "Honkai Impact 3rd",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/rita_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787868756.588425
+    }
+  ]
 }
