@@ -2,6 +2,20 @@
   "727441845789130804": [
     {
       "card": {
+        "id": "ifa_common",
+        "name": "Ifa",
+        "series": "Genshin Impact",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/ifa_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787851615.476112
+    },
+    {
+      "card": {
         "id": "oliver_common",
         "name": "Oliver Aiku",
         "series": "BLUELOCK",
@@ -7582,6 +7596,20 @@
   "863457388815188059": [
     {
       "card": {
+        "id": "kotone_common",
+        "name": "Kotone Shiomi",
+        "series": "Persona",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/kotone_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787851737.7500446
+    },
+    {
+      "card": {
         "id": "hizuki_common",
         "name": "Hizuki Reynard-Yamada",
         "series": "Demon Lord 2099",
@@ -7608,7 +7636,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787847033.5069687
+      "claimed_at": 1787847033.5069687,
+      "tags": "MINE"
     },
     {
       "card": {
