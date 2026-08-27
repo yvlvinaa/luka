@@ -2,6 +2,20 @@
   "727441845789130804": [
     {
       "card": {
+        "id": "paimon_common",
+        "name": "Paimon",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/paimon_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787863285.9426324
+    },
+    {
+      "card": {
         "id": "mikasa_common",
         "name": "Mikasa Ackerman",
         "series": "Attack on Titan",
@@ -3113,7 +3127,7 @@
       },
       "print": 1,
       "claimed_at": 1787858054.5566568,
-      "tags": "ONYX"
+      "tags": "NOTFORONYX"
     },
     {
       "card": {
@@ -3143,7 +3157,7 @@
       },
       "print": 3,
       "claimed_at": 1787855026.5841944,
-      "tags": "ONYX"
+      "tags": "NOTFORONYX"
     },
     {
       "card": {
