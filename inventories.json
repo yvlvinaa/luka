@@ -4399,6 +4399,66 @@
   "661202852244488192": [
     {
       "card": {
+        "id": "taooka_common",
+        "name": "Taooka Yua",
+        "series": "#Gal x Gal Yuri",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/taooka_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787942289.187623,
+      "tags": "ammar"
+    },
+    {
+      "card": {
+        "id": "lady_common_2",
+        "name": "Lady Pearl",
+        "series": "Path To Nowhere",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/lady_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787944644.530101,
+      "tags": "ammar"
+    },
+    {
+      "card": {
+        "id": "kars_common",
+        "name": "Kars",
+        "series": "Jojo\u2019s Bizarre Adventure",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/kars_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787836931.452916,
+      "tags": "ammar"
+    },
+    {
+      "card": {
+        "id": "jolyne_common",
+        "name": "Jolyne Cujoh",
+        "series": "Jojo\u02bcs Bizarre Adventure",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/jolyne_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787858679.2239816,
+      "tags": "ammar"
+    },
+    {
+      "card": {
         "id": "leone_common",
         "name": "Leone Abbacchio",
         "series": "Jojo\u2019s Bizarre Adventure",
@@ -4409,7 +4469,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787837204.4735584
+      "claimed_at": 1787837204.4735584,
+      "tags": "ammar"
     },
     {
       "card": {
@@ -4424,7 +4485,7 @@
       },
       "print": 1,
       "claimed_at": 1787839567.064909,
-      "tags": "\ud83c\udf81\u2705"
+      "tags": "ammar"
     },
     {
       "card": {
@@ -14424,6 +14485,20 @@
   "745734578005737623": [
     {
       "card": {
+        "id": "lee_common_3",
+        "name": "Lee",
+        "series": "Punishing: Gray Raven",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/lee_common_3.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787945340.284691
+    },
+    {
+      "card": {
         "id": "akihiko_common",
         "name": "Akihiko Sanada",
         "series": "Persona",
@@ -16797,6 +16872,20 @@
     }
   ],
   "1216834356396560406": [
+    {
+      "card": {
+        "id": "shen_common_2",
+        "name": "Shen Zechuan",
+        "series": "Ballad of Sword & Wine",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/shen_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787945504.546374
+    },
     {
       "card": {
         "id": "zhongli_common",
@@ -21931,66 +22020,7 @@
     }
   ],
   "1325579039888511056": [],
-  "1224818851464613952": [
-    {
-      "card": {
-        "id": "jolyne_common",
-        "name": "Jolyne Cujoh",
-        "series": "Jojo\u02bcs Bizarre Adventure",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/jolyne_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787858679.2239816,
-      "tags": "\ud83c\udf81\u2705"
-    },
-    {
-      "card": {
-        "id": "kars_common",
-        "name": "Kars",
-        "series": "Jojo\u2019s Bizarre Adventure",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/kars_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787836931.452916,
-      "tags": "\ud83c\udf81\u2705"
-    },
-    {
-      "card": {
-        "id": "lady_common_2",
-        "name": "Lady Pearl",
-        "series": "Path To Nowhere",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/lady_common_2.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787944644.530101
-    },
-    {
-      "card": {
-        "id": "taooka_common",
-        "name": "Taooka Yua",
-        "series": "#Gal x Gal Yuri",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/taooka_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787942289.187623
-    }
-  ],
+  "1224818851464613952": [],
   "837077284845518888": [
     {
       "card": {
@@ -22007,5 +22037,6 @@
       "claimed_at": 1787944593.7081683,
       "tags": "\ud83d\udcb8"
     }
-  ]
+  ],
+  "998695603359977553": []
 }
