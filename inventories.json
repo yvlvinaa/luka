@@ -4114,6 +4114,21 @@
   "661202852244488192": [
     {
       "card": {
+        "id": "usagi_common",
+        "name": "Usagi",
+        "series": "Chiikawa",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/usagi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787932846.69772,
+      "tags": "\ud83c\udf81\u2705"
+    },
+    {
+      "card": {
         "id": "yoruichi_common",
         "name": "Yoruichi Shihouin",
         "series": "Bleach",
@@ -4139,7 +4154,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787930038.3944232
+      "claimed_at": 1787930038.3944232,
+      "tags": "O"
     },
     {
       "card": {
