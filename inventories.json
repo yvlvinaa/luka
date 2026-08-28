@@ -5973,6 +5973,20 @@
   "1095353184471490620": [
     {
       "card": {
+        "id": "mikasa_common",
+        "name": "Mikasa Ackerman",
+        "series": "Attack on Titan",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/mikasa_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1787885232.7164757
+    },
+    {
+      "card": {
         "id": "jang_common",
         "name": "Jang Baekhee",
         "series": "Yang Ilwoo and I",
@@ -11363,6 +11377,20 @@
   "856783136833667072": [
     {
       "card": {
+        "id": "lee_common_2",
+        "name": "Lee Yeo-woon",
+        "series": "Virtual Strangers",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/lee_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 4,
+      "claimed_at": 1787885148.3766263
+    },
+    {
+      "card": {
         "id": "enjin_common",
         "name": "Enjin",
         "series": "Gachiakuta",
@@ -11674,6 +11702,20 @@
   "994686213967577199": [
     {
       "card": {
+        "id": "jin_common_3",
+        "name": "Jin Nasol",
+        "series": "Got Dropped into a Ghost Story, Still Gotta Work",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/jin_common_3.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 4,
+      "claimed_at": 1787885176.007016
+    },
+    {
+      "card": {
         "id": "joseph_common",
         "name": "Joseph Joestar",
         "series": "Jojo\u02bcs Bizarre Adventure",
@@ -11935,5 +11977,50 @@
       "claimed_at": 1787884293.5937498
     }
   ],
-  "977162721520918538": []
+  "977162721520918538": [
+    {
+      "card": {
+        "id": "gigi_common",
+        "name": "Gigi Murin",
+        "series": "Hololive",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/gigi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787885238.9567928
+    },
+    {
+      "card": {
+        "id": "phrolova_common",
+        "name": "Phrolova",
+        "series": "Wuthering Waves",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/phrolova_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1787884938.6054387
+    }
+  ],
+  "703745509835407402": [
+    {
+      "card": {
+        "id": "mori_common_2",
+        "name": "Mori Calliope",
+        "series": "Hololive",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/mori_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787885181.8600943
+    }
+  ]
 }
