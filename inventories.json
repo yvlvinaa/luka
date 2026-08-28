@@ -4253,6 +4253,21 @@
   "661202852244488192": [
     {
       "card": {
+        "id": "bae_common",
+        "name": "Bae Changdeok",
+        "series": "After A Meal",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/bae_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1787937465.6153224,
+      "tags": "\ud83c\udf81\u2705"
+    },
+    {
+      "card": {
         "id": "black_common_2",
         "name": "Black Swan",
         "series": "Honkai: Star Rail",
@@ -7569,6 +7584,20 @@
     }
   ],
   "1530213985624920219": [
+    {
+      "card": {
+        "id": "shintaro_common",
+        "name": "Shintaro Midorima",
+        "series": "Kuroko's Basketball",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/shintaro_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787937678.5255654
+    },
     {
       "card": {
         "id": "kinich_common",
@@ -11181,6 +11210,20 @@
   "1028692731029110846": [
     {
       "card": {
+        "id": "rukia_common",
+        "name": "Rukia Kuchiki",
+        "series": "Bleach",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/rukia_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787937652.3609893
+    },
+    {
+      "card": {
         "id": "seras_common",
         "name": "Seras Victoria",
         "series": "HELLSING",
@@ -12182,7 +12225,9 @@
         "version": "common"
       },
       "print": 2,
-      "claimed_at": 1787926682.223521
+      "claimed_at": 1787926682.223521,
+      "tags": "hi",
+      "showcased": true
     },
     {
       "card": {
