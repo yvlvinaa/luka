@@ -2138,7 +2138,8 @@
         "version": "common"
       },
       "print": 2,
-      "claimed_at": 1787941360.035195
+      "claimed_at": 1787941360.035195,
+      "pinned": true
     },
     {
       "card": {
@@ -8872,6 +8873,20 @@
   "1000002084667658290": [
     {
       "card": {
+        "id": "fadia_common",
+        "name": "Fadia",
+        "series": "Neverness to Everness",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/fadia_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1787942622.5101583
+    },
+    {
+      "card": {
         "id": "ritsu_common_2",
         "name": "Ritsu Sakuma",
         "series": "Ensemble Stars!",
@@ -13133,6 +13148,20 @@
   "1542476173886488606": [],
   "1542486042832011316": [],
   "1310677632769327257": [
+    {
+      "card": {
+        "id": "klaiver_common",
+        "name": "Klavier Gavin",
+        "series": "Ace Attorney",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/klaiver_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787942836.4179432
+    },
     {
       "card": {
         "id": "firefly_common",
