@@ -9283,6 +9283,20 @@
   "1310677632769327257": [
     {
       "card": {
+        "id": "azul_common",
+        "name": "Azul Ashengrotto",
+        "series": "Twisted Wonderland",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/azul_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787885753.3831713
+    },
+    {
+      "card": {
         "id": "josuke_common",
         "name": "Josuke Higashikata",
         "series": "Jojo\u02bcs Bizarre Adventure",
@@ -10159,6 +10173,20 @@
   "831140416312180756": [],
   "1542529568618061936": [],
   "968501068524818542": [
+    {
+      "card": {
+        "id": "present_common",
+        "name": "Present Mic",
+        "series": "My Hero Academia",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/present_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787885673.1706593
+    },
     {
       "card": {
         "id": "varka_common",
@@ -11716,6 +11744,20 @@
   "994686213967577199": [
     {
       "card": {
+        "id": "wakaba_common",
+        "name": "Wakaba Mutsumi",
+        "series": "BanG Dream!",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/wakaba_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787885835.8827028
+    },
+    {
+      "card": {
         "id": "jin_common_3",
         "name": "Jin Nasol",
         "series": "Got Dropped into a Ghost Story, Still Gotta Work",
@@ -11964,6 +12006,20 @@
   "224627689909256192": [
     {
       "card": {
+        "id": "kaoru_common",
+        "name": "Kaoru Sakurayashiki",
+        "series": "SK8 THE INFINITY",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/kaoru_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787885823.6343188
+    },
+    {
+      "card": {
         "id": "nana_common",
         "name": "Nana Osaki",
         "series": "NANA",
@@ -12051,6 +12107,22 @@
       },
       "print": 1,
       "claimed_at": 1787885307.2986507
+    }
+  ],
+  "758853868531613707": [
+    {
+      "card": {
+        "id": "osaragi_rare",
+        "name": "Osaragi",
+        "series": "Sakamoto Days",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/osaragi_rare.png",
+        "frame": "yellow",
+        "version": "rare"
+      },
+      "print": 1,
+      "claimed_at": 1787885626.312054
     }
   ]
 }
