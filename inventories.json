@@ -3380,6 +3380,20 @@
   "982952116039598161": [
     {
       "card": {
+        "id": "hyoga_common",
+        "name": "Hyoga Akatsuki",
+        "series": "Dr. Stone",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/hyoga_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787922526.2179532
+    },
+    {
+      "card": {
         "id": "kars_common",
         "name": "Kars",
         "series": "Jojo\u2019s Bizarre Adventure",
@@ -3914,6 +3928,21 @@
     }
   ],
   "661202852244488192": [
+    {
+      "card": {
+        "id": "sagiri_common",
+        "name": "Sagiri",
+        "series": "Hell\u2019s Paradise",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/sagiri_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787922235.0264251,
+      "tags": "\ud83c\udf81\u2705"
+    },
     {
       "card": {
         "id": "hyoga_common",
@@ -6798,6 +6827,20 @@
   ],
   "1530213985624920219": [],
   "1095353184471490620": [
+    {
+      "card": {
+        "id": "sayaka_common_2",
+        "name": "Sayaka Miki",
+        "series": "Puella Magi Madoka Magica",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/sayaka_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787922346.7156963
+    },
     {
       "card": {
         "id": "iso_common",
@@ -9982,17 +10025,45 @@
   "1028692731029110846": [
     {
       "card": {
-        "id": "jabber_common",
-        "name": "Jabber Wonger",
-        "series": "Gachiakuta",
+        "id": "cheng_common",
+        "name": "Lu Guang",
+        "series": "Link Click",
         "stars": 3,
         "weight": 8,
-        "image": "card_art/jabber_common.png",
+        "image": "card_art/cheng_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1787922457.576858
+    },
+    {
+      "card": {
+        "id": "kihoon_common",
+        "name": "Hong Kihoon",
+        "series": "Red Thread Quest",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/kihoon_common.png",
         "frame": "common",
         "version": "common"
       },
       "print": 2,
-      "claimed_at": 1787921690.8544166
+      "claimed_at": 1787853885.673068
+    },
+    {
+      "card": {
+        "id": "velina_common",
+        "name": "Velina",
+        "series": "Zenless Zone Zero",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/velina_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787843070.9778214
     },
     {
       "card": {
@@ -10122,20 +10193,6 @@
       },
       "print": 2,
       "claimed_at": 1787913869.8888993
-    },
-    {
-      "card": {
-        "id": "fu_common",
-        "name": "Fu Orostor",
-        "series": "Gachiakuta",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/fu_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 2,
-      "claimed_at": 1787913060.6850393
     },
     {
       "card": {
@@ -10900,7 +10957,8 @@
       },
       "print": 1,
       "claimed_at": 1787876808.4846618,
-      "tags": "hi"
+      "tags": "hi",
+      "showcased": true
     },
     {
       "card": {
@@ -12229,6 +12287,37 @@
   "745734578005737623": [
     {
       "card": {
+        "id": "fu_common",
+        "name": "Fu Orostor",
+        "series": "Gachiakuta",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/fu_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787913060.6850393,
+      "showcased": true
+    },
+    {
+      "card": {
+        "id": "jabber_common",
+        "name": "Jabber Wonger",
+        "series": "Gachiakuta",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/jabber_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787921690.8544166,
+      "showcased": true,
+      "pinned": true
+    },
+    {
+      "card": {
         "id": "daitaku_common",
         "name": "Daitaku Helios",
         "series": "Umamusume: Pretty Derby",
@@ -12281,7 +12370,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787875041.26559
+      "claimed_at": 1787875041.26559,
+      "showcased": true
     },
     {
       "card": {
@@ -12324,20 +12414,6 @@
       },
       "print": 2,
       "claimed_at": 1787860018.5382657
-    },
-    {
-      "card": {
-        "id": "kihoon_common",
-        "name": "Hong Kihoon",
-        "series": "Red Thread Quest",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/kihoon_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 2,
-      "claimed_at": 1787853885.673068
     },
     {
       "card": {
@@ -12450,20 +12526,6 @@
       },
       "print": 2,
       "claimed_at": 1787844422.873754
-    },
-    {
-      "card": {
-        "id": "velina_common",
-        "name": "Velina",
-        "series": "Zenless Zone Zero",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/velina_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787843070.9778214
     },
     {
       "card": {
@@ -16282,6 +16344,20 @@
     }
   ],
   "224627689909256192": [
+    {
+      "card": {
+        "id": "himiko_common",
+        "name": "Himiko Toga",
+        "series": "My Hero Academia",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/himiko_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787922325.1405196
+    },
     {
       "card": {
         "id": "mint_common_2",
