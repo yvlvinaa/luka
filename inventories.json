@@ -3647,6 +3647,20 @@
   "982952116039598161": [
     {
       "card": {
+        "id": "kawasaki_common",
+        "name": "Kawasaki Sakura",
+        "series": "Idoly Pride",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/kawasaki_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787938463.225682
+    },
+    {
+      "card": {
         "id": "berenica_common",
         "name": "Berenica",
         "series": "Duet Night Abyss",
@@ -4354,21 +4368,6 @@
       },
       "print": 1,
       "claimed_at": 1787933579.9138548,
-      "tags": "\ud83c\udf81\u2705"
-    },
-    {
-      "card": {
-        "id": "usagi_common",
-        "name": "Usagi",
-        "series": "Chiikawa",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/usagi_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 2,
-      "claimed_at": 1787932846.69772,
       "tags": "\ud83c\udf81\u2705"
     },
     {
@@ -12269,7 +12268,7 @@
       },
       "print": 2,
       "claimed_at": 1787926682.223521,
-      "tags": "hi",
+      "tags": "\u2661",
       "showcased": true
     },
     {
@@ -12467,7 +12466,7 @@
       },
       "print": 1,
       "claimed_at": 1787876808.4846618,
-      "tags": "hi",
+      "tags": "\u2661",
       "showcased": true
     },
     {
@@ -13896,6 +13895,35 @@
     }
   ],
   "745734578005737623": [
+    {
+      "card": {
+        "id": "trey_common",
+        "name": "Trey Clover",
+        "series": "Twisted Wonderland",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/trey_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787938532.4523234
+    },
+    {
+      "card": {
+        "id": "usagi_common",
+        "name": "Usagi",
+        "series": "Chiikawa",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/usagi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787932846.69772,
+      "tags": "\ud83c\udf81\u2705"
+    },
     {
       "card": {
         "id": "evan_common",
@@ -20791,5 +20819,6 @@
       "print": 1,
       "claimed_at": 1787937060.5676816
     }
-  ]
+  ],
+  "1231316819395084340": []
 }
