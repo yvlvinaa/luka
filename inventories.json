@@ -8369,6 +8369,20 @@
   "1070404986057531452": [
     {
       "card": {
+        "id": "ren_common",
+        "name": "Ren Amamiya",
+        "series": "Persona",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/ren_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787876808.4846618
+    },
+    {
+      "card": {
         "id": "kirisaki_common",
         "name": "Kirisaki Shidou",
         "series": "MILGRAM",
@@ -8604,20 +8618,6 @@
       },
       "print": 1,
       "claimed_at": 1787848799.3656437
-    },
-    {
-      "card": {
-        "id": "yu_rare_2",
-        "name": "Yu Fan & Chen Jingshen",
-        "series": "Wait For Me After School",
-        "stars": 4,
-        "weight": 5,
-        "image": "card_art/yu_rare_2.png",
-        "frame": "green",
-        "version": "rare"
-      },
-      "print": 1,
-      "claimed_at": 1787846448.3056548
     },
     {
       "card": {
@@ -10593,17 +10593,31 @@
   "856783136833667072": [
     {
       "card": {
-        "id": "ren_common",
-        "name": "Ren Amamiya",
-        "series": "Persona",
+        "id": "silent_common",
+        "name": "Silent Salt Cookie",
+        "series": "CookieRun Series",
         "stars": 1,
         "weight": 10,
-        "image": "card_art/ren_common.png",
+        "image": "card_art/silent_common.png",
         "frame": "common",
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787876808.4846618
+      "claimed_at": 1787877515.5469108
+    },
+    {
+      "card": {
+        "id": "yu_rare_2",
+        "name": "Yu Fan & Chen Jingshen",
+        "series": "Wait For Me After School",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/yu_rare_2.png",
+        "frame": "green",
+        "version": "rare"
+      },
+      "print": 1,
+      "claimed_at": 1787846448.3056548
     },
     {
       "card": {
