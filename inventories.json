@@ -11181,6 +11181,20 @@
   "1028692731029110846": [
     {
       "card": {
+        "id": "seras_common",
+        "name": "Seras Victoria",
+        "series": "HELLSING",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/seras_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787937195.2816427
+    },
+    {
+      "card": {
         "id": "nangong_common",
         "name": "Nangong Yu",
         "series": "Zenless Zone Zero",
@@ -12156,6 +12170,34 @@
     }
   ],
   "1070404986057531452": [
+    {
+      "card": {
+        "id": "kasumi_common",
+        "name": "Kasumi Yoshizawa",
+        "series": "Persona",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/kasumi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787926682.223521
+    },
+    {
+      "card": {
+        "id": "haejoon_common",
+        "name": "Haejoon Goh",
+        "series": "No Home",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/haejoon_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787937249.0488784
+    },
     {
       "card": {
         "id": "koharu_common",
@@ -14293,20 +14335,6 @@
       },
       "print": 2,
       "claimed_at": 1787927226.1490965
-    },
-    {
-      "card": {
-        "id": "kasumi_common",
-        "name": "Kasumi Yoshizawa",
-        "series": "Persona",
-        "stars": 3,
-        "weight": 8,
-        "image": "card_art/kasumi_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 2,
-      "claimed_at": 1787926682.223521
     },
     {
       "card": {
@@ -19836,6 +19864,20 @@
   "1205851657901178892": [
     {
       "card": {
+        "id": "nanami_common",
+        "name": "Nanami Momozono",
+        "series": "Kamisama Kiss",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/nanami_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787937184.9922059
+    },
+    {
+      "card": {
         "id": "agott_common",
         "name": "Agott",
         "series": "Witch Hat Atelier",
@@ -20374,7 +20416,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787935215.3285491
+      "claimed_at": 1787935215.3285491,
+      "tags": "\ud83d\udc8d"
     },
     {
       "card": {
