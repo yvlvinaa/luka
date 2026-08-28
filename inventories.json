@@ -12039,6 +12039,20 @@
   "856783136833667072": [
     {
       "card": {
+        "id": "nana_common_2",
+        "name": "Nana Osaki & Nana Komatsu",
+        "series": "NANA",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/nana_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787895783.9865155
+    },
+    {
+      "card": {
         "id": "netzach_common",
         "name": "Netzach",
         "series": "Lobotomy Corporation",
@@ -13511,6 +13525,20 @@
   "758853868531613707": [
     {
       "card": {
+        "id": "yuru_common",
+        "name": "Yuru",
+        "series": "Daemons Of The Shadow Realm",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/yuru_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787895792.5447652
+    },
+    {
+      "card": {
         "id": "edgar_common",
         "name": "Edgar Valden",
         "series": "Identity V",
@@ -13732,6 +13760,36 @@
       },
       "print": 1,
       "claimed_at": 1787885626.312054
+    }
+  ],
+  "841292229539528704": [
+    {
+      "card": {
+        "id": "wei_common",
+        "name": "Wei Wuxian",
+        "series": "Mo Dao Zu Shi",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/wei_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787895683.3770316
+    },
+    {
+      "card": {
+        "id": "alexsander_common",
+        "name": "Aleksander",
+        "series": "Veil",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/alexsander_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787895615.696169
     }
   ]
 }
