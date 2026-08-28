@@ -242,6 +242,67 @@ def user_has_active_trade(user_id) -> bool:
     return False
 
 
+async def force_clear_stuck_trades(target_id) -> tuple:
+    """
+    Owner-repair helper (see `lfixuser`): force-clears target_id out of
+    any active_trades/active_merchant_trades entries they're currently
+    stuck in -- exactly the same dict-removal + best-effort disable-
+    and-edit-the-old-message cleanup a normal expiry (TradeView.
+    on_timeout/decline, trade_expiration_sweep_loop) already performs,
+    just triggered manually instead of by a timeout.
+
+    Removing a player-trade entry necessarily ends it for BOTH
+    participants -- a trade is inherently bilateral, so there's no way
+    to free only the stuck side without ending the trade itself, which
+    is exactly what a normal timeout already does too.
+
+    Never touches inventories, cards, or anything actually traded --
+    an active_trades/active_merchant_trades entry only ever tracks an
+    in-progress SESSION, never any already-completed exchange. Both are
+    plain in-memory dicts (not one of the *.json persisted stores), so
+    there's nothing to save/roll back here -- clearing an entry is a
+    single, already-atomic dict operation.
+
+    Returns (player_trades_cleared, merchant_trades_cleared).
+    """
+    player_cleared = 0
+    for trade_id, trade_data in list(active_trades.items()):
+        view = trade_data.get("view")
+        if view is None or target_id not in (view.user1_id, view.user2_id):
+            continue
+
+        active_trades.pop(trade_id, None)
+        player_cleared += 1
+
+        for item in view.children:
+            item.disabled = True
+        msg = trade_data.get("message")
+        if msg is not None:
+            try:
+                embed = discord.Embed(color=THEME_COLOR)
+                embed.description = "This trade was force-cleared by an owner (stuck-state repair)."
+                await msg.edit(content=None, embed=embed, view=view)
+            except Exception:
+                pass
+
+    merchant_cleared = 0
+    merchant_trade_data = active_merchant_trades.pop(target_id, None)
+    if merchant_trade_data is not None:
+        merchant_cleared = 1
+        view = merchant_trade_data.get("view")
+        if view is not None:
+            for item in view.children:
+                item.disabled = True
+            msg = merchant_trade_data.get("message")
+            if msg is not None:
+                try:
+                    await msg.edit(view=view)
+                except Exception:
+                    pass
+
+    return player_cleared, merchant_cleared
+
+
 _trade_sweep_task = None
 
 
@@ -575,9 +636,41 @@ def add_card(user_id, card):
     inv.insert(0, owned_card)
 
 
+def add_recycled_card(user_id, card, print_num):
+    """
+    Recycled-card exception (see `lrecyclecards`): inserts a card into
+    user_id's inventory using its EXACT original print number instead
+    of assigning a fresh one via get_next_print() -- card_prints[card_id]
+    is deliberately left completely untouched, so a character's normal
+    print progression is unaffected by a recycled claim (a claimed
+    recycled Gojo #1 does not change what number the next NORMAL Gojo
+    drop gets). Otherwise identical to add_card(): same newest-first
+    insert, same owned_card shape. Any drop-only marker keys
+    (_recycled_entry_id/_recycled_print, see get_weighted_card()) are
+    stripped from the stored card first, so a recycled card is stored
+    completely indistinguishably from a normally-claimed one.
+    """
+    inv = get_inventory(user_id)
+
+    clean_card = {k: v for k, v in card.items() if not k.startswith("_recycled")}
+    owned_card = {
+        "card": clean_card,
+        "print": print_num,
+        "claimed_at": time.time()
+    }
+
+    inv.insert(0, owned_card)
+
+
 def remove_card(user_id, index):
     """Removes a card from a user's collection by its index position."""
     return get_inventory(user_id).pop(index)
+
+
+def get_card_by_id(card_id):
+    """Looks up a card TEMPLATE from the global `cards` list by its id.
+    Returns None if no such card exists."""
+    return next((c for c in cards if c.get("id") == card_id), None)
 
 
 def get_weighted_card():
@@ -589,6 +682,19 @@ def get_weighted_card():
     the single place drop eligibility is enforced; lup/lv/lmissing all
     read the same underlying `version` metadata and `card_prints` claim
     counts, but never re-implement this eligibility check themselves.
+
+    Recycled-card exception (see `lrecyclecards`): every currently-
+    active recycled print (see get_active_recycled_entries()) is folded
+    into this SAME weighted pool, at its underlying card's normal
+    weight -- so a recycled print competes fairly for a drop slot
+    instead of being guaranteed or inflated, and has ZERO effect on
+    odds whenever nothing is currently recycled (the loop below is then
+    simply empty -- identical to this function before recycling
+    existed). A recycled pick is a fresh COPY of the underlying card
+    dict with two extra marker keys (_recycled_entry_id/_recycled_print)
+    added -- the real template in `cards` is never mutated, and those
+    marker keys are stripped again before anything is ever persisted
+    (see add_recycled_card()).
     """
     now = time.time()
     base_by_character, prev_common_by_card_id = _build_character_version_lookup()
@@ -598,6 +704,19 @@ def get_weighted_card():
         if not _card_is_eligible_to_drop(card, now, base_by_character, prev_common_by_card_id):
             continue
         weighted.extend([card] * card.get("weight", 1))
+
+    for entry in get_active_recycled_entries():
+        underlying_card = get_card_by_id(entry.get("card_id"))
+        if underlying_card is None:
+            # The template itself no longer exists (e.g. removed since
+            # this print was recycled) -- nothing sensible to drop.
+            continue
+        recycled_card = dict(
+            underlying_card,
+            _recycled_entry_id=entry.get("id"),
+            _recycled_print=entry.get("print"),
+        )
+        weighted.extend([recycled_card] * underlying_card.get("weight", 1))
 
     if not weighted:
         # Extremely defensive fallback -- e.g. immediately after a reset,
@@ -1590,6 +1709,92 @@ async def _sync_pending_recovery_from_github_at_startup() -> dict:
 
 pending_recovery = asyncio.run(_sync_pending_recovery_from_github_at_startup())
 pending_recovery_lock = asyncio.Lock()
+
+
+# =========================
+# RECYCLABLE CARDS POOL (stored inside pending_recovery.json)
+# =========================
+# Reserved key inside the SAME `pending_recovery` dict every departed-
+# user recovery timer already lives in -- same "non-numeric key, never
+# collides with a real Discord user id" convention used throughout this
+# file (e.g. SYSTEM_RECOVERY_USER in `inventories`). No second
+# persistence system: this reuses pending_recovery_lock,
+# save_pending_recovery_local(), and mark_pending_recovery_dirty()
+# exactly as they already exist. Safe to add -- nothing iterates over
+# pending_recovery.items()/.values()/.keys() assuming every value is a
+# timestamp except _run_pending_recovery_sweep, which already guards
+# each key with `int(user_key)` inside a try/except ValueError: continue,
+# so a non-numeric key like this one is silently skipped there exactly
+# like any other bad/foreign key would be.
+#
+# Shape: pending_recovery["__recyclable_cards__"] = [ { "id": <uuid>,
+#   "card_id": <the underlying card's id>, "print": <its original print
+#   number>, "card": <a full snapshot of the card dict at removal time>,
+#   "removed_from": <original owner's user id, str>, "removed_at":
+#   <unix ts>, "recycled_active": bool }, ... ]
+#
+# "recycled_active" distinguishes cards merely SITTING in the pool
+# (removed by `lresetinventories`, not yet chosen) from ones
+# `lrecyclecards` has explicitly activated -- only active entries are
+# ever folded into get_weighted_card()'s drop pool.
+RECYCLABLE_CARDS_KEY = "__recyclable_cards__"
+
+
+def get_recyclable_pool() -> list:
+    """Read-only: the full recyclable-cards pool (active and inactive
+    alike). Never creates the key as a side effect of reading it."""
+    return pending_recovery.get(RECYCLABLE_CARDS_KEY, [])
+
+
+def get_active_recycled_entries() -> list:
+    """Read-only: only the currently-ACTIVE recycled entries (added to
+    the pool by `lresetinventories`, then explicitly activated by
+    `lrecyclecards`) -- these, and only these, are folded into
+    get_weighted_card()'s drop pool. An entry merely sitting in the
+    pool that nobody has recycled yet is never droppable."""
+    return [e for e in get_recyclable_pool() if e.get("recycled_active")]
+
+
+async def consume_recycled_entry(entry_id):
+    """
+    Atomically removes ONE specific recycled-card entry (by id) from
+    the pool, if it's still present AND still active -- called at claim
+    time (see CardView.claim()) once a recycled drop is actually being
+    granted, so the exact same print can never be handed out twice.
+    Returns the full removed entry dict on success (so a caller can put
+    it back byte-for-byte if the claim it was spent on ends up failing),
+    or None if it's already gone (e.g. a concurrent drop's claim on the
+    same entry won the race first -- recycled prints aren't reserved at
+    drop time, same as a normal print's peek-only preview number isn't
+    either).
+
+    Uses the exact same pending_recovery_lock/
+    save_pending_recovery_local()/mark_pending_recovery_dirty()
+    pipeline every other pending_recovery mutation already uses. On a
+    save failure, the entry is put back exactly where it was, so a
+    failed persist can never silently make a still-valid recycled print
+    vanish from the pool.
+    """
+    async with pending_recovery_lock:
+        pool = pending_recovery.get(RECYCLABLE_CARDS_KEY, [])
+        index = next(
+            (i for i, e in enumerate(pool) if e.get("id") == entry_id and e.get("recycled_active")),
+            None
+        )
+        if index is None:
+            return None
+
+        entry = pool.pop(index)
+        try:
+            save_pending_recovery_local()
+            mark_pending_recovery_dirty()
+        except Exception:
+            pool.insert(index, entry)
+            print(f"[recycle] Failed to persist consuming recycled entry {entry_id}:")
+            traceback.print_exc()
+            return None
+
+        return entry
 
 
 # =========================
@@ -2669,7 +2874,7 @@ class DuoRequestView(discord.ui.View):
         )
         return embed
 
-    @discord.ui.button(emoji="<:accept:1515633292605657088>", style=discord.ButtonStyle.success, label="Accept")
+    @discord.ui.button(emoji="✅", style=discord.ButtonStyle.success, label="Accept")
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user2_id:
             return await interaction.response.send_message(
@@ -2737,7 +2942,7 @@ class DuoRequestView(discord.ui.View):
         embed = build_duo_challenge_embed(challenge, self.user1, self.user2)
         await interaction.response.edit_message(embed=embed, view=None)
 
-    @discord.ui.button(emoji="<:decline:1515633309953163344>", style=discord.ButtonStyle.danger, label="Decline")
+    @discord.ui.button(emoji="❌", style=discord.ButtonStyle.danger, label="Decline")
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user2_id:
             return await interaction.response.send_message(
@@ -3772,6 +3977,37 @@ async def _run_pending_recovery_sweep(guild) -> None:
                 except Exception:
                     print(f"[recovery] Failed to save after recovering {user_id}'s inventory:")
                     traceback.print_exc()
+
+
+def _find_pending_recovery_matches(name: str, print_num: int, star_count: int) -> list:
+    """
+    Owner-repair helper (see `lrecover`/`lpendingrecovery`). Searches
+    every user CURRENTLY in the pending-recovery countdown -- their
+    cards still live in their OWN inventory at this stage, exactly as
+    _perform_full_recovery/_run_pending_recovery_sweep above describe,
+    nothing has been transferred yet -- for an owned card whose
+    character name, print number, and star count all match exactly.
+
+    Read-only: never mutates inventories or pending_recovery. Returns a
+    list of (owner_key, index, owned_card) tuples -- normally 0 or 1
+    (prints are unique per card id), but this never assumes that; the
+    caller decides what an unexpected 0 or 2+ means.
+    """
+    matches = []
+    name_lower = name.strip().lower()
+    for user_key in pending_recovery:
+        if user_key == RECYCLABLE_CARDS_KEY or not str(user_key).isdigit():
+            continue
+        inv = inventories.get(user_key, [])
+        for i, owned_card in enumerate(inv):
+            card = owned_card.get("card", {})
+            if (
+                card.get("name", "").strip().lower() == name_lower
+                and owned_card.get("print") == print_num
+                and card.get("stars") == star_count
+            ):
+                matches.append((user_key, i, owned_card))
+    return matches
 
 
 async def pending_recovery_check_loop():
@@ -6706,6 +6942,120 @@ def generate_showcase_image(showcased_owned_cards: list) -> str:
 
 
 # =========================
+# OWNER CONFIRMATION VIEW (shared by dangerous owner-only commands)
+# =========================
+class OwnerConfirmView(discord.ui.View):
+    """
+    Generic Confirm/Cancel button pair for a single dangerous owner-only
+    action -- shared by `lresetinventories` and `lrecyclecards` rather
+    than each command building its own. `on_confirm` is an async
+    callback -- on_confirm(interaction) -- called only once, only after
+    the SAME owner who issued the original command presses Confirm; it
+    is entirely responsible for actually performing (and persisting)
+    the action and reporting the result. Both buttons disable
+    themselves and the view stops itself immediately on press, so a
+    double-click can never run the action twice, and the view disables
+    itself on timeout so an ignored confirmation can never be actioned
+    late.
+    """
+    def __init__(self, owner_id, on_confirm, timeout=60):
+        super().__init__(timeout=timeout)
+        self.owner_id = owner_id
+        self.on_confirm = on_confirm
+        self.message = None
+
+    def _disable_all(self):
+        for item in self.children:
+            item.disabled = True
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.danger, emoji="⚠️")
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            return await interaction.response.send_message(
+                "This isn't your confirmation.", ephemeral=True
+            )
+        self._disable_all()
+        self.stop()
+        await interaction.response.edit_message(view=self)
+        await self.on_confirm(interaction)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            return await interaction.response.send_message(
+                "This isn't your confirmation.", ephemeral=True
+            )
+        self._disable_all()
+        self.stop()
+        await interaction.response.edit_message(content="Cancelled -- no changes were made.", embed=None, view=self)
+
+    async def on_timeout(self):
+        self._disable_all()
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except Exception:
+                pass
+
+
+# =========================
+# OWNER READ-ONLY CARD LIST VIEW (shared by lpendingrecovery/llukainventory)
+# =========================
+class AdminCardListView(discord.ui.View):
+    """
+    Generic, purely read-only one-card-per-page pager for owner admin
+    tools -- shared by `lpendingrecovery` and `llukainventory` rather
+    than each building its own near-identical pagination, the same
+    "reuse instead of duplicate" pattern as OwnerConfirmView above.
+    Never mutates anything: entries are already-built display data
+    (plain dicts), not live references into `inventories`/
+    `pending_recovery`, so paging through this can never regenerate or
+    change any state.
+    """
+    def __init__(self, title: str, entries: list, owner_id: int):
+        super().__init__(timeout=90)
+        self.title = title
+        self.entries = entries
+        self.owner_id = owner_id
+        self.page = 0
+        self.max_page = max(0, len(entries) - 1)
+        self._update_button_states()
+
+    def _update_button_states(self):
+        self.previous.disabled = (self.page <= 0)
+        self.next.disabled = (self.page >= self.max_page)
+
+    def build_embed(self) -> discord.Embed:
+        if not self.entries:
+            return discord.Embed(color=THEME_COLOR, title=self.title, description="*(nothing to show)*")
+
+        entry = self.entries[self.page]
+        embed = discord.Embed(color=THEME_COLOR, title=self.title, description=entry.get("description", ""))
+        for name, value in entry.get("fields", []):
+            embed.add_field(name=name, value=value, inline=True)
+        embed.set_footer(text=f"Page {self.page + 1}/{self.max_page + 1}")
+        return embed
+
+    @discord.ui.button(emoji="⬅️", style=discord.ButtonStyle.secondary, row=0)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            return await interaction.response.send_message("This isn't your view.", ephemeral=True)
+        if self.page > 0:
+            self.page -= 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(emoji="➡️", style=discord.ButtonStyle.secondary, row=0)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.owner_id:
+            return await interaction.response.send_message("This isn't your view.", ephemeral=True)
+        if self.page < self.max_page:
+            self.page += 1
+        self._update_button_states()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+
+# =========================
 # 1. DROP VIEW
 # =========================
 class CardView(discord.ui.View):
@@ -6758,6 +7108,8 @@ class CardView(discord.ui.View):
         if which == 2 and self.card2_claimed:
             return await interaction.response.send_message("Already claimed.", ephemeral=True)
 
+        card = self.card1 if which == 1 else self.card2
+
         now = time.time()
 
         if user_id in claim_cooldowns:
@@ -6787,7 +7139,22 @@ class CardView(discord.ui.View):
                     f"Wait {format_time(remaining)} before claiming again.", ephemeral=True
                 )
 
-        card = self.card1 if which == 1 else self.card2
+        # Recycled-card exception (see get_weighted_card()/lrecyclecards):
+        # resolved BEFORE touching inventories_lock, same structural
+        # pattern as the duo bonus consumption just above -- an entirely
+        # separate lock, fully settled first. A recycled print isn't
+        # reserved at drop time (same as a normal print's peek-only
+        # preview number isn't), so if two concurrent drops both
+        # happened to offer this exact same recycled entry, only the
+        # FIRST claim to actually reach this point gets it;
+        # consume_recycled_entry() returns None for the second, which
+        # then falls straight through to a completely normal, freshly-
+        # assigned print via add_card() below -- the user still gets a
+        # real, valid card either way, never an error.
+        recycled_entry_id = card.get("_recycled_entry_id")
+        recycled_entry_won = None
+        if recycled_entry_id is not None:
+            recycled_entry_won = await consume_recycled_entry(recycled_entry_id)
 
         if which == 1:
             self.card1_claimed = True
@@ -6801,7 +7168,10 @@ class CardView(discord.ui.View):
             claim_cooldowns[user_id] = now
 
         async with inventories_lock:
-            add_card(user_id, card)
+            if recycled_entry_won is not None:
+                add_recycled_card(user_id, card, recycled_entry_won.get("print"))
+            else:
+                add_card(user_id, card)
             try:
                 save_inventories_local()
                 mark_inventories_dirty()
@@ -6830,6 +7200,20 @@ class CardView(discord.ui.View):
                             save_duo_local()
                             mark_duo_dirty()
                         except Exception:
+                            traceback.print_exc()
+                if recycled_entry_won is not None:
+                    # The recycled entry was already consumed from the
+                    # pool above -- since the claim itself never actually
+                    # went through, put it back byte-for-byte so it's
+                    # still recyclable.
+                    async with pending_recovery_lock:
+                        pool = pending_recovery.setdefault(RECYCLABLE_CARDS_KEY, [])
+                        pool.append(recycled_entry_won)
+                        try:
+                            save_pending_recovery_local()
+                            mark_pending_recovery_dirty()
+                        except Exception:
+                            pool.pop()
                             traceback.print_exc()
                 return await interaction.response.send_message(
                     "❌ Something went wrong saving your claim. Please try again.",
@@ -8026,7 +8410,7 @@ class TradeRequestView(discord.ui.View):
         embed.description = f"{self.user2.mention}, you've received a trade request from {self.user1.mention}!"
         return embed
 
-    @discord.ui.button(emoji="<:accept:1515633292605657088>", style=discord.ButtonStyle.success, label="Trade")
+    @discord.ui.button(emoji="✅", style=discord.ButtonStyle.success, label="Trade")
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user2_id:
             return await interaction.response.send_message(
@@ -8057,7 +8441,7 @@ class TradeRequestView(discord.ui.View):
         except Exception:
             pass
 
-    @discord.ui.button(emoji="<:decline:1515633309953163344>", style=discord.ButtonStyle.danger, label="Cancel")
+    @discord.ui.button(emoji="❌", style=discord.ButtonStyle.danger, label="Cancel")
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user2_id:
             return await interaction.response.send_message(
@@ -8194,7 +8578,7 @@ class TradeView(discord.ui.View):
 
         return embed
 
-    @discord.ui.button(emoji="<:decline:1515633309953163344>", style=discord.ButtonStyle.danger)
+    @discord.ui.button(emoji="❌", style=discord.ButtonStyle.danger)
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.trade_id in active_trades:
             del active_trades[self.trade_id]
@@ -8227,7 +8611,7 @@ class TradeView(discord.ui.View):
             except Exception:
                 pass
 
-    @discord.ui.button(emoji="<:lock:1522002571496128553>", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(emoji="🔒", style=discord.ButtonStyle.secondary)
     async def lock(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.stage == "selecting":
             return await interaction.response.send_message(
@@ -8252,7 +8636,7 @@ class TradeView(discord.ui.View):
             # side locks and never confirms) used to never expire at all.
             self.timeout = TRADE_CONFIRM_TIMEOUT_SECONDS
             try:
-                self.lock.emoji = "<:accept:1515633292605657088>"
+                self.lock.emoji = "✅"
             except Exception:
                 pass
 
@@ -8261,7 +8645,7 @@ class TradeView(discord.ui.View):
             view=self
         )
 
-    @discord.ui.button(emoji="<:accept:1515633292605657088>", style=discord.ButtonStyle.success)
+    @discord.ui.button(emoji="✅", style=discord.ButtonStyle.success)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.stage != "confirming":
             return await interaction.response.send_message(
@@ -8514,7 +8898,7 @@ class MerchantListView(discord.ui.View):
         embed, file = self.build_embed_and_file()
         await interaction.response.edit_message(embed=embed, view=self, attachments=[file] if file else [])
 
-    @discord.ui.button(label="Accept Trade", emoji="<:accept:1515633292605657088>", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Accept Trade", emoji="✅", style=discord.ButtonStyle.success)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.viewer_id:
             return await interaction.response.send_message("This isn't your merchant menu!", ephemeral=True)
@@ -10885,14 +11269,63 @@ class Client(discord.Client):
 
             target_key = str(target.id)
 
-            # Reads only -- deliberately NOT get_inventory()/get_mailbox()/
-            # get_bonus(), since those setdefault a fresh empty entry
-            # into inventories/mail/duo on first access. A read-only
-            # diagnostic command must never create a persistent-store
-            # entry for a user as a side effect of merely looking them up.
+            # =========================
+            # REPAIR PASS -- diagnose first, then apply only fixes that
+            # are already fully supported by existing state/helpers.
+            # Nothing here invents new state or touches unrelated data
+            # (mail, bonus, cooldowns, merchants, etc. below are read-only,
+            # same as before).
+            # =========================
+            issues = []
+
+            # 1. Stuck / incorrectly-active trades. force_clear_stuck_trades
+            # is the exact same cleanup a normal expiry already performs
+            # (see trade_expiration_sweep_loop/TradeView.on_timeout), just
+            # triggered manually -- never touches any card that was
+            # already actually exchanged, only an in-progress SESSION.
+            had_player_trade = user_has_active_trade(target.id)
+            had_merchant_trade = user_has_active_merchant_trade(target.id)
+            if had_player_trade or had_merchant_trade:
+                player_cleared, merchant_cleared = await force_clear_stuck_trades(target.id)
+                if player_cleared:
+                    issues.append(f"🔧 Was stuck in **{player_cleared}** player trade(s) -- force-cleared.")
+                if merchant_cleared:
+                    issues.append("🔧 Had an open merchant-trade session -- force-cleared.")
+
+            # 2. Malformed inventory entries -- structurally broken owned-
+            # card entries (missing the "card" or "print" a real entry
+            # always has, per add_card()/add_recycled_card()) can't be
+            # repaired into something valid, only safely dropped. Reads
+            # inventories.get() directly (not get_inventory()), so a user
+            # with no inventory at all is never given one as a side effect.
             inv = inventories.get(target_key, [])
+            malformed_indices = [
+                i for i, entry in enumerate(inv)
+                if not isinstance(entry, dict) or "card" not in entry or "print" not in entry
+            ]
+
+            if malformed_indices:
+                async with inventories_lock:
+                    live_inv = inventories.get(target_key, [])
+                    removed_snapshot = [(i, live_inv[i]) for i in malformed_indices if i < len(live_inv)]
+                    for i in sorted(malformed_indices, reverse=True):
+                        if i < len(live_inv):
+                            live_inv.pop(i)
+                    try:
+                        save_inventories_local()
+                        mark_inventories_dirty()
+                        issues.append(f"🔧 Removed **{len(removed_snapshot)}** malformed inventory entrie(s).")
+                    except Exception:
+                        # Put them back exactly where they were, in
+                        # original order, so a failed save can't lose them.
+                        for i, entry in sorted(removed_snapshot, key=lambda pair: pair[0]):
+                            live_inv.insert(min(i, len(live_inv)), entry)
+                        issues.append("⚠️ Found malformed inventory entries, but failed to save the fix -- left unchanged.")
+
+            # ---- Everything below is unchanged: pure diagnostics, all
+            # still read-only. ----
             malformed_entries = sum(
-                1 for entry in inv
+                1 for entry in inventories.get(target_key, [])
                 if not isinstance(entry, dict) or "card" not in entry or "print" not in entry
             )
 
@@ -10922,10 +11355,15 @@ class Client(discord.Client):
                 recovery_status = f"⚠️ Pending recovery -- {days_left:.1f} day(s) until transfer"
 
             embed = discord.Embed(
-                color=discord.Color.blue(),
-                title=f"🔧 User Data Diagnostic: {target}",
-                description="Read-only diagnostic view. **No changes have been made.** "
-                            "Repair actions will be added in a future update."
+                color=discord.Color.green() if not issues else discord.Color.orange(),
+                title=f"🔧 User Repair: {target}",
+                description="Diagnosed known recoverable issues and applied any safe fixes found. "
+                            "Everything below reflects the CURRENT state, after any fixes above."
+            )
+            embed.add_field(
+                name="🛠️ Issues Found & Fixed",
+                value="\n".join(issues) if issues else "✅ No known issues found.",
+                inline=False
             )
             embed.add_field(name="🆔 User ID", value=f"`{target.id}`", inline=True)
             embed.add_field(name="🎴 Inventory Size", value=str(len(inv)), inline=True)
@@ -10947,6 +11385,464 @@ class Client(discord.Client):
             embed.set_footer(text=f"Checked at {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(time.time()))} UTC")
 
             return await reply(message, embed=embed)
+
+        # =========================
+        # LRESETINVENTORIES COMMAND (owner-only, dangerous, confirm-gated)
+        # =========================
+        # Trims every member's inventory down to a max card count, always
+        # keeping every pinned AND every tagged card (both count toward
+        # the max), filling remaining slots randomly from the rest.
+        # Removed cards are never deleted -- they're moved into the
+        # SAME recovery pool `lrecyclecards` already reads from
+        # (pending_recovery[RECYCLABLE_CARDS_KEY], added as *inactive*
+        # entries -- see that command and get_recyclable_pool() above).
+        if content_lower.startswith("lresetinventories"):
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            parts = message.content.split()
+            if len(parts) < 2 or not parts[1].isdigit():
+                return await reply(message, "Usage: `lresetinventories <max cards to keep>` (e.g. `lresetinventories 20`)")
+
+            keep_max = int(parts[1])
+            if keep_max < 1:
+                return await reply(message, "The amount to keep must be at least 1.")
+
+            if not message.guild:
+                return await reply(message, "This can only be used in a server.")
+
+            confirm_embed = discord.Embed(
+                color=discord.Color.red(),
+                title="⚠️ Confirm Mass Inventory Reset",
+                description=(
+                    f"This will trim **every member's** inventory down to **{keep_max}** cards.\n\n"
+                    "For anyone with more than that:\n"
+                    f"• ALL pinned cards and ALL tagged cards are kept (they count toward the {keep_max}).\n"
+                    "• Remaining slots are filled with a random selection of their other cards.\n"
+                    "• Everything else is removed and moved into the recovery pool "
+                    "(not deleted, not yet recyclable -- see `lrecyclecards`).\n"
+                    "• Anyone whose pinned+tagged cards alone already exceed "
+                    f"**{keep_max}** is skipped and reported, never guessed at.\n\n"
+                    "**This cannot be undone from Discord. Proceed?**"
+                )
+            )
+
+            async def do_reset(interaction: discord.Interaction):
+                now = time.time()
+                # Snapshots taken BEFORE any mutation, so a failed save
+                # at either step below can restore both stores to
+                # exactly how they were -- nothing partially applied.
+                inventory_snapshot = {}
+                pool_snapshot = copy.deepcopy(pending_recovery.get(RECYCLABLE_CARDS_KEY, []))
+
+                affected_count = 0
+                kept_count = 0
+                removed_count = 0
+                skipped_users = []
+
+                for member in message.guild.members:
+                    if member.bot:
+                        continue
+                    key = str(member.id)
+                    inv = inventories.get(key, [])
+                    if len(inv) <= keep_max:
+                        continue
+
+                    protected_indices = [i for i, oc in enumerate(inv) if oc.get("pinned") or oc.get("tags")]
+                    if len(protected_indices) > keep_max:
+                        skipped_users.append((member, len(protected_indices)))
+                        continue
+
+                    protected_set = set(protected_indices)
+                    unprotected_indices = [i for i in range(len(inv)) if i not in protected_set]
+                    needed = keep_max - len(protected_indices)
+                    chosen_random = set(random.sample(unprotected_indices, needed)) if needed > 0 else set()
+                    keep_set = protected_set | chosen_random
+
+                    removed_entries = [inv[i] for i in range(len(inv)) if i not in keep_set]
+                    new_inv = [inv[i] for i in range(len(inv)) if i in keep_set]
+
+                    inventory_snapshot[key] = copy.deepcopy(inv)
+                    inventories[key] = new_inv
+
+                    for owned_card in removed_entries:
+                        card = owned_card.get("card", {})
+                        pending_recovery.setdefault(RECYCLABLE_CARDS_KEY, []).append({
+                            "id": str(uuid.uuid4()),
+                            "card_id": card.get("id"),
+                            "print": owned_card.get("print"),
+                            "card": card,
+                            "removed_from": key,
+                            "removed_at": now,
+                            "recycled_active": False,
+                        })
+
+                    affected_count += 1
+                    kept_count += len(new_inv)
+                    removed_count += len(removed_entries)
+
+                if affected_count == 0:
+                    note = f" ({len(skipped_users)} skipped -- protected cards exceed the limit.)" if skipped_users else ""
+                    return await interaction.followup.send(
+                        "No members had more than the threshold -- nothing to do." + note
+                    )
+
+                def _restore():
+                    for key, original in inventory_snapshot.items():
+                        inventories[key] = original
+                    pending_recovery[RECYCLABLE_CARDS_KEY] = pool_snapshot
+
+                async with inventories_lock:
+                    try:
+                        save_inventories_local()
+                        mark_inventories_dirty()
+                    except Exception:
+                        _restore()
+                        traceback.print_exc()
+                        return await interaction.followup.send(
+                            "❌ Failed to save the inventory changes. No changes were made."
+                        )
+
+                async with pending_recovery_lock:
+                    try:
+                        save_pending_recovery_local()
+                        mark_pending_recovery_dirty()
+                    except Exception:
+                        traceback.print_exc()
+                        _restore()
+                        # inventories.json was already written with the NEW
+                        # state in the block above -- since the matching
+                        # recovery-pool entries failed to save, that write
+                        # must be undone too, or the removed cards would be
+                        # lost for good instead of merely staying put.
+                        async with inventories_lock:
+                            try:
+                                save_inventories_local()
+                                mark_inventories_dirty()
+                            except Exception:
+                                print("[lresetinventories] CRITICAL: failed to re-save inventories.json "
+                                      "after rolling back -- in-memory state IS rolled back, but the "
+                                      "on-disk file may still reflect the failed reset until the next "
+                                      "successful sync.")
+                                traceback.print_exc()
+                        return await interaction.followup.send(
+                            "❌ Failed to save the recovery-pool changes. Rolled back -- no changes were kept."
+                        )
+
+                skipped_note = ""
+                if skipped_users:
+                    lines = "\n".join(f"• {m.mention} -- {n} protected cards" for m, n in skipped_users[:10])
+                    more = f"\n...and {len(skipped_users) - 10} more" if len(skipped_users) > 10 else ""
+                    skipped_note = f"\n\n⚠️ **Skipped ({len(skipped_users)})** -- protected cards exceed {keep_max}:\n{lines}{more}"
+
+                result_embed = discord.Embed(
+                    color=discord.Color.green(),
+                    title="✅ Mass Inventory Reset Complete",
+                    description=(
+                        f"**{affected_count}** member(s) trimmed to **{keep_max}** cards.\n"
+                        f"**{removed_count}** card(s) removed and moved into the recovery pool.\n"
+                        f"**{kept_count}** card(s) kept in total."
+                        f"{skipped_note}"
+                    )
+                )
+                await interaction.followup.send(embed=result_embed)
+
+            view = OwnerConfirmView(message.author.id, do_reset)
+            sent = await reply(message, embed=confirm_embed, view=view)
+            view.message = sent
+            return
+
+        # =========================
+        # LRECYCLECARDS COMMAND (owner-only, dangerous, confirm-gated)
+        # =========================
+        # Activates cards that are currently sitting INACTIVE in the
+        # recovery pool (put there by `lresetinventories`) so they start
+        # competing for drops again via get_weighted_card(), at their
+        # original print number. Never reads from inventories or Luka's
+        # own ("__system__") inventory directly -- only ever from
+        # pending_recovery[RECYCLABLE_CARDS_KEY].
+        if content_lower.startswith("lrecyclecards"):
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            parts = message.content.split()
+            if len(parts) < 2:
+                return await reply(message, "Usage: `lrecyclecards <amount>` or `lrecyclecards all`")
+
+            arg = parts[1].lower()
+
+            inactive_entries = [e for e in get_recyclable_pool() if not e.get("recycled_active")]
+            if not inactive_entries:
+                return await reply(message, "There are no cards currently pending in the recovery pool to recycle.")
+
+            if arg == "all":
+                amount = len(inactive_entries)
+            elif arg.isdigit():
+                amount = int(arg)
+                if amount < 1:
+                    return await reply(message, "Amount must be at least 1.")
+                amount = min(amount, len(inactive_entries))
+            else:
+                return await reply(message, "Usage: `lrecyclecards <amount>` or `lrecyclecards all`")
+
+            chosen = random.sample(inactive_entries, amount)
+            chosen_ids = {e.get("id") for e in chosen}
+
+            preview_lines = [
+                f"• {e.get('card', {}).get('name', 'Unknown')} -- print #{e.get('print')}"
+                for e in chosen[:10]
+            ]
+            more = f"\n...and {amount - 10} more" if amount > 10 else ""
+
+            confirm_embed = discord.Embed(
+                color=discord.Color.red(),
+                title="⚠️ Confirm Card Recycling",
+                description=(
+                    f"This will activate **{amount}** card(s) from the recovery pool to drop again, "
+                    "at their original print number -- normal print progression and claim/version "
+                    "thresholds are unaffected.\n\n"
+                    + ("\n".join(preview_lines) + more + "\n\n" if preview_lines else "")
+                    + "**Proceed?**"
+                )
+            )
+
+            async def do_recycle(interaction: discord.Interaction):
+                async with pending_recovery_lock:
+                    live_pool = pending_recovery.get(RECYCLABLE_CARDS_KEY, [])
+                    snapshot = copy.deepcopy(live_pool)
+
+                    # Re-checked against the LIVE pool at confirm time, not
+                    # the (possibly now-stale) preview above -- an entry
+                    # already claimed/activated/removed by someone else in
+                    # the meantime is simply skipped, never double-counted.
+                    activated = 0
+                    for entry in live_pool:
+                        if entry.get("id") in chosen_ids and not entry.get("recycled_active"):
+                            entry["recycled_active"] = True
+                            activated += 1
+
+                    try:
+                        save_pending_recovery_local()
+                        mark_pending_recovery_dirty()
+                    except Exception:
+                        pending_recovery[RECYCLABLE_CARDS_KEY] = snapshot
+                        traceback.print_exc()
+                        return await interaction.followup.send(
+                            "❌ Failed to save. No cards were recycled."
+                        )
+
+                await interaction.followup.send(
+                    f"✅ Activated **{activated}** card(s) for recycling -- they'll now compete for drops "
+                    "alongside everything else, at their original print numbers."
+                )
+
+            view = OwnerConfirmView(message.author.id, do_recycle)
+            sent = await reply(message, embed=confirm_embed, view=view)
+            view.message = sent
+            return
+
+        # =========================
+        # LPENDINGRECOVERY COMMAND (owner-only, read-only)
+        # =========================
+        # Every card belonging to a user CURRENTLY counting down in
+        # pending_recovery -- their cards still live in their own
+        # inventory at this stage (see _perform_full_recovery above),
+        # nothing has been transferred yet. Purely a read -- never
+        # mutates or regenerates anything.
+        if content_lower == "lpendingrecovery":
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            entries = []
+            now = time.time()
+            for user_key, first_detected in pending_recovery.items():
+                if user_key == RECYCLABLE_CARDS_KEY or not str(user_key).isdigit():
+                    continue
+
+                inv = inventories.get(user_key, [])
+                if not inv:
+                    continue
+
+                elapsed_days = (now - first_detected) / 86400
+                days_left = max(0, RECOVERY_PENDING_DAYS - elapsed_days)
+                owner_display = f"<@{user_key}> (`{user_key}`)"
+
+                for owned_card in inv:
+                    card = owned_card.get("card", {})
+                    entries.append({
+                        "description": f"## {card.get('name', 'Unknown Character')}",
+                        "fields": [
+                            ("Series", card.get("series", "Unknown Series")),
+                            ("Stars", stars(card.get("stars", 1))),
+                            ("Print", format_print(owned_card.get("print"))),
+                            ("Version/Frame", card_version_label(card)),
+                            ("Original Owner", owner_display),
+                            ("Recovery Status", f"⚠️ {days_left:.1f} day(s) until automatic transfer"),
+                        ],
+                    })
+
+            if not entries:
+                return await reply(message, "No cards are currently in pending recovery.")
+
+            view = AdminCardListView("♻️ Pending Recovery", entries, message.author.id)
+            return await reply(message, embed=view.build_embed(), view=view)
+
+        # =========================
+        # LRECOVER COMMAND (owner-only, dangerous single-card transfer,
+        # confirm-gated)
+        # =========================
+        # Manually pulls ONE exact card out of a still-pending user's
+        # inventory early and moves it into Luka's ("__system__")
+        # inventory -- same destination/tagging _perform_full_recovery
+        # uses (original_owner/recovered_at), same inventories_lock/
+        # save_inventories_local()/mark_inventories_dirty() pipeline,
+        # no new persistence path. The user's OTHER cards and their
+        # pending_recovery countdown are left completely untouched --
+        # only this one card entry moves.
+        if content_lower.startswith("lrecover "):
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            raw_args = content[len("lrecover"):].strip()
+            match = re.match(r"^(.+?)\s*#\s*(\d+)\s*,\s*(\d+)\s*stars?$", raw_args, re.IGNORECASE)
+            if not match:
+                return await reply(message,
+                    "Usage: `lrecover <full card name> #<print>, <stars> stars`\n"
+                    "Example: `lrecover Satoru Gojo #5, 2 stars`"
+                )
+
+            name = match.group(1).strip()
+            print_num = int(match.group(2))
+            star_count = int(match.group(3))
+
+            matches = _find_pending_recovery_matches(name, print_num, star_count)
+
+            if not matches:
+                return await reply(message,
+                    f"No pending-recovery card exactly matches **{name}** #{print_num}, {star_count}★. "
+                    "Check `lpendingrecovery` for the exact name/print/stars."
+                )
+
+            if len(matches) > 1:
+                return await reply(message,
+                    f"⚠️ Found **{len(matches)}** pending-recovery cards matching **{name}** #{print_num}, "
+                    f"{star_count}★ across different owners -- refusing to guess which one you mean "
+                    "(this shouldn't normally happen, since prints are unique per card). "
+                    "Please investigate manually."
+                )
+
+            owner_key, index, owned_card = matches[0]
+            card = owned_card.get("card", {})
+
+            confirm_embed = discord.Embed(
+                color=discord.Color.red(),
+                title="⚠️ Confirm Manual Recovery",
+                description=(
+                    f"## {card.get('name', 'Unknown Character')}\n"
+                    f"**Series:** {card.get('series', 'Unknown Series')}\n"
+                    f"**Stars:** {stars(card.get('stars', 1))}\n"
+                    f"**Print:** {format_print(owned_card.get('print'))}\n"
+                    f"**Version:** {card_version_label(card)}\n"
+                    f"**Current Owner:** <@{owner_key}> (`{owner_key}`, still pending recovery)\n\n"
+                    "This will remove this exact card from that user's inventory and move it into "
+                    "Luka's inventory, preserving its print number exactly (no new print is assigned). "
+                    "The user's other cards and their pending-recovery countdown are untouched.\n\n"
+                    "**Proceed?**"
+                )
+            )
+
+            async def do_recover(interaction: discord.Interaction):
+                async with inventories_lock:
+                    # Re-resolved against LIVE state at confirm time,
+                    # never the (possibly now-stale) match found above --
+                    # e.g. the user could have rejoined and traded/lost
+                    # this exact card in the meantime.
+                    live_matches = _find_pending_recovery_matches(name, print_num, star_count)
+                    if len(live_matches) != 1:
+                        return await interaction.followup.send(
+                            "⚠️ This card no longer exactly matches a single pending-recovery entry "
+                            "(it may have already moved) -- no changes were made."
+                        )
+
+                    live_owner_key, live_index, _ = live_matches[0]
+                    owner_inv = inventories.get(live_owner_key, [])
+                    recovered_inv = inventories.setdefault(SYSTEM_RECOVERY_USER, [])
+
+                    owner_snapshot = copy.deepcopy(owner_inv)
+                    recovered_snapshot = copy.deepcopy(recovered_inv)
+
+                    removed_card = owner_inv.pop(live_index)
+                    tagged_card = dict(
+                        removed_card,
+                        original_owner=live_owner_key,
+                        recovered_at=time.time(),
+                    )
+                    recovered_inv.append(tagged_card)
+
+                    try:
+                        save_inventories_local()
+                        mark_inventories_dirty()
+                    except Exception:
+                        inventories[live_owner_key] = owner_snapshot
+                        inventories[SYSTEM_RECOVERY_USER] = recovered_snapshot
+                        traceback.print_exc()
+                        return await interaction.followup.send(
+                            "❌ Failed to save. No changes were made -- the card remains with its "
+                            "original (still pending) owner."
+                        )
+
+                await interaction.followup.send(
+                    f"✅ Recovered **{card.get('name', 'Unknown Character')}** "
+                    f"{format_print(removed_card.get('print'))} into Luka's inventory. "
+                    f"Original owner (`{live_owner_key}`) is otherwise unaffected."
+                )
+
+            view = OwnerConfirmView(message.author.id, do_recover)
+            sent = await reply(message, embed=confirm_embed, view=view)
+            view.message = sent
+            return
+
+        # =========================
+        # LLUKAINVENTORY COMMAND (owner-only, read-only)
+        # =========================
+        if content_lower == "llukainventory":
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            luka_inv = inventories.get(SYSTEM_RECOVERY_USER, [])
+            if not luka_inv:
+                return await reply(message, "Luka's inventory is currently empty.")
+
+            entries = []
+            total = len(luka_inv)
+            for i, owned_card in enumerate(luka_inv):
+                card = owned_card.get("card", {})
+                # Same newest-first numbering `lc @Luka`/`lgw` already use,
+                # so a number shown here can be handed straight to `lgw`.
+                display_number = total - i
+
+                fields = [
+                    ("Series", card.get("series", "Unknown Series")),
+                    ("Stars", stars(card.get("stars", 1))),
+                    ("Print", format_print(owned_card.get("print"))),
+                    ("Version/Frame", card_version_label(card)),
+                    ("Inventory #", f"`{display_number}` (use with `lgw`)"),
+                ]
+                if owned_card.get("original_owner"):
+                    fields.append((
+                        "Recovered From",
+                        f"<@{owned_card['original_owner']}> (`{owned_card['original_owner']}`)"
+                    ))
+                if owned_card.get("recovered_at"):
+                    fields.append(("Recovered At", f"<t:{int(owned_card['recovered_at'])}:R>"))
+
+                entries.append({
+                    "description": f"## {card.get('name', 'Unknown Character')}",
+                    "fields": fields,
+                })
+
+            view = AdminCardListView("🤖 Luka's Inventory", entries, message.author.id)
+            return await reply(message, embed=view.build_embed(), view=view)
 
         # =========================
         # LTAG COMMAND
@@ -11329,7 +12225,13 @@ class Client(discord.Client):
                     )
 
             view = DuoRequestView(message.author, target_user, author_id, target_id)
-            sent = await reply(message, embed=view.get_embed(), view=view)
+            try:
+                sent = await reply(message, embed=view.get_embed(), view=view)
+            except Exception:
+                print("[lduo] Failed to send the Duo request embed:")
+                traceback.print_exc()
+                return await reply(message, "❌ Something went wrong sending that Duo request. Please try again.")
+
             view.message = sent
             return
 
@@ -11700,7 +12602,13 @@ class Client(discord.Client):
             if file:
                 send_kwargs["file"] = file
 
-            sent = await message.channel.send(**send_kwargs)
+            try:
+                sent = await message.channel.send(**send_kwargs)
+            except Exception:
+                print("[lmerchants] Failed to send the merchant list embed:")
+                traceback.print_exc()
+                return await reply(message, "❌ Something went wrong showing the merchants. Please try again.")
+
             list_view.message = sent
             return
 
@@ -12028,13 +12936,23 @@ class Client(discord.Client):
 
             loop = asyncio.get_running_loop()
 
+            # Recycled-card exception (see get_weighted_card()/
+            # lrecyclecards): a recycled slot displays its EXACT
+            # original print number instead of the normal preview
+            # (peek_next_print never even runs for it) -- this is only
+            # ever a display/preview number either way, same as a
+            # normal drop's; the print actually granted is decided at
+            # claim time (see CardView.claim()).
+            display_print1 = card1["_recycled_print"] if card1.get("_recycled_entry_id") is not None else peek_next_print(card1["id"])
+            display_print2 = card2["_recycled_print"] if card2.get("_recycled_entry_id") is not None else peek_next_print(card2["id"])
+
             image_path = await loop.run_in_executor(
                 None,
                 render_drop,
                 card1,
-                peek_next_print(card1["id"]),
+                display_print1,
                 card2,
-                peek_next_print(card2["id"])
+                display_print2
             )
 
             t_ld_render = time.perf_counter()
