@@ -1144,6 +1144,20 @@
   "1241420729933758514": [
     {
       "card": {
+        "id": "wanshi_common",
+        "name": "Wanshi",
+        "series": "Punishing: Gray Raven",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/wanshi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787885445.019537
+    },
+    {
+      "card": {
         "id": "daredevil_common",
         "name": "Daredevil",
         "series": "Marvel",
@@ -12021,6 +12035,22 @@
       },
       "print": 1,
       "claimed_at": 1787885181.8600943
+    }
+  ],
+  "759020064958971954": [
+    {
+      "card": {
+        "id": "nerissa_common",
+        "name": "Nerissa Ravencroft",
+        "series": "Hololive",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/nerissa_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787885307.2986507
     }
   ]
 }
