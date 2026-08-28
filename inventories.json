@@ -4853,21 +4853,6 @@
     },
     {
       "card": {
-        "id": "ichigo_common",
-        "name": "Ichigo Kurosaki",
-        "series": "Bleach",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/ichigo_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787756540.0300872,
-      "tags": "\ud83c\udf81\u2705"
-    },
-    {
-      "card": {
         "id": "geto_common",
         "name": "Suguru Geto",
         "series": "Jujutsu Kaisen",
@@ -6686,6 +6671,20 @@
   ],
   "1530213985624920219": [],
   "1095353184471490620": [
+    {
+      "card": {
+        "id": "van_common",
+        "name": "Van Morozov",
+        "series": "Rebound Of The Heart",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/van_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787919554.285848
+    },
     {
       "card": {
         "id": "rei_common",
@@ -9811,6 +9810,35 @@
   "1028692731029110846": [
     {
       "card": {
+        "id": "ichigo_common",
+        "name": "Ichigo Kurosaki",
+        "series": "Bleach",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/ichigo_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787756540.0300872,
+      "tags": "\ud83c\udf81\u2705"
+    },
+    {
+      "card": {
+        "id": "c.c._common",
+        "name": "C.C.",
+        "series": "Code Geass",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/c.c._common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787919635.7589552
+    },
+    {
+      "card": {
         "id": "eddie_common",
         "name": "Eddie",
         "series": "Jackpot Crash Course",
@@ -11083,6 +11111,20 @@
   "1542476173886488606": [],
   "1542486042832011316": [],
   "1310677632769327257": [
+    {
+      "card": {
+        "id": "dottore_common",
+        "name": "Dottore",
+        "series": "Genshin Impact",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/dottore_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787919768.3099113
+    },
     {
       "card": {
         "id": "agape_common",
@@ -15813,6 +15855,20 @@
   "224627689909256192": [
     {
       "card": {
+        "id": "shintaro_common",
+        "name": "Shintaro Midorima",
+        "series": "Kuroko's Basketball",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/shintaro_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787919657.6045384
+    },
+    {
+      "card": {
         "id": "yoo_common",
         "name": "Yoo Chae-hyun",
         "series": "The Hunter's Gonna Lay Low",
@@ -17060,6 +17116,20 @@
   "533041724638101505": [
     {
       "card": {
+        "id": "rensuke_common",
+        "name": "Rensuke Kunigami",
+        "series": "BLUELOCK",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/rensuke_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1787919588.7436016
+    },
+    {
+      "card": {
         "id": "denji_common",
         "name": "Denji",
         "series": "Chainsaw Man",
@@ -17070,7 +17140,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787918251.3804965
+      "claimed_at": 1787918251.3804965,
+      "showcased": true
     },
     {
       "card": {
@@ -17253,7 +17324,8 @@
       },
       "print": 1,
       "claimed_at": 1787882675.1273031,
-      "tags": "MINE"
+      "tags": "MINE",
+      "showcased": true
     },
     {
       "card": {
