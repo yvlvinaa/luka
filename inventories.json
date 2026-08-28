@@ -7729,6 +7729,20 @@
   "1091891524935098378": [
     {
       "card": {
+        "id": "chrome_common",
+        "name": "Chrome",
+        "series": "Dr. Stone",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/chrome_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787894662.398491
+    },
+    {
+      "card": {
         "id": "shoto_common",
         "name": "Shoto Todoroki",
         "series": "My Hero Academia",
@@ -11979,7 +11993,8 @@
         "version": "common"
       },
       "print": 2,
-      "claimed_at": 1787894264.9171503
+      "claimed_at": 1787894264.9171503,
+      "tags": "yam"
     },
     {
       "card": {
