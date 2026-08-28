@@ -6298,20 +6298,6 @@
     },
     {
       "card": {
-        "id": "pip_common",
-        "name": "Pip Bernadotte",
-        "series": "HELLSING",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/pip_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 1,
-      "claimed_at": 1787890530.276508
-    },
-    {
-      "card": {
         "id": "lohen_common",
         "name": "Lohen",
         "series": "Genshin Impact",
@@ -9013,6 +8999,34 @@
   "1028692731029110846": [
     {
       "card": {
+        "id": "pip_common",
+        "name": "Pip Bernadotte",
+        "series": "HELLSING",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/pip_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787890530.276508
+    },
+    {
+      "card": {
+        "id": "astra_common",
+        "name": "Astra Yao",
+        "series": "Zenless Zone Zero",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/astra_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787906782.54162
+    },
+    {
+      "card": {
         "id": "aston_common",
         "name": "Aston Machan",
         "series": "Umamusume: Pretty Derby",
@@ -9538,6 +9552,20 @@
   "1070404986057531452": [
     {
       "card": {
+        "id": "albedo_common",
+        "name": "Albedo",
+        "series": "Genshin Impact",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/albedo_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787906800.3045228
+    },
+    {
+      "card": {
         "id": "ren_common",
         "name": "Ren Amamiya",
         "series": "Persona",
@@ -9548,7 +9576,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787876808.4846618
+      "claimed_at": 1787876808.4846618,
+      "tags": "hi"
     },
     {
       "card": {
@@ -15139,5 +15168,21 @@
       "claimed_at": 1787904826.9430778
     }
   ],
-  "533041724638101505": []
+  "533041724638101505": [
+    {
+      "card": {
+        "id": "mualani_common",
+        "name": "Mualani",
+        "series": "Genshin Impact",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/mualani_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787906777.6986272
+    }
+  ],
+  "968786127081328660": []
 }
