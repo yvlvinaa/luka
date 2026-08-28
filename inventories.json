@@ -2382,7 +2382,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787924579.7397926
+      "claimed_at": 1787924579.7397926,
+      "showcased": true
     },
     {
       "card": {
@@ -3189,7 +3190,7 @@
       },
       "print": 2,
       "claimed_at": 1787830075.608194,
-      "showcased": true
+      "showcased": false
     },
     {
       "card": {
@@ -5279,6 +5280,20 @@
     }
   ],
   "1228978576028729384": [
+    {
+      "card": {
+        "id": "medicine_common",
+        "name": "Medicine Pocket",
+        "series": "Reverse: 1999",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/medicine_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787929133.2189147
+    },
     {
       "card": {
         "id": "lee_common_2",
@@ -14261,6 +14276,20 @@
   "1135702746692059330": [
     {
       "card": {
+        "id": "akihiko_common_4",
+        "name": "Akihiko Kaji",
+        "series": "Given",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/akihiko_common_4.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787929070.1470447
+    },
+    {
+      "card": {
         "id": "megurine_common",
         "name": "Megurine Luka",
         "series": "Vocaloid",
@@ -14871,6 +14900,20 @@
     }
   ],
   "1216834356396560406": [
+    {
+      "card": {
+        "id": "fuwawa_common",
+        "name": "Fuwawa Abyssgard",
+        "series": "Hololive",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/fuwawa_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787929154.8731062
+    },
     {
       "card": {
         "id": "geto_common",
@@ -19098,6 +19141,20 @@
     }
   ],
   "1411518998767472650": [
+    {
+      "card": {
+        "id": "ayato_common",
+        "name": "Ayato Sakamaki",
+        "series": "Diabolik Lovers",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/ayato_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787929173.403661
+    },
     {
       "card": {
         "id": "wanderer_common",
