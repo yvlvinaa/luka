@@ -3955,7 +3955,8 @@
       },
       "print": 2,
       "claimed_at": 1787922526.2179532,
-      "tags": "\ud83d\udc8d"
+      "tags": "\ud83d\udc8d",
+      "showcased": true
     },
     {
       "card": {
@@ -3985,7 +3986,8 @@
       },
       "print": 1,
       "claimed_at": 1787889711.4320436,
-      "tags": "\ud83d\udc8d"
+      "tags": "\ud83d\udc8d",
+      "showcased": true
     },
     {
       "card": {
@@ -4301,7 +4303,7 @@
       "print": 1,
       "claimed_at": 1787865355.8002362,
       "tags": "NFT",
-      "showcased": true
+      "showcased": false
     },
     {
       "card": {
@@ -5023,7 +5025,7 @@
       },
       "print": 1,
       "claimed_at": 1787751317.1381667,
-      "showcased": true,
+      "showcased": false,
       "tags": "NFT"
     },
     {
@@ -10110,6 +10112,20 @@
   "1028692731029110846": [
     {
       "card": {
+        "id": "sakutaro_common",
+        "name": "Sakutaro Morishige",
+        "series": "Corpse Party",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/sakutaro_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787924107.714509
+    },
+    {
+      "card": {
         "id": "enjin_common",
         "name": "Enjin",
         "series": "Gachiakuta",
@@ -11498,6 +11514,20 @@
   "1542476173886488606": [],
   "1542486042832011316": [],
   "1310677632769327257": [
+    {
+      "card": {
+        "id": "silver_common_2",
+        "name": "Silver Vanrouge",
+        "series": "Twisted Wonderland",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/silver_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1787924065.0936568
+    },
     {
       "card": {
         "id": "kou_common_3",
@@ -14262,6 +14292,20 @@
   "1216834356396560406": [
     {
       "card": {
+        "id": "kirara_common_2",
+        "name": "Kirara",
+        "series": "Genshin Impact",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/kirara_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787924289.6094077
+    },
+    {
+      "card": {
         "id": "vergil_common",
         "name": "Vergil",
         "series": "Devil May Cry",
@@ -16573,6 +16617,20 @@
   "224627689909256192": [
     {
       "card": {
+        "id": "do_common",
+        "name": "Do Woo Won",
+        "series": "The Pizza Delivery Man and Gold Palace",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/do_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787924056.8617089
+    },
+    {
+      "card": {
         "id": "yuma_common",
         "name": "Yuma Mukami",
         "series": "Diabolik Lovers",
@@ -17876,6 +17934,20 @@
   "533041724638101505": [
     {
       "card": {
+        "id": "kyou_common",
+        "name": "Kyou Fujibayash",
+        "series": "CLANNAD",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/kyou_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787924150.3325627
+    },
+    {
+      "card": {
         "id": "kazuichi_common",
         "name": "Kazuichi Soda",
         "series": "Danganronpa",
@@ -18155,5 +18227,6 @@
     }
   ],
   "968786127081328660": [],
-  "1122003954436407336": []
+  "1122003954436407336": [],
+  "1378462940096761856": []
 }
