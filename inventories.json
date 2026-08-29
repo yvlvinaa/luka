@@ -2,6 +2,20 @@
   "727441845789130804": [
     {
       "card": {
+        "id": "emma_common",
+        "name": "Emma",
+        "series": "Veil",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/emma_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1788000033.2130704
+    },
+    {
+      "card": {
         "id": "eden_common",
         "name": "Eden Seonwoo",
         "series": "Special Civil Servant",
@@ -343,6 +357,20 @@
     }
   ],
   "1241420729933758514": [
+    {
+      "card": {
+        "id": "moze_common",
+        "name": "Moze",
+        "series": "Honkai: Star Rail",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/moze_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787999823.5656362
+    },
     {
       "card": {
         "id": "gyeon_common",
@@ -1291,6 +1319,20 @@
     }
   ],
   "982952116039598161": [
+    {
+      "card": {
+        "id": "kaori_common_2",
+        "name": "Kaori Miyazono",
+        "series": "Your Lie In April",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/kaori_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1788000041.167753
+    },
     {
       "card": {
         "id": "twilight_common",
@@ -5302,6 +5344,20 @@
   "875877141449949276": [
     {
       "card": {
+        "id": "spongebob_common",
+        "name": "Spongebob",
+        "series": "Spongebob Squarepants",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/spongebob_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787999941.6955163
+    },
+    {
+      "card": {
         "id": "han_common_3",
         "name": "Han Yoohyun",
         "series": "The S-classes That I Raised",
@@ -5725,6 +5781,20 @@
     }
   ],
   "1216834356396560406": [
+    {
+      "card": {
+        "id": "chu_common",
+        "name": "Chu Wanning",
+        "series": "The Husky and His White Cat Shizun",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/chu_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1788000027.6029456
+    },
     {
       "card": {
         "id": "yoon_common_4",
@@ -10205,7 +10275,8 @@
         "version": "common"
       },
       "print": 2,
-      "claimed_at": 1787999785.9412591
+      "claimed_at": 1787999785.9412591,
+      "pinned": true
     },
     {
       "card": {
@@ -10330,6 +10401,20 @@
   "1279518782838276148": [
     {
       "card": {
+        "id": "sanemi_common",
+        "name": "Sanemi Shinzaguzawa",
+        "series": "Kimetsu no Yaiba",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/sanemi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787999979.3326933
+    },
+    {
+      "card": {
         "id": "noi_rare",
         "name": "Noi Konazawa",
         "series": "Cosmic Princess Kaguya",
@@ -10405,6 +10490,20 @@
   "1066269748293287997": [
     {
       "card": {
+        "id": "death_common",
+        "name": "Death The Kid",
+        "series": "Soul Eater",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/death_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787999806.834529
+    },
+    {
+      "card": {
         "id": "lee_common_5",
         "name": "Lee Sa-young",
         "series": "The Hunter's Gonna Lay Low",
@@ -10450,5 +10549,51 @@
   ],
   "__system__": [],
   "1008776202191634432": [],
-  "1198905520422137927": []
+  "1198905520422137927": [],
+  "1218836543515525185": [
+    {
+      "card": {
+        "id": "valko_common",
+        "name": "Valko",
+        "series": "Love And Deepspace",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/valko_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1788000074.72749
+    },
+    {
+      "card": {
+        "id": "hifumi_common",
+        "name": "Hifumi Izanami",
+        "series": "Hypnosis Mic",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/hifumi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787999835.1972718
+    }
+  ],
+  "1208748350523052062": [
+    {
+      "card": {
+        "id": "rin_common_2",
+        "name": "Rin",
+        "series": "Catherine: Full Body",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/rin_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1788000086.9388297
+    }
+  ]
 }
