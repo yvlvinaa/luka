@@ -542,7 +542,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 18,
+      "progress": 20,
       "id": "37102b82-2de0-42ea-a4e2-fdd3ef5e02e4",
       "player_a": "975180513394438165",
       "player_b": "1332117178790580338",
@@ -594,7 +594,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 32,
+      "progress": 39,
       "id": "47a4dec6-20e4-428a-ad6d-c7d1310a9e28",
       "player_a": "661202852244488192",
       "player_b": "908254172074352641",
@@ -645,7 +645,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 23,
+      "progress": 30,
       "id": "371b61f2-be80-46de-b29d-10c9a54baeed",
       "player_a": "900306697850064936",
       "player_b": "814791323029995522",
@@ -656,46 +656,18 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 23,
+      "progress": 34,
       "id": "45824fb1-2edc-4215-b282-24d4ae5351e5",
       "player_a": "1487041378918858924",
       "player_b": "1468648929783709768",
       "started_at": 1788011214.511206,
       "channel_id": 1543232067775627367
     },
-    "3bd0d1db-c25c-4252-870d-429fc0c2ca3b": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Power",
-        "Quincy",
-        "Nakahara Chuuya",
-        "Jiaoqiu",
-        "Vi",
-        "Kokomi Teruhashi",
-        "Shanks",
-        "Yu Narukami",
-        "Yoo Joonghyuk",
-        "Biwa Hayahide",
-        "Alucard Tepes",
-        "Mizuki",
-        "Ann",
-        "Atsumu Miya",
-        "Magna Swing"
-      ],
-      "id": "3bd0d1db-c25c-4252-870d-429fc0c2ca3b",
-      "player_a": "1231316819395084340",
-      "player_b": "1411518998767472650",
-      "started_at": 1788011920.1431925,
-      "channel_id": 1541958013861105816
-    },
     "e6356337-26f0-4c1b-818f-81ab79740dd4": {
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 18,
+      "progress": 27,
       "id": "e6356337-26f0-4c1b-818f-81ab79740dd4",
       "player_a": "1508236825557209179",
       "player_b": "1152969942820466819",
@@ -706,7 +678,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 10,
+      "progress": 17,
       "id": "4b9ea43d-addc-4643-bab3-c07dde161219",
       "player_a": "224627689909256192",
       "player_b": "762127115721637898",
@@ -737,12 +709,49 @@
         "Iroha Sakayori",
         "Colleague",
         "Harumi Kurose",
-        "Kiritani Haruka"
+        "Kiritani Haruka",
+        "Jinshi & Maomao",
+        "Shirley Fenette",
+        "Naberius Kalego",
+        "Donquixote Doflamingo",
+        "Riddle Rosehearts",
+        "Antag",
+        "Kwak Jekang",
+        "Aurora Syalis Goodereste"
       ],
       "id": "6806dfaf-bfe3-4e06-9534-eaa729eccc5d",
       "player_a": "1299833889166065743",
       "player_b": "1274718479316156508",
       "started_at": 1788015351.9635382,
+      "channel_id": 1543259382723125388
+    },
+    "f475ff46-6cf4-4831-993c-4e5986a23d45": {
+      "type": "claim_count",
+      "target": 60,
+      "label": "Claim 60 cards together",
+      "progress": 7,
+      "id": "f475ff46-6cf4-4831-993c-4e5986a23d45",
+      "player_a": "1274155690331734175",
+      "player_b": "894445820613644318",
+      "started_at": 1788018924.4910557,
+      "channel_id": 1543271193535184926
+    },
+    "25c7f761-ba18-465d-a27e-96fab4f1f386": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Hyuna",
+        "Xia Fei",
+        "Zima",
+        "Shadow Milk Cookie",
+        "Ifa"
+      ],
+      "id": "25c7f761-ba18-465d-a27e-96fab4f1f386",
+      "player_a": "433218038385344532",
+      "player_b": "841292229539528704",
+      "started_at": 1788019617.985805,
       "channel_id": 1543259382723125388
     }
   },
@@ -1239,6 +1248,10 @@
       {
         "timestamp": 1786080813.824134,
         "partner_id": "1064312739150954570"
+      },
+      {
+        "timestamp": 1788019270.0015898,
+        "partner_id": "1411518998767472650"
       }
     ],
     "1064312739150954570": [
@@ -2558,6 +2571,12 @@
         "timestamp": 1788015058.8476925,
         "partner_id": "1228266277835898900"
       }
+    ],
+    "1411518998767472650": [
+      {
+        "timestamp": 1788019270.0015898,
+        "partner_id": "1231316819395084340"
+      }
     ]
   },
   "cooldowns": {
@@ -2631,7 +2650,7 @@
     "1079026770394746902": 1786079714.6368504,
     "1327627470051999747": 1786080048.7242024,
     "1488887483335971039": 1786080048.7242024,
-    "1231316819395084340": 1786080813.824134,
+    "1231316819395084340": 1788019270.0015898,
     "1064312739150954570": 1786558251.9038737,
     "583107073622016022": 1786081733.0543668,
     "658879787577901068": 1786081733.0543668,
@@ -2834,7 +2853,8 @@
     "1228978576028729384": 1787873403.7289317,
     "1216834356396560406": 1787873403.7289317,
     "968501068524818542": 1788013966.9957066,
-    "842906805406924840": 1788015058.8476925
+    "842906805406924840": 1788015058.8476925,
+    "1411518998767472650": 1788019270.0015898
   },
   "bonus": {
     "777925664358531102": {
@@ -3663,7 +3683,7 @@
     },
     "1051844078184173573": {
       "drop": 0,
-      "claim": 3
+      "claim": 2
     },
     "693503862191030343": {
       "drop": 13,
@@ -5199,7 +5219,7 @@
     },
     "1428341890025259091": {
       "drop": 0,
-      "claim": 6
+      "claim": 5
     },
     "1271546566334873630": {
       "drop": 0,
@@ -5234,7 +5254,7 @@
       "claim": 0
     },
     "1171032839601520703": {
-      "drop": 3,
+      "drop": 0,
       "claim": 0
     },
     "1271399006370795542": {
@@ -5303,7 +5323,7 @@
     },
     "1231316819395084340": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "1125010005066784860": {
       "drop": 0,
@@ -5794,7 +5814,7 @@
       "claim": 1
     },
     "1228266277835898900": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "972894516694622278": {
@@ -7758,8 +7778,8 @@
       "claim": 11
     },
     "1123953776827572265": {
-      "drop": 13,
-      "claim": 11
+      "drop": 0,
+      "claim": 2
     },
     "1363635958104461363": {
       "drop": 13,
@@ -8354,8 +8374,8 @@
       "claim": 11
     },
     "1477682798507851837": {
-      "drop": 13,
-      "claim": 11
+      "drop": 0,
+      "claim": 0
     },
     "695701112434458665": {
       "drop": 0,
@@ -8442,7 +8462,7 @@
       "claim": 11
     },
     "1310028877485314098": {
-      "drop": 11,
+      "drop": 10,
       "claim": 10
     },
     "978303489845379133": {
@@ -8942,6 +8962,14 @@
       "claim": 0
     },
     "845814816580304916": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1502170773211582616": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1401622768214347796": {
       "drop": 0,
       "claim": 0
     }
