@@ -607,7 +607,8 @@
         "Joel Gear",
         "Ranto Takashina",
         "Tooru Hagakure",
-        "Tao Saotome"
+        "Tao Saotome",
+        "Quanxi"
       ],
       "id": "9f74b587-e843-4c42-9f36-033a7bcc63da",
       "player_a": "1245817648193867876",
@@ -619,7 +620,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 14,
+      "progress": 15,
       "id": "47a4dec6-20e4-428a-ad6d-c7d1310a9e28",
       "player_a": "661202852244488192",
       "player_b": "908254172074352641",
@@ -642,7 +643,9 @@
       "target": 20,
       "label": "Obtain 20 unique characters together",
       "progress": 0,
-      "characters_seen": [],
+      "characters_seen": [
+        "Kurode"
+      ],
       "id": "37faf33f-09f8-43a9-8421-afcbd8820fe6",
       "player_a": "821574312216756224",
       "player_b": "970524469040910386",
@@ -656,7 +659,9 @@
       "progress": 0,
       "characters_seen": [
         "Ryu Jaekwan",
-        "Jean"
+        "Jean",
+        "Asahi Shiina",
+        "Hawks"
       ],
       "id": "7098aa3b-58dd-4a20-be33-06b4b32663d2",
       "player_a": "1271962211606204560",
@@ -669,12 +674,27 @@
       "target": 15,
       "label": "Claim cards from 15 different series together",
       "progress": 0,
-      "series_seen": [],
+      "series_seen": [
+        "Limbus Company",
+        "Fall in love, false angels"
+      ],
       "id": "74379674-ffbd-4015-b74d-ac13136b9b90",
       "player_a": "1310677632769327257",
       "player_b": "1466515237976150272",
       "started_at": 1788009889.0854878,
       "channel_id": 1540149985650282596
+    },
+    "ca7dfec0-37ba-4399-baf4-894c8ee52fbb": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [],
+      "id": "ca7dfec0-37ba-4399-baf4-894c8ee52fbb",
+      "player_a": "1228266277835898900",
+      "player_b": "842906805406924840",
+      "started_at": 1788010147.4342036,
+      "channel_id": 1543232633440575538
     }
   },
   "weekly": {
@@ -3516,7 +3536,7 @@
     },
     "1343167107906670602": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "1235208265856716834": {
       "drop": 0,
