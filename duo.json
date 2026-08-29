@@ -268,7 +268,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 3,
+      "progress": 4,
       "id": "68177b3f-71a7-47eb-82f2-174f2193cc4f",
       "player_a": "1411686981468946664",
       "player_b": "1066269748293287997",
@@ -619,7 +619,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 12,
+      "progress": 14,
       "id": "47a4dec6-20e4-428a-ad6d-c7d1310a9e28",
       "player_a": "661202852244488192",
       "player_b": "908254172074352641",
@@ -648,6 +648,33 @@
       "player_b": "970524469040910386",
       "started_at": 1788009747.2796202,
       "channel_id": 1543232067775627367
+    },
+    "7098aa3b-58dd-4a20-be33-06b4b32663d2": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Ryu Jaekwan",
+        "Jean"
+      ],
+      "id": "7098aa3b-58dd-4a20-be33-06b4b32663d2",
+      "player_a": "1271962211606204560",
+      "player_b": "968501068524818542",
+      "started_at": 1788009762.0597324,
+      "channel_id": 1542556470229340200
+    },
+    "74379674-ffbd-4015-b74d-ac13136b9b90": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [],
+      "id": "74379674-ffbd-4015-b74d-ac13136b9b90",
+      "player_a": "1310677632769327257",
+      "player_b": "1466515237976150272",
+      "started_at": 1788009889.0854878,
+      "channel_id": 1540149985650282596
     }
   },
   "weekly": {
@@ -8792,6 +8819,10 @@
       "claim": 0
     },
     "647974710470115339": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1465450153182761172": {
       "drop": 0,
       "claim": 0
     }
