@@ -618,7 +618,22 @@
       "tags": "\u2764\ufe0f"
     }
   ],
-  "1171032839601520703": [],
+  "1171032839601520703": [
+    {
+      "card": {
+        "id": "rukia_common",
+        "name": "Rukia Kuchiki",
+        "series": "Bleach",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/rukia_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787998590.648829
+    }
+  ],
   "770651160695537697": [
     {
       "card": {
@@ -2908,7 +2923,7 @@
       },
       "print": 1,
       "claimed_at": 1787858054.5566568,
-      "tags": "NOTFORONYX"
+      "tags": "nft"
     },
     {
       "card": {
@@ -8703,6 +8718,20 @@
   "533041724638101505": [
     {
       "card": {
+        "id": "fu_common",
+        "name": "Fu Orostor",
+        "series": "Gachiakuta",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/fu_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1787998866.8702488
+    },
+    {
+      "card": {
         "id": "kallen_common",
         "name": "Kallen Kozuki",
         "series": "Code Geass",
@@ -9771,6 +9800,20 @@
   "1508236825557209179": [
     {
       "card": {
+        "id": "korekiyo_common",
+        "name": "Korekiyo Shinguji",
+        "series": "Danganronpa",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/korekiyo_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787998868.515539
+    },
+    {
+      "card": {
         "id": "tsukishima_common",
         "name": "Tsukishima Kei",
         "series": "Haikyuu!!",
@@ -9877,5 +9920,38 @@
       "print": 1,
       "claimed_at": 1787998512.9014492
     }
-  ]
+  ],
+  "1279518782838276148": [
+    {
+      "card": {
+        "id": "varesa_common",
+        "name": "Varesa",
+        "series": "Genshin Impact",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/varesa_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787998744.1126513
+    }
+  ],
+  "1411686981468946664": [
+    {
+      "card": {
+        "id": "lain_common",
+        "name": "Lain Iwakura",
+        "series": "Serial Experiments Lain",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/lain_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1787998760.923385
+    }
+  ],
+  "1413734628832841790": []
 }
