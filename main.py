@@ -11417,12 +11417,13 @@ class Client(discord.Client):
                 description=(
                     f"This will trim **every member's** inventory down to **{keep_max}** cards.\n\n"
                     "For anyone with more than that:\n"
-                    f"• ALL pinned cards and ALL tagged cards are kept (they count toward the {keep_max}).\n"
-                    "• Remaining slots are filled with a random selection of their other cards.\n"
+                    f"• ALL pinned cards and ALL tagged cards are kept (they count toward the {keep_max}), "
+                    "**unless** someone has more protected cards than that -- in that case exactly "
+                    f"**{keep_max}** of their protected cards are randomly kept instead, and everything else "
+                    "(including the rest of their protected cards) is removed like normal.\n"
+                    "• Otherwise, remaining slots are filled with a random selection of their other cards.\n"
                     "• Everything else is removed and moved into the recovery pool "
-                    "(not deleted, not yet recyclable -- see `lrecyclecards`).\n"
-                    "• Anyone whose pinned+tagged cards alone already exceed "
-                    f"**{keep_max}** is skipped and reported, never guessed at.\n\n"
+                    "(not deleted, not yet recyclable -- see `lrecyclecards`).\n\n"
                     "**This cannot be undone from Discord. Proceed?**"
                 )
             )
@@ -11438,7 +11439,6 @@ class Client(discord.Client):
                 affected_count = 0
                 kept_count = 0
                 removed_count = 0
-                skipped_users = []
 
                 for member in message.guild.members:
                     if member.bot:
@@ -11449,15 +11449,27 @@ class Client(discord.Client):
                         continue
 
                     protected_indices = [i for i, oc in enumerate(inv) if oc.get("pinned") or oc.get("tags")]
-                    if len(protected_indices) > keep_max:
-                        skipped_users.append((member, len(protected_indices)))
-                        continue
 
-                    protected_set = set(protected_indices)
-                    unprotected_indices = [i for i in range(len(inv)) if i not in protected_set]
-                    needed = keep_max - len(protected_indices)
-                    chosen_random = set(random.sample(unprotected_indices, needed)) if needed > 0 else set()
-                    keep_set = protected_set | chosen_random
+                    if len(protected_indices) > keep_max:
+                        # More protected (pinned/tagged) cards than the
+                        # keep limit allows -- randomly keep exactly
+                        # `keep_max` of the PROTECTED cards themselves
+                        # (never guessing based on unprotected ones,
+                        # since there aren't enough protected slots to
+                        # keep everything protected anyway). Every other
+                        # card -- the remaining protected ones AND every
+                        # unprotected one -- is removed into the
+                        # recovery pool via the exact same path below.
+                        # This user is no longer skipped/reported;
+                        # everyone with more than `keep_max` total cards
+                        # is now always actually trimmed.
+                        keep_set = set(random.sample(protected_indices, keep_max))
+                    else:
+                        protected_set = set(protected_indices)
+                        unprotected_indices = [i for i in range(len(inv)) if i not in protected_set]
+                        needed = keep_max - len(protected_indices)
+                        chosen_random = set(random.sample(unprotected_indices, needed)) if needed > 0 else set()
+                        keep_set = protected_set | chosen_random
 
                     removed_entries = [inv[i] for i in range(len(inv)) if i not in keep_set]
                     new_inv = [inv[i] for i in range(len(inv)) if i in keep_set]
@@ -11482,9 +11494,8 @@ class Client(discord.Client):
                     removed_count += len(removed_entries)
 
                 if affected_count == 0:
-                    note = f" ({len(skipped_users)} skipped -- protected cards exceed the limit.)" if skipped_users else ""
                     return await interaction.followup.send(
-                        "No members had more than the threshold -- nothing to do." + note
+                        "No members had more than the threshold -- nothing to do."
                     )
 
                 def _restore():
@@ -11529,12 +11540,6 @@ class Client(discord.Client):
                             "❌ Failed to save the recovery-pool changes. Rolled back -- no changes were kept."
                         )
 
-                skipped_note = ""
-                if skipped_users:
-                    lines = "\n".join(f"• {m.mention} -- {n} protected cards" for m, n in skipped_users[:10])
-                    more = f"\n...and {len(skipped_users) - 10} more" if len(skipped_users) > 10 else ""
-                    skipped_note = f"\n\n⚠️ **Skipped ({len(skipped_users)})** -- protected cards exceed {keep_max}:\n{lines}{more}"
-
                 result_embed = discord.Embed(
                     color=discord.Color.green(),
                     title="✅ Mass Inventory Reset Complete",
@@ -11542,7 +11547,6 @@ class Client(discord.Client):
                         f"**{affected_count}** member(s) trimmed to **{keep_max}** cards.\n"
                         f"**{removed_count}** card(s) removed and moved into the recovery pool.\n"
                         f"**{kept_count}** card(s) kept in total."
-                        f"{skipped_note}"
                     )
                 )
                 await interaction.followup.send(embed=result_embed)
@@ -11685,6 +11689,51 @@ class Client(discord.Client):
                 return await reply(message, "No cards are currently in pending recovery.")
 
             view = AdminCardListView("♻️ Pending Recovery", entries, message.author.id)
+            return await reply(message, embed=view.build_embed(), view=view)
+
+        # =========================
+        # LRECYCLABLEPOOL COMMAND (owner-only, read-only)
+        # =========================
+        # Completely separate from `lpendingrecovery` above -- that one
+        # shows the unrelated left-server-member recovery system; this
+        # one shows pending_recovery[RECYCLABLE_CARDS_KEY], the pool
+        # `lresetinventories` fills and `lrecyclecards` activates from.
+        # Reads get_recyclable_pool() directly -- never mutates or
+        # activates anything itself.
+        if content_lower == "lrecyclablepool":
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            pool = get_recyclable_pool()
+            if not pool:
+                return await reply(message, "The recyclable-card pool is currently empty.")
+
+            active_count = sum(1 for e in pool if e.get("recycled_active"))
+            inactive_count = len(pool) - active_count
+
+            entries = []
+            for entry in pool:
+                card = entry.get("card", {})
+                removed_from = entry.get("removed_from")
+                owner_display = f"<@{removed_from}> (`{removed_from}`)" if removed_from else "Unknown"
+                status = "✅ Active -- currently droppable" if entry.get("recycled_active") else "⏳ Inactive -- awaiting `lrecyclecards`"
+                entries.append({
+                    "description": f"## {card.get('name', 'Unknown Character')}",
+                    "fields": [
+                        ("Series", card.get("series", "Unknown Series")),
+                        ("Stars", stars(card.get("stars", 1))),
+                        ("Print", format_print(entry.get("print"))),
+                        ("Version/Frame", card_version_label(card)),
+                        ("Original Owner", owner_display),
+                        ("Status", status),
+                    ],
+                })
+
+            view = AdminCardListView(
+                f"♻️ Recyclable Card Pool -- {len(pool)} total ({active_count} active, {inactive_count} inactive)",
+                entries,
+                message.author.id
+            )
             return await reply(message, embed=view.build_embed(), view=view)
 
         # =========================
