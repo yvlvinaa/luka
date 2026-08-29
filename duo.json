@@ -594,7 +594,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 25,
+      "progress": 26,
       "id": "47a4dec6-20e4-428a-ad6d-c7d1310a9e28",
       "player_a": "661202852244488192",
       "player_b": "908254172074352641",
@@ -638,37 +638,6 @@
       "started_at": 1788009747.2796202,
       "channel_id": 1543232067775627367
     },
-    "7098aa3b-58dd-4a20-be33-06b4b32663d2": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Ryu Jaekwan",
-        "Jean",
-        "Asahi Shiina",
-        "Hawks",
-        "Ortho Shroud",
-        "Spike Spiegel",
-        "Go Yohan",
-        "Mel Medarda",
-        "Velina",
-        "Sousuke Shima",
-        "Leona Kingscholar",
-        "Arcueid Brunestud",
-        "Spoiler",
-        "Vergil",
-        "Ling Xinlu",
-        "Kazutora Hanemiya",
-        "Seidou Takizawa",
-        "Alice Baskerville"
-      ],
-      "id": "7098aa3b-58dd-4a20-be33-06b4b32663d2",
-      "player_a": "1271962211606204560",
-      "player_b": "968501068524818542",
-      "started_at": 1788009762.0597324,
-      "channel_id": 1542556470229340200
-    },
     "74379674-ffbd-4015-b74d-ac13136b9b90": {
       "type": "claim_series",
       "target": 15,
@@ -684,7 +653,9 @@
         "Honey Trouble",
         "BOYS be MAID !",
         "Twisted Wonderland",
-        "ERROR143"
+        "ERROR143",
+        "Eighteen\u2019s Bed",
+        "Project: Eden\u2019s Garden"
       ],
       "id": "74379674-ffbd-4015-b74d-ac13136b9b90",
       "player_a": "1310677632769327257",
@@ -720,7 +691,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 10,
+      "progress": 11,
       "id": "371b61f2-be80-46de-b29d-10c9a54baeed",
       "player_a": "900306697850064936",
       "player_b": "814791323029995522",
@@ -731,7 +702,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 8,
+      "progress": 9,
       "id": "45824fb1-2edc-4215-b282-24d4ae5351e5",
       "player_a": "1487041378918858924",
       "player_b": "1468648929783709768",
@@ -761,7 +732,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 4,
+      "progress": 5,
       "id": "e6356337-26f0-4c1b-818f-81ab79740dd4",
       "player_a": "1508236825557209179",
       "player_b": "1152969942820466819",
@@ -850,6 +821,10 @@
       {
         "timestamp": 1786577212.480413,
         "partner_id": "1249883308075258034"
+      },
+      {
+        "timestamp": 1788013966.9957066,
+        "partner_id": "968501068524818542"
       }
     ],
     "1076350464288903258": [
@@ -2553,6 +2528,12 @@
         "timestamp": 1787873403.7289317,
         "partner_id": "1228978576028729384"
       }
+    ],
+    "968501068524818542": [
+      {
+        "timestamp": 1788013966.9957066,
+        "partner_id": "1271962211606204560"
+      }
     ]
   },
   "cooldowns": {
@@ -2566,7 +2547,7 @@
     "870418340072530011": 1786069506.6626718,
     "826335464532607031": 1786497493.3841465,
     "1204473206077919295": 1786069584.3804038,
-    "1271962211606204560": 1786577212.480413,
+    "1271962211606204560": 1788013966.9957066,
     "1076350464288903258": 1786070270.9438894,
     "843391240254652416": 1786070314.5427434,
     "784651032084086794": 1786502441.8286514,
@@ -2827,7 +2808,8 @@
     "1499001091801612329": 1786579323.1123583,
     "1535822737875144814": 1786579323.1123583,
     "1228978576028729384": 1787873403.7289317,
-    "1216834356396560406": 1787873403.7289317
+    "1216834356396560406": 1787873403.7289317,
+    "968501068524818542": 1788013966.9957066
   },
   "bonus": {
     "777925664358531102": {
@@ -5179,8 +5161,8 @@
       "claim": 0
     },
     "968501068524818542": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1211128310843580559": {
       "drop": 13,
@@ -6072,7 +6054,7 @@
     },
     "850413830064701490": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "1513671121067573281": {
       "drop": 0,
