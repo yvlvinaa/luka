@@ -18,6 +18,7 @@ import functools
 import traceback
 import uuid
 from io import BytesIO
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw, ImageFont, ImageStat, ImageFilter
 
@@ -1795,6 +1796,119 @@ async def consume_recycled_entry(entry_id):
             return None
 
         return entry
+
+
+def _compute_duplicate_fix_plan() -> dict:
+    """
+    Computes the full `lfixduplicates` repair plan fresh from the
+    CURRENT live `inventories` + recyclable pool state. Pure read --
+    never mutates anything itself. Called both for the command's
+    preview embed and again at confirm time, so a stale preview can
+    never be blindly replayed against data that's changed in between.
+
+    Rules (see LFIXDUPLICATES COMMAND):
+      - Self-duplicates (the same user owns the identical (card_id,
+        print) twice) and live/live duplicates between two different
+        users are handled by the exact same rule: every owner of that
+        exact (card_id, print) is sorted by claimed_at; the earliest
+        keeps the number, every later copy gets a fresh one.
+      - Pool/live overlaps (a pool entry's (card_id, print) also exists
+        in someone's live inventory right now): the live owner's print
+        is left completely untouched; only the pool entry itself is
+        renumbered.
+      - Every fresh number handed out is strictly higher than the
+        current true max for that card_id across BOTH live inventories
+        and the ENTIRE pool (active and inactive alike), and higher
+        than every other fresh number already assigned to that same
+        card_id earlier in this same pass -- so nothing produced here
+        can ever collide with live data, pool data, or itself, and
+        normal future progression (get_next_print()) is preserved.
+
+    Returns:
+      {
+        "live_ops": [ {"user_id", "idx", "card_id", "old_print",
+                        "new_print", "kind" ("self_duplicate" or
+                        "cross_user_duplicate"), "kept_user_id"}, ... ],
+        "pool_ops": [ {"entry_id", "card_id", "old_print", "new_print"}, ... ],
+        "self_count": int, "cross_count": int, "overlap_count": int,
+      }
+    """
+    live_index = defaultdict(list)
+    for user_id, owned_cards in inventories.items():
+        for idx, owned_card in enumerate(owned_cards):
+            card_id = owned_card.get("card", {}).get("id")
+            print_num = owned_card.get("print")
+            if card_id is None or not isinstance(print_num, int):
+                continue
+            live_index[(card_id, print_num)].append({
+                "user_id": user_id,
+                "idx": idx,
+                "claimed_at": owned_card.get("claimed_at") or 0,
+            })
+
+    pool = get_recyclable_pool()
+
+    # Seeded from the TRUE current max across live + the entire pool,
+    # then incremented once per assignment below -- so every number
+    # handed out is unique against everything that already exists, and
+    # against every other number this same pass hands out.
+    max_print = defaultdict(int)
+    for (card_id, print_num) in live_index.keys():
+        if print_num > max_print[card_id]:
+            max_print[card_id] = print_num
+    for entry in pool:
+        card_id = entry.get("card_id")
+        print_num = entry.get("print")
+        if card_id is not None and isinstance(print_num, int) and print_num > max_print[card_id]:
+            max_print[card_id] = print_num
+
+    live_ops = []
+    self_count = 0
+    cross_count = 0
+    for (card_id, print_num), occurrences in live_index.items():
+        if len(occurrences) <= 1:
+            continue
+        occurrences_sorted = sorted(occurrences, key=lambda o: o["claimed_at"])
+        keep = occurrences_sorted[0]
+        is_self = len(set(o["user_id"] for o in occurrences)) == 1
+        for dup in occurrences_sorted[1:]:
+            max_print[card_id] += 1
+            live_ops.append({
+                "user_id": dup["user_id"],
+                "idx": dup["idx"],
+                "card_id": card_id,
+                "old_print": print_num,
+                "new_print": max_print[card_id],
+                "kind": "self_duplicate" if is_self else "cross_user_duplicate",
+                "kept_user_id": keep["user_id"],
+            })
+            if is_self:
+                self_count += 1
+            else:
+                cross_count += 1
+
+    pool_ops = []
+    for entry in pool:
+        card_id = entry.get("card_id")
+        print_num = entry.get("print")
+        if card_id is None or not isinstance(print_num, int):
+            continue
+        if (card_id, print_num) in live_index:
+            max_print[card_id] += 1
+            pool_ops.append({
+                "entry_id": entry.get("id"),
+                "card_id": card_id,
+                "old_print": print_num,
+                "new_print": max_print[card_id],
+            })
+
+    return {
+        "live_ops": live_ops,
+        "pool_ops": pool_ops,
+        "self_count": self_count,
+        "cross_count": cross_count,
+        "overlap_count": len(pool_ops),
+    }
 
 
 # =========================
@@ -4884,16 +4998,27 @@ def _rebuild_card_prints_from_inventories() -> None:
     does not touch inventories.json's format or content, and does not
     write anything to disk itself.
 
+    Also folds in every print number sitting in the recyclable-cards
+    pool (pending_recovery[RECYCLABLE_CARDS_KEY]) -- active AND
+    inactive alike. A pool entry is a print that's already been issued
+    once; it isn't currently "live" in anyone's inventory, but the
+    number itself is still spoken for; it must never be silently
+    reused for a normal fresh drop just because it's temporarily
+    sitting in the pool rather than in `inventories`. Without this, a
+    pool print higher than that card's current live max would be
+    invisible to this rebuild, and a completely ordinary future drop
+    could eventually hand out that exact same number again.
+
     Always CLEARS card_prints first, then rebuilds it purely from what's
-    actually in `inventories` right now -- this used to only ever raise
-    each card's count, never lower it, so a fully wiped inventories.json
-    (all claim data intentionally reset) left every card's claim count
-    frozen at its old, stale high-water mark forever (since nothing else
-    ever lowers card_prints, and this function ran once at startup and
-    only compared upward). Clearing first means a wipe is reflected
-    correctly the very next time this runs -- normal ongoing play is
-    unaffected, since every currently-owned print still gets counted
-    right back in below.
+    actually in `inventories` (and the pool) right now -- this used to
+    only ever raise each card's count, never lower it, so a fully wiped
+    inventories.json (all claim data intentionally reset) left every
+    card's claim count frozen at its old, stale high-water mark forever
+    (since nothing else ever lowers card_prints, and this function ran
+    once at startup and only compared upward). Clearing first means a
+    wipe is reflected correctly the very next time this runs -- normal
+    ongoing play is unaffected, since every currently-owned print (live
+    or pooled) still gets counted right back in below.
     """
     card_prints.clear()
     for owned_cards in inventories.values():
@@ -4904,6 +5029,14 @@ def _rebuild_card_prints_from_inventories() -> None:
                 continue
             if print_num > card_prints.get(card_id, 0):
                 card_prints[card_id] = print_num
+
+    for entry in pending_recovery.get(RECYCLABLE_CARDS_KEY, []):
+        card_id = entry.get("card_id")
+        print_num = entry.get("print")
+        if card_id is None or not isinstance(print_num, int):
+            continue
+        if print_num > card_prints.get(card_id, 0):
+            card_prints[card_id] = print_num
 
 
 _rebuild_card_prints_from_inventories()
@@ -11735,6 +11868,143 @@ class Client(discord.Client):
                 message.author.id
             )
             return await reply(message, embed=view.build_embed(), view=view)
+
+        # =========================
+        # LFIXDUPLICATES COMMAND (owner-only, dangerous, confirm-gated)
+        # =========================
+        # Repairs every duplicate (card_id, print) pair currently found
+        # across live inventories and the recyclable pool -- see
+        # _compute_duplicate_fix_plan() for the exact rules. Only ever
+        # changes the `print` field of the affected entries; never
+        # deletes a card, never touches pins/tags/card data/anything
+        # else. Recomputes the plan fresh both here (for the preview)
+        # and again inside do_fix at confirm time, so nothing stale
+        # from the preview is ever blindly replayed against data that's
+        # since changed.
+        if content_lower == "lfixduplicates":
+            if message.author.id not in OWNER_USER_IDS:
+                return
+
+            plan = _compute_duplicate_fix_plan()
+            total_ops = len(plan["live_ops"]) + len(plan["pool_ops"])
+
+            if total_ops == 0:
+                return await reply(message, "✅ No duplicate prints found -- nothing to fix.")
+
+            preview_lines = []
+            for op in plan["live_ops"][:10]:
+                kind_label = "self-duplicate" if op["kind"] == "self_duplicate" else "cross-user duplicate"
+                preview_lines.append(
+                    f"• [{kind_label}] `{op['card_id']}` print {op['old_print']} -> {op['new_print']} "
+                    f"(user <@{op['user_id']}>, kept by <@{op['kept_user_id']}>)"
+                )
+            for op in plan["pool_ops"][:max(0, 10 - len(preview_lines))]:
+                preview_lines.append(
+                    f"• [pool/live overlap] `{op['card_id']}` print {op['old_print']} -> {op['new_print']} (pool entry only)"
+                )
+            more = f"\n...and {total_ops - len(preview_lines)} more" if total_ops > len(preview_lines) else ""
+
+            confirm_embed = discord.Embed(
+                color=discord.Color.red(),
+                title="⚠️ Confirm Duplicate Print Repair",
+                description=(
+                    f"This will fix **{total_ops}** duplicate print(s):\n"
+                    f"• **{plan['self_count']}** self-duplicate(s) -- earliest claim keeps the print, "
+                    "the later copy gets a fresh one.\n"
+                    f"• **{plan['cross_count']}** cross-user duplicate(s) -- same rule, across two different owners.\n"
+                    f"• **{plan['overlap_count']}** pool/live overlap(s) -- the live owner's print is left "
+                    "alone; only the pool entry is renumbered.\n\n"
+                    "Only the `print` value ever changes -- no card is deleted, and pins/tags/card data are "
+                    "never touched.\n\n"
+                    + ("\n".join(preview_lines) + more + "\n\n" if preview_lines else "")
+                    + "**Proceed?**"
+                )
+            )
+
+            async def do_fix(interaction: discord.Interaction):
+                async with inventories_lock:
+                    async with pending_recovery_lock:
+                        # Recomputed fresh, right before mutating, under
+                        # both locks -- guards against anything having
+                        # changed since the preview above.
+                        fresh_plan = _compute_duplicate_fix_plan()
+                        live_ops = fresh_plan["live_ops"]
+                        pool_ops = fresh_plan["pool_ops"]
+                        fresh_total = len(live_ops) + len(pool_ops)
+
+                        if fresh_total == 0:
+                            return await interaction.followup.send(
+                                "✅ No duplicates found -- nothing to fix (data changed since this was previewed)."
+                            )
+
+                        # Snapshot exactly what will be touched -- only
+                        # the specific users' inventories involved, and
+                        # the pool as a whole -- so a failed save can
+                        # restore everything byte-for-byte, never partial.
+                        touched_users = {op["user_id"] for op in live_ops}
+                        inventory_snapshot = {uid: copy.deepcopy(inventories.get(uid, [])) for uid in touched_users}
+                        pool_snapshot = copy.deepcopy(pending_recovery.get(RECYCLABLE_CARDS_KEY, []))
+
+                        for op in live_ops:
+                            owned_card = inventories[op["user_id"]][op["idx"]]
+                            owned_card["print"] = op["new_print"]
+
+                        pool_by_id = {e.get("id"): e for e in pending_recovery.get(RECYCLABLE_CARDS_KEY, [])}
+                        for op in pool_ops:
+                            entry = pool_by_id.get(op["entry_id"])
+                            if entry is not None:
+                                entry["print"] = op["new_print"]
+
+                        def _restore():
+                            for uid, original in inventory_snapshot.items():
+                                inventories[uid] = original
+                            pending_recovery[RECYCLABLE_CARDS_KEY] = pool_snapshot
+
+                        try:
+                            save_inventories_local()
+                            mark_inventories_dirty()
+                        except Exception:
+                            _restore()
+                            traceback.print_exc()
+                            return await interaction.followup.send(
+                                "❌ Failed to save the inventory changes. No changes were made."
+                            )
+
+                        try:
+                            save_pending_recovery_local()
+                            mark_pending_recovery_dirty()
+                        except Exception:
+                            traceback.print_exc()
+                            _restore()
+                            # inventories.json was already written with the
+                            # NEW state above -- since the matching pool
+                            # changes failed to save, that write must be
+                            # undone too, or the renumbering would be only
+                            # half-applied on disk.
+                            try:
+                                save_inventories_local()
+                                mark_inventories_dirty()
+                            except Exception:
+                                print("[lfixduplicates] CRITICAL: failed to re-save inventories.json "
+                                      "after rolling back -- in-memory state IS rolled back, but the "
+                                      "on-disk file may still reflect the failed repair until the next "
+                                      "successful sync.")
+                                traceback.print_exc()
+                            return await interaction.followup.send(
+                                "❌ Failed to save the pool changes. Rolled back -- no changes were kept."
+                            )
+
+                await interaction.followup.send(
+                    f"✅ Fixed **{fresh_total}** duplicate print(s): "
+                    f"**{fresh_plan['self_count']}** self-duplicate(s), "
+                    f"**{fresh_plan['cross_count']}** cross-user duplicate(s), "
+                    f"**{fresh_plan['overlap_count']}** pool/live overlap(s)."
+                )
+
+            view = OwnerConfirmView(message.author.id, do_fix)
+            sent = await reply(message, embed=confirm_embed, view=view)
+            view.message = sent
+            return
 
         # =========================
         # LRECOVER COMMAND (owner-only, dangerous single-card transfer,
