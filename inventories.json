@@ -1297,6 +1297,20 @@
   "770651160695537697": [
     {
       "card": {
+        "id": "banyue_common",
+        "name": "Banyue",
+        "series": "Zenless Zone Zero",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/banyue_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 1,
+      "claimed_at": 1788025074.4037862
+    },
+    {
+      "card": {
         "id": "iroi_common",
         "name": "Iroi",
         "series": "Neverness to Everness",
@@ -1378,7 +1392,8 @@
         "version": "common"
       },
       "print": 2,
-      "claimed_at": 1787979696.394967
+      "claimed_at": 1787979696.394967,
+      "tags": "\u2764\ufe0f"
     },
     {
       "card": {
@@ -41171,5 +41186,9 @@
     }
   ],
   "714581544462712974": [],
-  "1256341375356506175": []
+  "1256341375356506175": [],
+  "774481019822669824": [],
+  "755211531674845235": [],
+  "974310526303739964": [],
+  "1423323604044742666": []
 }
