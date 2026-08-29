@@ -622,7 +622,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 15,
+      "progress": 17,
       "id": "47a4dec6-20e4-428a-ad6d-c7d1310a9e28",
       "player_a": "661202852244488192",
       "player_b": "908254172074352641",
@@ -647,7 +647,8 @@
       "progress": 0,
       "characters_seen": [
         "Kurode",
-        "Shu Itsuki & Mika Kagehira"
+        "Shu Itsuki & Mika Kagehira",
+        "Hiromi Higuruma"
       ],
       "id": "37faf33f-09f8-43a9-8421-afcbd8820fe6",
       "player_a": "821574312216756224",
@@ -665,7 +666,9 @@
         "Jean",
         "Asahi Shiina",
         "Hawks",
-        "Ortho Shroud"
+        "Ortho Shroud",
+        "Spike Spiegel",
+        "Go Yohan"
       ],
       "id": "7098aa3b-58dd-4a20-be33-06b4b32663d2",
       "player_a": "1271962211606204560",
@@ -681,7 +684,8 @@
       "series_seen": [
         "Limbus Company",
         "Fall in love, false angels",
-        "BLUELOCK"
+        "BLUELOCK",
+        "Soul Eater"
       ],
       "id": "74379674-ffbd-4015-b74d-ac13136b9b90",
       "player_a": "1310677632769327257",
@@ -694,12 +698,26 @@
       "target": 15,
       "label": "Claim cards from 15 different series together",
       "progress": 0,
-      "series_seen": [],
+      "series_seen": [
+        "Winterfield",
+        "Twisted Wonderland"
+      ],
       "id": "ca7dfec0-37ba-4399-baf4-894c8ee52fbb",
       "player_a": "1228266277835898900",
       "player_b": "842906805406924840",
       "started_at": 1788010147.4342036,
       "channel_id": 1543232633440575538
+    },
+    "371b61f2-be80-46de-b29d-10c9a54baeed": {
+      "type": "claim_count",
+      "target": 60,
+      "label": "Claim 60 cards together",
+      "progress": 0,
+      "id": "371b61f2-be80-46de-b29d-10c9a54baeed",
+      "player_a": "900306697850064936",
+      "player_b": "814791323029995522",
+      "started_at": 1788010945.8162222,
+      "channel_id": 1543232067775627367
     }
   },
   "weekly": {
