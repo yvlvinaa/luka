@@ -590,43 +590,11 @@
       "started_at": 1786578399.9892998,
       "channel_id": 1533657266970951741
     },
-    "9f74b587-e843-4c42-9f36-033a7bcc63da": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Outis",
-        "Pantalone",
-        "Yuu Koito",
-        "Asahina Mafuyu",
-        "Sanhua",
-        "Shanks",
-        "Slur",
-        "Nightwing",
-        "Joel Gear",
-        "Ranto Takashina",
-        "Tooru Hagakure",
-        "Tao Saotome",
-        "Quanxi",
-        "Ciel Phantomhive",
-        "Son Goku",
-        "Charlotte & Minako",
-        "Shimamura Hougetsu",
-        "Zhao",
-        "Korekishi Eugene"
-      ],
-      "id": "9f74b587-e843-4c42-9f36-033a7bcc63da",
-      "player_a": "1245817648193867876",
-      "player_b": "1428341890025259091",
-      "started_at": 1788005764.6229033,
-      "channel_id": 1543214590022910032
-    },
     "47a4dec6-20e4-428a-ad6d-c7d1310a9e28": {
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 23,
+      "progress": 24,
       "id": "47a4dec6-20e4-428a-ad6d-c7d1310a9e28",
       "player_a": "661202852244488192",
       "player_b": "908254172074352641",
@@ -658,7 +626,9 @@
         "Shuji Taira",
         "Rogue",
         "Ranpo Edogawa",
-        "Colleague"
+        "Colleague",
+        "Annabeth Chase",
+        "Azul Ashengrotto"
       ],
       "id": "37faf33f-09f8-43a9-8421-afcbd8820fe6",
       "player_a": "821574312216756224",
@@ -685,7 +655,8 @@
         "Leona Kingscholar",
         "Arcueid Brunestud",
         "Spoiler",
-        "Vergil"
+        "Vergil",
+        "Ling Xinlu"
       ],
       "id": "7098aa3b-58dd-4a20-be33-06b4b32663d2",
       "player_a": "1271962211606204560",
@@ -726,7 +697,9 @@
         "#Gal x Gal Yuri",
         "Hetalia",
         "Welcome to Demon School! Iruma-kun",
-        "Genshin Impact"
+        "Genshin Impact",
+        "Q-Kou",
+        "Amber Alert"
       ],
       "id": "ca7dfec0-37ba-4399-baf4-894c8ee52fbb",
       "player_a": "1228266277835898900",
@@ -738,7 +711,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 7,
+      "progress": 8,
       "id": "371b61f2-be80-46de-b29d-10c9a54baeed",
       "player_a": "900306697850064936",
       "player_b": "814791323029995522",
@@ -778,7 +751,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 1,
+      "progress": 2,
       "id": "e6356337-26f0-4c1b-818f-81ab79740dd4",
       "player_a": "1508236825557209179",
       "player_b": "1152969942820466819",
@@ -2067,11 +2040,19 @@
       {
         "timestamp": 1786209593.988848,
         "partner_id": "1428341890025259091"
+      },
+      {
+        "timestamp": 1788012851.2657743,
+        "partner_id": "1428341890025259091"
       }
     ],
     "1428341890025259091": [
       {
         "timestamp": 1786209593.988848,
+        "partner_id": "1245817648193867876"
+      },
+      {
+        "timestamp": 1788012851.2657743,
         "partner_id": "1245817648193867876"
       }
     ],
@@ -2755,8 +2736,8 @@
     "722139521864433717": 1786198358.5583751,
     "787241864892907530": 1786199369.8836036,
     "1192955009327964180": 1786199369.8836036,
-    "1245817648193867876": 1786209593.988848,
-    "1428341890025259091": 1786209593.988848,
+    "1245817648193867876": 1788012851.2657743,
+    "1428341890025259091": 1788012851.2657743,
     "905294901082738749": 1786225272.8217788,
     "697803266150629416": 1786225272.8217788,
     "1079314071461044274": 1786225421.2819939,
@@ -3665,7 +3646,7 @@
     },
     "1051844078184173573": {
       "drop": 0,
-      "claim": 6
+      "claim": 5
     },
     "693503862191030343": {
       "drop": 13,
@@ -4024,8 +4005,8 @@
       "claim": 3
     },
     "1245817648193867876": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1498786280169935062": {
       "drop": 0,
@@ -5200,8 +5181,8 @@
       "claim": 0
     },
     "1428341890025259091": {
-      "drop": 0,
-      "claim": 6
+      "drop": 1,
+      "claim": 7
     },
     "1271546566334873630": {
       "drop": 0,
@@ -7096,8 +7077,8 @@
       "claim": 11
     },
     "679042256887349348": {
-      "drop": 12,
-      "claim": 11
+      "drop": 11,
+      "claim": 8
     },
     "1072347657462366259": {
       "drop": 13,
