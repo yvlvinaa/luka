@@ -542,7 +542,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 17,
+      "progress": 18,
       "id": "37102b82-2de0-42ea-a4e2-fdd3ef5e02e4",
       "player_a": "975180513394438165",
       "player_b": "1332117178790580338",
@@ -594,7 +594,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 29,
+      "progress": 32,
       "id": "47a4dec6-20e4-428a-ad6d-c7d1310a9e28",
       "player_a": "661202852244488192",
       "player_b": "908254172074352641",
@@ -631,7 +631,9 @@
         "Azul Ashengrotto",
         "Xie Lian",
         "Hiyori Tomoe",
-        "Osamu Miya"
+        "Osamu Miya",
+        "Jet Black",
+        "Kamado Tanjiro"
       ],
       "id": "37faf33f-09f8-43a9-8421-afcbd8820fe6",
       "player_a": "821574312216756224",
@@ -639,37 +641,11 @@
       "started_at": 1788009747.2796202,
       "channel_id": 1543232067775627367
     },
-    "74379674-ffbd-4015-b74d-ac13136b9b90": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Limbus Company",
-        "Fall in love, false angels",
-        "BLUELOCK",
-        "Soul Eater",
-        "Holostars",
-        "The Sacred Serpents Seduction",
-        "Honey Trouble",
-        "BOYS be MAID !",
-        "Twisted Wonderland",
-        "ERROR143",
-        "Eighteen\u2019s Bed",
-        "Project: Eden\u2019s Garden",
-        "I Want to Love You Till Your Dying Day"
-      ],
-      "id": "74379674-ffbd-4015-b74d-ac13136b9b90",
-      "player_a": "1310677632769327257",
-      "player_b": "1466515237976150272",
-      "started_at": 1788009889.0854878,
-      "channel_id": 1540149985650282596
-    },
     "371b61f2-be80-46de-b29d-10c9a54baeed": {
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 14,
+      "progress": 23,
       "id": "371b61f2-be80-46de-b29d-10c9a54baeed",
       "player_a": "900306697850064936",
       "player_b": "814791323029995522",
@@ -680,7 +656,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 15,
+      "progress": 23,
       "id": "45824fb1-2edc-4215-b282-24d4ae5351e5",
       "player_a": "1487041378918858924",
       "player_b": "1468648929783709768",
@@ -701,7 +677,13 @@
         "Kokomi Teruhashi",
         "Shanks",
         "Yu Narukami",
-        "Yoo Joonghyuk"
+        "Yoo Joonghyuk",
+        "Biwa Hayahide",
+        "Alucard Tepes",
+        "Mizuki",
+        "Ann",
+        "Atsumu Miya",
+        "Magna Swing"
       ],
       "id": "3bd0d1db-c25c-4252-870d-429fc0c2ca3b",
       "player_a": "1231316819395084340",
@@ -713,7 +695,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 10,
+      "progress": 18,
       "id": "e6356337-26f0-4c1b-818f-81ab79740dd4",
       "player_a": "1508236825557209179",
       "player_b": "1152969942820466819",
@@ -724,7 +706,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 4,
+      "progress": 10,
       "id": "4b9ea43d-addc-4643-bab3-c07dde161219",
       "player_a": "224627689909256192",
       "player_b": "762127115721637898",
@@ -741,6 +723,27 @@
       "player_b": "751661073727225887",
       "started_at": 1788014537.2975724,
       "channel_id": 1542466792931328030
+    },
+    "6806dfaf-bfe3-4e06-9534-eaa729eccc5d": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Eddie",
+        "Mihael Keehl",
+        "Gong Ian",
+        "Mori",
+        "Iroha Sakayori",
+        "Colleague",
+        "Harumi Kurose",
+        "Kiritani Haruka"
+      ],
+      "id": "6806dfaf-bfe3-4e06-9534-eaa729eccc5d",
+      "player_a": "1299833889166065743",
+      "player_b": "1274718479316156508",
+      "started_at": 1788015351.9635382,
+      "channel_id": 1543259382723125388
     }
   },
   "weekly": {
@@ -2168,11 +2171,19 @@
       {
         "timestamp": 1786402487.114354,
         "partner_id": "1310677632769327257"
+      },
+      {
+        "timestamp": 1788015252.185156,
+        "partner_id": "1310677632769327257"
       }
     ],
     "1310677632769327257": [
       {
         "timestamp": 1786402487.114354,
+        "partner_id": "1466515237976150272"
+      },
+      {
+        "timestamp": 1788015252.185156,
         "partner_id": "1466515237976150272"
       }
     ],
@@ -2760,8 +2771,8 @@
     "604257673713549341": 1786303138.4478989,
     "745747833210142784": 1786328020.9832516,
     "1168173661707059325": 1786328020.9832516,
-    "1466515237976150272": 1786402487.114354,
-    "1310677632769327257": 1786402487.114354,
+    "1466515237976150272": 1788015252.185156,
+    "1310677632769327257": 1788015252.185156,
     "953055801252143175": 1786409052.8760228,
     "1185475801248964658": 1786409052.8760228,
     "1200857762922496121": 1786423092.3809495,
@@ -3652,14 +3663,14 @@
     },
     "1051844078184173573": {
       "drop": 0,
-      "claim": 4
+      "claim": 3
     },
     "693503862191030343": {
       "drop": 13,
       "claim": 11
     },
     "842906805406924840": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "755931249708630108": {
@@ -4556,7 +4567,7 @@
     },
     "1366637983478054978": {
       "drop": 0,
-      "claim": 2
+      "claim": 0
     },
     "1036390856313286696": {
       "drop": 13,
@@ -5188,7 +5199,7 @@
     },
     "1428341890025259091": {
       "drop": 0,
-      "claim": 7
+      "claim": 6
     },
     "1271546566334873630": {
       "drop": 0,
@@ -5419,8 +5430,8 @@
       "claim": 0
     },
     "931469645897166888": {
-      "drop": 12,
-      "claim": 9
+      "drop": 11,
+      "claim": 8
     },
     "1362911474573639680": {
       "drop": 0,
@@ -8431,7 +8442,7 @@
       "claim": 11
     },
     "1310028877485314098": {
-      "drop": 12,
+      "drop": 11,
       "claim": 10
     },
     "978303489845379133": {
