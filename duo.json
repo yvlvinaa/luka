@@ -498,7 +498,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 30,
+      "progress": 33,
       "id": "2b9b717c-1b84-4778-b8ba-624eec85befa",
       "player_a": "1183826856449953822",
       "player_b": "1095575350035091476",
@@ -594,7 +594,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 51,
       "id": "47a4dec6-20e4-428a-ad6d-c7d1310a9e28",
       "player_a": "661202852244488192",
       "player_b": "908254172074352641",
@@ -616,7 +616,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 41,
+      "progress": 42,
       "id": "371b61f2-be80-46de-b29d-10c9a54baeed",
       "player_a": "900306697850064936",
       "player_b": "814791323029995522",
@@ -627,7 +627,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 51,
       "id": "45824fb1-2edc-4215-b282-24d4ae5351e5",
       "player_a": "1487041378918858924",
       "player_b": "1468648929783709768",
@@ -638,7 +638,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 41,
+      "progress": 42,
       "id": "e6356337-26f0-4c1b-818f-81ab79740dd4",
       "player_a": "1508236825557209179",
       "player_b": "1152969942820466819",
@@ -671,7 +671,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 19,
+      "progress": 20,
       "id": "f475ff46-6cf4-4831-993c-4e5986a23d45",
       "player_a": "1274155690331734175",
       "player_b": "894445820613644318",
@@ -691,7 +691,8 @@
         "Ifa",
         "Kanata Shinkai",
         "Ritsuka Uenoyama",
-        "Touko Nanami"
+        "Touko Nanami",
+        "Wei Wuxian"
       ],
       "id": "25c7f761-ba18-465d-a27e-96fab4f1f386",
       "player_a": "433218038385344532",
@@ -724,7 +725,9 @@
         "Jojo\u2019s Bizarre Adventure",
         "Noctilucent: Before Dawn",
         "Wuthering Waves",
-        "Puella Magi Madoka Magica"
+        "Puella Magi Madoka Magica",
+        "Little Mushroom",
+        "Final Fantasy"
       ],
       "id": "280e43e1-0664-4862-a140-94763f429993",
       "player_a": "994686213967577199",
@@ -736,7 +739,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 5,
+      "progress": 6,
       "id": "9539aeb6-9372-4dc0-88fa-b696b50b5c7e",
       "player_a": "745734578005737623",
       "player_b": "1000002084667658290",
@@ -753,6 +756,20 @@
       "player_b": "714581544462712974",
       "started_at": 1788088709.7657516,
       "channel_id": 1543304551594070176
+    },
+    "6a9c42c1-288f-4345-a0fa-98965650e3a6": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "My Hero Academia"
+      ],
+      "id": "6a9c42c1-288f-4345-a0fa-98965650e3a6",
+      "player_a": "1454914344792883305",
+      "player_b": "743938831107096637",
+      "started_at": 1788090623.5815134,
+      "channel_id": 1543582638785175652
     }
   },
   "weekly": {
