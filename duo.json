@@ -383,7 +383,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 45,
+      "progress": 46,
       "id": "300c406a-f0c2-4d69-a4a0-71473e082d3b",
       "player_a": "1028046694992064512",
       "player_b": "934498436575813693",
@@ -684,7 +684,8 @@
       "label": "Obtain 20 unique characters together",
       "progress": 0,
       "characters_seen": [
-        "Kurapika"
+        "Kurapika",
+        "Lee Sa-young"
       ],
       "id": "e51ac98c-b873-4802-8acc-6612aba3d84f",
       "player_a": "1310677632769327257",
@@ -702,6 +703,17 @@
       "player_b": "1465450153182761172",
       "started_at": 1788560388.063708,
       "channel_id": 1543249330797019286
+    },
+    "699f1dd8-9b83-4f27-a9c3-3b074cd88763": {
+      "type": "claim_rarity4",
+      "target": 10,
+      "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
+      "progress": 0,
+      "id": "699f1dd8-9b83-4f27-a9c3-3b074cd88763",
+      "player_a": "749958760532934736",
+      "player_b": "755211531674845235",
+      "started_at": 1788561064.248603,
+      "channel_id": 1543275611663896706
     }
   },
   "weekly": {
