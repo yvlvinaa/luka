@@ -101,6 +101,9 @@ def _load_inventories_json():
 #   - members: guild.members is genuinely iterated by real commands --
 #     `lgive @everyone`/role targeting and `lresetinventories` both walk
 #     the full member list, so this stays enabled per spec.
+#   - messages: required to actually receive on_message events at all --
+#     without this, Discord never dispatches message events to the bot
+#     in the first place, regardless of message_content below.
 #   - message_content: every command is read from plain message text.
 # Everything else (presences, voice_states, typing, invites, webhooks,
 # scheduled_events, auto_moderation, etc.) is disabled -- grepped the
@@ -111,6 +114,7 @@ def _load_inventories_json():
 intents = discord.Intents.none()
 intents.guilds = True
 intents.members = True
+intents.messages = True
 intents.message_content = True
 
 # Global Configurations
