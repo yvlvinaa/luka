@@ -96,7 +96,22 @@ def _load_inventories_json():
 
 
 # Initialize intents
-intents = discord.Intents.all()
+# Narrowed from Intents.all() down to only what's actually used:
+#   - guilds: baseline guild/channel data (required for virtually anything).
+#   - members: guild.members is genuinely iterated by real commands --
+#     `lgive @everyone`/role targeting and `lresetinventories` both walk
+#     the full member list, so this stays enabled per spec.
+#   - message_content: every command is read from plain message text.
+# Everything else (presences, voice_states, typing, invites, webhooks,
+# scheduled_events, auto_moderation, etc.) is disabled -- grepped the
+# whole file first and confirmed zero references to presence/activity/
+# status/voice/typing anywhere, so none of it was ever actually used.
+# This only changes what discord.py caches/receives from the gateway;
+# it doesn't touch any command logic, targeting, or behavior.
+intents = discord.Intents.none()
+intents.guilds = True
+intents.members = True
+intents.message_content = True
 
 # Global Configurations
 DROP_COOLDOWN = 600
@@ -2279,12 +2294,12 @@ async def _run_mail_sending_flow(bot, channel, sender, target_user) -> None:
     # target_user.
     if is_sender_blocked(sender.id, target_user.id):
         await channel.send(
-            f"🚫 You can't send mail to **{target_user.display_name}** -- they aren't accepting mail from you."
+            f"You can't send mail to **{target_user.display_name}** -- they aren't accepting mail from you."
         )
         return
 
     await channel.send(
-        f"✉️ What would you like to send to **{target_user.display_name}**? "
+        f"What would you like to send to **{target_user.display_name}**? "
         "Type your message now."
     )
 
@@ -2294,14 +2309,14 @@ async def _run_mail_sending_flow(bot, channel, sender, target_user) -> None:
     try:
         mail_msg = await bot.wait_for("message", check=check, timeout=180)
     except asyncio.TimeoutError:
-        await channel.send("❌ Timed out waiting for your mail message.")
+        await channel.send("Timed out waiting for your mail message.")
         return
 
     mail_content = mail_msg.content.strip()
     if not mail_content:
         await reply(
             mail_msg,
-            "❌ Mail message can't be empty. Please try again."
+            "Mail message can't be empty. Please try again."
         )
         return
 
@@ -2324,11 +2339,11 @@ async def _run_mail_sending_flow(bot, channel, sender, target_user) -> None:
             mailbox.remove(letter)
             await reply(
                 mail_msg,
-                "❌ Something went wrong saving your mail. Please try again."
+                "Something went wrong saving your mail. Please try again."
             )
             return
 
-    await reply(mail_msg, f"✅ Mail sent to **{target_user.display_name}**!")
+    await reply(mail_msg, f"Mail sent to **{target_user.display_name}**!")
 
 
 def _looks_like_bot_command(content_lower: str) -> bool:
@@ -5272,6 +5287,21 @@ _gradient_cache = {}
 # spinning up (and tearing down) a new pool on every single call.
 _render_executor = ThreadPoolExecutor(max_workers=2)
 
+# Separate, dedicated fixed-size executor for the OUTER render_drop()
+# call itself -- distinct from _render_executor above, which is used
+# INSIDE render_drop to render its two cards concurrently (an inner
+# concern). Every render_drop() invocation builds a large combined-image
+# buffer (~58MB at this resolution); dispatching the outer call through
+# this dedicated 2-worker pool instead of asyncio's shared default
+# executor (loop.run_in_executor(None, ...)) caps how many drops can be
+# rendering AT ONCE across the whole bot -- a burst of simultaneous `ld`
+# calls queues and waits its turn instead of each allocating one of
+# these buffers in parallel without limit. This only limits how many
+# renders run concurrently; it never changes drop selection, drop
+# rates, cooldowns, timing, claiming, or any other gameplay behavior --
+# and a single render's own speed/output is unaffected either way.
+_drop_render_executor = ThreadPoolExecutor(max_workers=2)
+
 
 # ---------------------------------------------------------------------------
 # HELPERS
@@ -5707,6 +5737,18 @@ def render_card(card: dict, print_num, hide_print: bool = False, force_real_prin
     # 1. Artwork
     art_source = load_artwork_source(card.get("image", ""), card_id=card.get("id"))
     canvas = center_crop_to_fill(art_source).convert("RGBA")
+    # Release the original decoded artwork immediately -- center_crop_to_fill
+    # already produced a fully independent resized+cropped copy (PIL's
+    # resize() always allocates fresh pixel data; it is never a lazy
+    # view onto the source image), and load_artwork_source() never
+    # returns a cached/shared object, so nothing anywhere below this
+    # line, or after render_card() returns, ever reads art_source
+    # again. Freeing it here (rather than waiting for it to fall out of
+    # scope at the end of this function) is a real RAM saving,
+    # especially with several cards rendering concurrently. Does not
+    # change canvas/the rendered result in any way.
+    art_source.close()
+    del art_source
 
     # 2. Gradient (color depends on frame -- common stays gray, rare
     # frames get their own subtle tint via FRAME_GRADIENT_COLORS).
@@ -6744,11 +6786,11 @@ class MailboxPaginationView(discord.ui.View):
 
     def build_embed(self) -> discord.Embed:
         letter = self.letters[self.page]
-        status = "⚪ Read" if letter.get("read") else "🟢 Unread"
+        status = "Read" if letter.get("read") else "Unread"
 
         embed = discord.Embed(
             color=THEME_COLOR,
-            title=f"✉️ Mail from {letter.get('_sender_name', 'Unknown user')}",
+            title=f"Mail from {letter.get('_sender_name', 'Unknown user')}",
             description=f"### {letter.get('message')}" if letter.get("message") else "*(empty message)*",
         )
         if letter.get("_sender_avatar"):
@@ -6812,7 +6854,7 @@ class MailboxPaginationView(discord.ui.View):
                         real_letter["read"] = False
                         break
                 return await interaction.response.send_message(
-                    "❌ Something went wrong saving your mail. Please try again.", ephemeral=True
+                    "Something went wrong saving your mail. Please try again.", ephemeral=True
                 )
 
         letter["read"] = True
@@ -6855,7 +6897,7 @@ class MailboxPaginationView(discord.ui.View):
             )
 
         await interaction.response.send_message(
-            f"✉️ Replying to **{sender_user.display_name}** -- check below!",
+            f"Replying to **{sender_user.display_name}** -- check below!",
             ephemeral=True
         )
 
@@ -6922,19 +6964,19 @@ class MailboxPaginationView(discord.ui.View):
                 else:
                     get_blocked_senders(self.user_id).remove(str(sender_id))
                 return await interaction.response.send_message(
-                    "❌ Something went wrong saving that. Please try again.", ephemeral=True
+                    "Something went wrong saving that. Please try again.", ephemeral=True
                 )
 
         self._update_button_states()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
         if currently_blocked:
             await interaction.followup.send(
-                f"✅ Unblocked **{letter.get('_sender_name', 'this user')}** -- they can send you mail again.",
+                f"Unblocked **{letter.get('_sender_name', 'this user')}** -- they can send you mail again.",
                 ephemeral=True
             )
         else:
             await interaction.followup.send(
-                f"🚫 Blocked **{letter.get('_sender_name', 'this user')}** -- they can no longer send you mail.",
+                f"Blocked **{letter.get('_sender_name', 'this user')}** -- they can no longer send you mail.",
                 ephemeral=True
             )
 
@@ -6970,7 +7012,7 @@ class MailboxPaginationView(discord.ui.View):
                     if real_letter.get("id") in newly_read_ids:
                         real_letter["read"] = False
                 return await interaction.response.send_message(
-                    "❌ Something went wrong saving your mail. Please try again.", ephemeral=True
+                    "Something went wrong saving your mail. Please try again.", ephemeral=True
                 )
 
         # Reflect the change in this view's own (already-fetched) copy
@@ -9955,7 +9997,7 @@ class Client(discord.Client):
         # intercepts ordinary chat messages -- only actual `l...`
         # command attempts.
         if maintenance.get("active") and user_id not in OWNER_USER_IDS and _looks_like_bot_command(content_lower):
-            return await reply(message, "🛠️ The bot is currently under maintenance. Please try again shortly.")
+            return await reply(message, "The bot is currently under maintenance, please check <#1540476573608706179> for updates.")
 
         # =========================
         # UNREAD MAIL REMINDER
@@ -12471,7 +12513,7 @@ class Client(discord.Client):
                     reverse=True,
                 )
                 if not letters:
-                    return await reply(message, "📭 Your mailbox is empty.")
+                    return await reply(message, "Your mailbox is empty.")
 
                 enriched_letters = await _resolve_mail_sender_info(self, letters)
                 view = MailboxPaginationView(enriched_letters, message.author.id)
@@ -13266,7 +13308,7 @@ class Client(discord.Client):
             display_print2 = card2["_recycled_print"] if card2.get("_recycled_entry_id") is not None else peek_next_print(card2["id"])
 
             image_path = await loop.run_in_executor(
-                None,
+                _drop_render_executor,
                 render_drop,
                 card1,
                 display_print1,
