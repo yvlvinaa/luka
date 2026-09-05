@@ -730,7 +730,8 @@
         "Ryu",
         "Nana Komatsu",
         "Pinkie Pie",
-        "Jo Kongoza"
+        "Jo Kongoza",
+        "Jolyne Cujoh"
       ],
       "id": "3aae79a9-2dac-4e70-bc38-8e80c7292e4a",
       "player_a": "1245817648193867876",
@@ -788,7 +789,8 @@
         "Morvay",
         "Wakatoshi Ushijima",
         "MEIKO",
-        "Park Minseong"
+        "Park Minseong",
+        "Ukinami Yuzuha"
       ],
       "id": "cef1b0f8-1556-48dc-aa59-75bfd00b2eb9",
       "player_a": "1454914344792883305",
@@ -800,7 +802,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 26,
+      "progress": 27,
       "id": "d5ce1cbd-96bc-43c8-8041-149a8d22c1ae",
       "player_a": "735119062585049229",
       "player_b": "617162611687161859",
@@ -882,6 +884,20 @@
       "player_b": "1295041201095053515",
       "started_at": 1788603956.3171806,
       "channel_id": 1543415709445656627
+    },
+    "a4b56cb3-84ef-4c48-9a07-59d7c4e5a3a1": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "DC"
+      ],
+      "id": "a4b56cb3-84ef-4c48-9a07-59d7c4e5a3a1",
+      "player_a": "800838590606606346",
+      "player_b": "774481019822669824",
+      "started_at": 1788604733.4771883,
+      "channel_id": 1543317892274196571
     }
   },
   "weekly": {
