@@ -70,7 +70,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 7,
+      "progress": 8,
       "id": "6f28b3c3-dbf9-45c6-88f8-a7d6a53fc977",
       "player_a": "534547375033679873",
       "player_b": "1085294225182183514",
@@ -246,7 +246,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 5,
+      "progress": 6,
       "id": "dab8ef3d-d9eb-47ee-a778-73eac07bf82c",
       "player_a": "768645666851258371",
       "player_b": "488009745609916417",
@@ -498,7 +498,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 21,
+      "progress": 22,
       "id": "91f32540-b1f4-4dd7-814d-effebc7673f7",
       "player_a": "1194615343394607124",
       "player_b": "875492710973329439",
@@ -594,7 +594,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 51,
+      "progress": 57,
       "id": "f475ff46-6cf4-4831-993c-4e5986a23d45",
       "player_a": "1274155690331734175",
       "player_b": "894445820613644318",
@@ -649,7 +649,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 27,
+      "progress": 28,
       "id": "ee4b19cb-b381-41b7-a70c-48283337e2a8",
       "player_a": "1229889322698674216",
       "player_b": "1273022793931292694",
@@ -715,7 +715,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 11,
+      "progress": 13,
       "id": "369451ff-ac4b-4595-b47f-b9e688a36aed",
       "player_a": "1466515237976150272",
       "player_b": "1231316819395084340",
@@ -734,7 +734,8 @@
         "Edmond",
         "Kiyotaka Ayanokoji",
         "Hotori",
-        "Narciso Anasui"
+        "Narciso Anasui",
+        "Columbina"
       ],
       "id": "3aae79a9-2dac-4e70-bc38-8e80c7292e4a",
       "player_a": "1245817648193867876",
@@ -757,7 +758,9 @@
         "Shin Tsukinami",
         "Alma",
         "Lain Iwakura",
-        "Ryomen Sukuna"
+        "Ryomen Sukuna",
+        "Sephiroth",
+        "Lennox Ram"
       ],
       "id": "489f610c-0ea9-4b03-80f5-ed3c28382881",
       "player_a": "1401622768214347796",
@@ -783,7 +786,8 @@
         "Nunnally Lamperouge",
         "Kang Seo-an",
         "Makoto Niijima",
-        "Nagisa Momoe & Mami Tomoe"
+        "Nagisa Momoe & Mami Tomoe",
+        "Ram"
       ],
       "id": "23439946-25a0-454c-b7af-c8c3234ede44",
       "player_a": "1271962211606204560",
@@ -813,7 +817,10 @@
         "Zoya",
         "Himmel",
         "Ishmael",
-        "Asuka Langley"
+        "Asuka Langley",
+        "Daredevil",
+        "Mami Tomoe",
+        "Anton"
       ],
       "id": "b5492c14-3a1e-4c20-94a7-6738ee39632e",
       "player_a": "1210501746477244438",
@@ -827,13 +834,45 @@
       "label": "Claim cards from 15 different series together",
       "progress": 0,
       "series_seen": [
-        "Zenless Zone Zero"
+        "Zenless Zone Zero",
+        "Idoly Pride",
+        "Jujutsu Kaisen",
+        "WINX CLUB",
+        "Masked by Love",
+        "DC",
+        "Toilet-bound Hanako-kun"
       ],
       "id": "a1da8380-5eba-4be3-a4e4-d94ed28b782a",
       "player_a": "968501068524818542",
       "player_b": "998695603359977553",
       "started_at": 1788579657.5697021,
       "channel_id": 1542982405231485080
+    },
+    "38f15942-1c37-44c4-bbc3-ecb120f46dcd": {
+      "type": "claim_rarity4",
+      "target": 10,
+      "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
+      "progress": 0,
+      "id": "38f15942-1c37-44c4-bbc3-ecb120f46dcd",
+      "player_a": "1441925768199278643",
+      "player_b": "1065199150498590782",
+      "started_at": 1788580865.1094432,
+      "channel_id": 1543207374670659724
+    },
+    "cd2e95e3-7f09-4c75-8236-f7b9a93b3aa9": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "19 Days",
+        "MILGRAM"
+      ],
+      "id": "cd2e95e3-7f09-4c75-8236-f7b9a93b3aa9",
+      "player_a": "886247125292306432",
+      "player_b": "1125010005066784860",
+      "started_at": 1788581339.8866343,
+      "channel_id": 1543397903949631571
     }
   },
   "weekly": {
@@ -3881,7 +3920,7 @@
     },
     "827119373323206657": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "838565209287032893": {
       "drop": 0,
@@ -4180,7 +4219,7 @@
       "claim": 0
     },
     "968786127081328660": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "224627689909256192": {
@@ -5148,8 +5187,8 @@
       "claim": 0
     },
     "1468926708064325632": {
-      "drop": 1,
-      "claim": 1
+      "drop": 0,
+      "claim": 0
     },
     "900987751447539772": {
       "drop": 0,
@@ -9197,7 +9236,7 @@
     },
     "1508236825557209179": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "1405216217387765780": {
       "drop": 0,
