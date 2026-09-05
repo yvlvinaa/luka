@@ -627,7 +627,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 40,
+      "progress": 41,
       "id": "ee4b19cb-b381-41b7-a70c-48283337e2a8",
       "player_a": "1229889322698674216",
       "player_b": "1273022793931292694",
@@ -671,7 +671,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 45,
+      "progress": 46,
       "id": "c22818f1-4d12-428b-b157-bcce6548b7c6",
       "player_a": "1299833889166065743",
       "player_b": "772183077996331009",
@@ -742,22 +742,11 @@
       "started_at": 1788580865.1094432,
       "channel_id": 1543207374670659724
     },
-    "07464f85-e40c-470c-8f99-24d2f7ab7ad3": {
-      "type": "claim_count",
-      "target": 60,
-      "label": "Claim 60 cards together",
-      "progress": 59,
-      "id": "07464f85-e40c-470c-8f99-24d2f7ab7ad3",
-      "player_a": "826335464532607031",
-      "player_b": "1204473206077919295",
-      "started_at": 1788582509.0358865,
-      "channel_id": 1543389320373862461
-    },
     "d5ce1cbd-96bc-43c8-8041-149a8d22c1ae": {
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 57,
+      "progress": 58,
       "id": "d5ce1cbd-96bc-43c8-8041-149a8d22c1ae",
       "player_a": "735119062585049229",
       "player_b": "617162611687161859",
@@ -790,7 +779,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 8,
+      "progress": 9,
       "id": "bfbf203d-3da3-419d-b1ed-ecf4a87d93e8",
       "player_a": "775822038601564201",
       "player_b": "842906805406924840",
@@ -801,7 +790,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 22,
+      "progress": 23,
       "id": "35e30413-66b7-4b2c-ad76-2cb80e2f65c7",
       "player_a": "1332218021103534121",
       "player_b": "1293557714420498435",
@@ -825,7 +814,8 @@
         "Ayato Sakamaki",
         "Nagi",
         "Eiji Okumura",
-        "Naomi Nakashima"
+        "Naomi Nakashima",
+        "Eunyung Baek"
       ],
       "id": "f4e4903a-74cf-4e56-a783-47d6bd1f5a25",
       "player_a": "1334019193430872075",
@@ -869,7 +859,8 @@
         "Spongebob Squarepants",
         "Ensemble Stars!",
         "WINX CLUB",
-        "Tokyo Debunker"
+        "Tokyo Debunker",
+        "School Bus Graveyard"
       ],
       "id": "a4b56cb3-84ef-4c48-9a07-59d7c4e5a3a1",
       "player_a": "800838590606606346",
@@ -965,11 +956,19 @@
       {
         "timestamp": 1786497493.3841465,
         "partner_id": "1241187747071397910"
+      },
+      {
+        "timestamp": 1788620574.4480665,
+        "partner_id": "1204473206077919295"
       }
     ],
     "1204473206077919295": [
       {
         "timestamp": 1786069584.3804038,
+        "partner_id": "826335464532607031"
+      },
+      {
+        "timestamp": 1788620574.4480665,
         "partner_id": "826335464532607031"
       }
     ],
@@ -2985,8 +2984,8 @@
     "1258264908546445323": 1786068994.3756974,
     "1089542400134885488": 1786069506.6626718,
     "870418340072530011": 1786069506.6626718,
-    "826335464532607031": 1786497493.3841465,
-    "1204473206077919295": 1786069584.3804038,
+    "826335464532607031": 1788620574.4480665,
+    "1204473206077919295": 1788620574.4480665,
     "1271962211606204560": 1788587154.1663878,
     "1076350464288903258": 1786070270.9438894,
     "843391240254652416": 1786070314.5427434,
@@ -3666,7 +3665,7 @@
     },
     "826335464532607031": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "539981369477038091": {
       "drop": 0,
@@ -4266,7 +4265,7 @@
     },
     "1204473206077919295": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "1386525883300581386": {
       "drop": 0,
@@ -6765,7 +6764,7 @@
       "claim": 0
     },
     "1022487940137492540": {
-      "drop": 1,
+      "drop": 0,
       "claim": 1
     },
     "1220465243092946978": {
@@ -9433,6 +9432,10 @@
       "claim": 0
     },
     "1003626508860018709": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1286641208176934996": {
       "drop": 0,
       "claim": 0
     }
