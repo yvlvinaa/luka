@@ -509,7 +509,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 18,
+      "progress": 19,
       "id": "91f32540-b1f4-4dd7-814d-effebc7673f7",
       "player_a": "1194615343394607124",
       "player_b": "875492710973329439",
@@ -583,7 +583,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 41,
+      "progress": 42,
       "id": "4b9ea43d-addc-4643-bab3-c07dde161219",
       "player_a": "224627689909256192",
       "player_b": "762127115721637898",
@@ -605,7 +605,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 40,
+      "progress": 44,
       "id": "f475ff46-6cf4-4831-993c-4e5986a23d45",
       "player_a": "1274155690331734175",
       "player_b": "894445820613644318",
@@ -616,7 +616,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 8,
+      "progress": 9,
       "id": "1f1762f3-151f-4380-a18b-dc98ead32df8",
       "player_a": "1289020313514020979",
       "player_b": "952513851981725736",
@@ -649,7 +649,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 24,
+      "progress": 26,
       "id": "e31917a5-c88e-4f23-a6e6-ec0cf3d5aaee",
       "player_a": "1022487940137492540",
       "player_b": "1279518782838276148",
@@ -660,7 +660,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 14,
+      "progress": 15,
       "id": "ee4b19cb-b381-41b7-a70c-48283337e2a8",
       "player_a": "1229889322698674216",
       "player_b": "1273022793931292694",
@@ -671,7 +671,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 30,
+      "progress": 34,
       "id": "17686117-838e-4f79-a3d6-cadf21e812bb",
       "player_a": "1468648929783709768",
       "player_b": "1465450153182761172",
@@ -727,7 +727,12 @@
         "Valko",
         "Ji Eunoh",
         "Park Minseong",
-        "Akira Mikado"
+        "Akira Mikado",
+        "Wanderer",
+        "Olruggio",
+        "Melissa Shield",
+        "Woo Jinhyeong",
+        "Lucia"
       ],
       "id": "dc56a189-9735-4bd3-8efc-8e0b571a755c",
       "player_a": "960884355805351977",
@@ -739,7 +744,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 9,
+      "progress": 12,
       "id": "c22818f1-4d12-428b-b157-bcce6548b7c6",
       "player_a": "1299833889166065743",
       "player_b": "772183077996331009",
@@ -750,7 +755,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 3,
+      "progress": 6,
       "id": "369451ff-ac4b-4595-b47f-b9e688a36aed",
       "player_a": "1466515237976150272",
       "player_b": "1231316819395084340",
@@ -764,13 +769,32 @@
       "progress": 0,
       "characters_seen": [
         "Nagisa Ran",
-        "Madoka Kaname"
+        "Madoka Kaname",
+        "Colleague",
+        "Edmond"
       ],
       "id": "3aae79a9-2dac-4e70-bc38-8e80c7292e4a",
       "player_a": "1245817648193867876",
       "player_b": "627783823375204362",
       "started_at": 1788571347.7684536,
       "channel_id": 1543214590022910032
+    },
+    "489f610c-0ea9-4b03-80f5-ed3c28382881": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Kanato Sakamaki",
+        "Gi Taerim",
+        "Hitori Gotou",
+        "Tatsuomi Ban"
+      ],
+      "id": "489f610c-0ea9-4b03-80f5-ed3c28382881",
+      "player_a": "1401622768214347796",
+      "player_b": "1208748350523052062",
+      "started_at": 1788572055.105199,
+      "channel_id": 1540149985650282596
     }
   },
   "weekly": {
@@ -4032,7 +4056,7 @@
     },
     "1310677632769327257": {
       "drop": 0,
-      "claim": 1
+      "claim": 0
     },
     "1212385059546472460": {
       "drop": 0,
@@ -9155,6 +9179,10 @@
       "claim": 0
     },
     "1029068754526687232": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1117032031881277501": {
       "drop": 0,
       "claim": 0
     }
