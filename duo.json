@@ -594,7 +594,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 14,
+      "progress": 15,
       "id": "1f1762f3-151f-4380-a18b-dc98ead32df8",
       "player_a": "1289020313514020979",
       "player_b": "952513851981725736",
@@ -627,7 +627,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 42,
+      "progress": 43,
       "id": "e31917a5-c88e-4f23-a6e6-ec0cf3d5aaee",
       "player_a": "1022487940137492540",
       "player_b": "1279518782838276148",
@@ -787,7 +787,8 @@
         "Sousuke Shima",
         "Morvay",
         "Wakatoshi Ushijima",
-        "MEIKO"
+        "MEIKO",
+        "Park Minseong"
       ],
       "id": "cef1b0f8-1556-48dc-aa59-75bfd00b2eb9",
       "player_a": "1454914344792883305",
@@ -843,7 +844,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 5,
+      "progress": 7,
       "id": "35e30413-66b7-4b2c-ad76-2cb80e2f65c7",
       "player_a": "1332218021103534121",
       "player_b": "1293557714420498435",
@@ -859,12 +860,27 @@
         "Eva Tsunaka",
         "Kishiar la Orr",
         "Minato Yukina",
-        "Sae Itoshi"
+        "Sae Itoshi",
+        "Frieren"
       ],
       "id": "f4e4903a-74cf-4e56-a783-47d6bd1f5a25",
       "player_a": "1334019193430872075",
       "player_b": "1382686382690013196",
       "started_at": 1788601247.4090438,
+      "channel_id": 1543415709445656627
+    },
+    "ed6259c4-0dc0-427f-a1f9-42a667424697": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "Under The Green Light"
+      ],
+      "id": "ed6259c4-0dc0-427f-a1f9-42a667424697",
+      "player_a": "1273199528614563961",
+      "player_b": "1295041201095053515",
+      "started_at": 1788603956.3171806,
       "channel_id": 1543415709445656627
     }
   },
