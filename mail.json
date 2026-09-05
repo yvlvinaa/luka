@@ -1292,7 +1292,7 @@
       "receiver_id": "1310677632769327257",
       "timestamp": 1788600488.205069,
       "message": "Hi",
-      "read": false
+      "read": true
     },
     {
       "id": "a1af2fe1-1700-406b-9e3f-53c98f0a6822",
@@ -1300,7 +1300,7 @@
       "receiver_id": "1310677632769327257",
       "timestamp": 1788600498.8422458,
       "message": "I am Mike",
-      "read": false
+      "read": true
     }
   ],
   "1466515237976150272": [
@@ -5989,6 +5989,14 @@
       "timestamp": 1788474422.2589824,
       "message": "I love you",
       "read": true
+    },
+    {
+      "id": "6e5e1b7a-22a3-4397-af51-c6846901860c",
+      "sender_id": "800838590606606346",
+      "receiver_id": "774481019822669824",
+      "timestamp": 1788601966.326793,
+      "message": "\ud83c\udf2d",
+      "read": false
     }
   ],
   "1359716535077179463": [],
