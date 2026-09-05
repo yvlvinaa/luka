@@ -246,7 +246,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 3,
+      "progress": 4,
       "id": "dab8ef3d-d9eb-47ee-a778-73eac07bf82c",
       "player_a": "768645666851258371",
       "player_b": "488009745609916417",
@@ -671,7 +671,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 29,
+      "progress": 30,
       "id": "17686117-838e-4f79-a3d6-cadf21e812bb",
       "player_a": "1468648929783709768",
       "player_b": "1465450153182761172",
@@ -725,7 +725,9 @@
         "Cielomort",
         "Hestia",
         "Valko",
-        "Ji Eunoh"
+        "Ji Eunoh",
+        "Park Minseong",
+        "Akira Mikado"
       ],
       "id": "dc56a189-9735-4bd3-8efc-8e0b571a755c",
       "player_a": "960884355805351977",
@@ -754,6 +756,21 @@
       "player_b": "1231316819395084340",
       "started_at": 1788570246.9786613,
       "channel_id": 1542673844349837322
+    },
+    "3aae79a9-2dac-4e70-bc38-8e80c7292e4a": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Nagisa Ran",
+        "Madoka Kaname"
+      ],
+      "id": "3aae79a9-2dac-4e70-bc38-8e80c7292e4a",
+      "player_a": "1245817648193867876",
+      "player_b": "627783823375204362",
+      "started_at": 1788571347.7684536,
+      "channel_id": 1543214590022910032
     }
   },
   "weekly": {
