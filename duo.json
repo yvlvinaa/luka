@@ -671,7 +671,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 50,
+      "progress": 51,
       "id": "c22818f1-4d12-428b-b157-bcce6548b7c6",
       "player_a": "1299833889166065743",
       "player_b": "772183077996331009",
@@ -780,7 +780,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 27,
+      "progress": 28,
       "id": "35e30413-66b7-4b2c-ad76-2cb80e2f65c7",
       "player_a": "1332218021103534121",
       "player_b": "1293557714420498435",
@@ -891,7 +891,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 2,
+      "progress": 3,
       "id": "8fc0bf8b-5ec2-4904-8c8c-9cce562969c9",
       "player_a": "772144591251177503",
       "player_b": "768496552477589534",
@@ -914,6 +914,20 @@
       "player_b": "1502170773211582616",
       "started_at": 1788622659.73664,
       "channel_id": 1543207374670659724
+    },
+    "0b5d5455-01f6-4e4b-8dfb-b175155f53bb": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Millie Parfait"
+      ],
+      "id": "0b5d5455-01f6-4e4b-8dfb-b175155f53bb",
+      "player_a": "1054746696019615775",
+      "player_b": "643593256713584670",
+      "started_at": 1788623839.219852,
+      "channel_id": 1543770626425098342
     }
   },
   "weekly": {
@@ -9469,6 +9483,14 @@
       "claim": 0
     },
     "1286641208176934996": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1379599903319392318": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1524732095803424818": {
       "drop": 0,
       "claim": 0
     }
