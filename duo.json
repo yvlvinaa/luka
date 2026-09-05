@@ -498,7 +498,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 22,
+      "progress": 23,
       "id": "91f32540-b1f4-4dd7-814d-effebc7673f7",
       "player_a": "1194615343394607124",
       "player_b": "875492710973329439",
@@ -572,7 +572,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 44,
+      "progress": 45,
       "id": "4b9ea43d-addc-4643-bab3-c07dde161219",
       "player_a": "224627689909256192",
       "player_b": "762127115721637898",
@@ -752,7 +752,9 @@
         "Sephiroth",
         "Lennox Ram",
         "Ohn Wooju",
-        "Kakania"
+        "Kakania",
+        "Yoruichi Shihouin",
+        "Futaba Sakura"
       ],
       "id": "489f610c-0ea9-4b03-80f5-ed3c28382881",
       "player_a": "1401622768214347796",
@@ -782,7 +784,8 @@
         "Ram",
         "Orihime Inoue",
         "Ellen Joe",
-        "Jun Sazanami"
+        "Jun Sazanami",
+        "Zani"
       ],
       "id": "23439946-25a0-454c-b7af-c8c3234ede44",
       "player_a": "1271962211606204560",
@@ -819,7 +822,9 @@
         "Yuki Yoshikawa",
         "Shou Tenkubashi",
         "Ten Murakumo",
-        "Jin Cheong-Woo & Matthew Raynor"
+        "Jin Cheong-Woo & Matthew Raynor",
+        "Kou Mabuchi",
+        "Go Yohan"
       ],
       "id": "b5492c14-3a1e-4c20-94a7-6738ee39632e",
       "player_a": "1210501746477244438",
@@ -842,7 +847,8 @@
         "Toilet-bound Hanako-kun",
         "Honkai Impact 3rd",
         "Persona",
-        "My Hero Academia"
+        "My Hero Academia",
+        "Merry Marbling"
       ],
       "id": "a1da8380-5eba-4be3-a4e4-d94ed28b782a",
       "player_a": "968501068524818542",
@@ -874,7 +880,9 @@
         "Zenless Zone Zero",
         "Limbus Company",
         "Jujutsu Kaisen",
-        "Bungo Stray Dogs"
+        "Bungo Stray Dogs",
+        "KasuRich",
+        "My Hero Academia"
       ],
       "id": "cd2e95e3-7f09-4c75-8236-f7b9a93b3aa9",
       "player_a": "886247125292306432",
@@ -886,12 +894,26 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 9,
+      "progress": 13,
       "id": "07464f85-e40c-470c-8f99-24d2f7ab7ad3",
       "player_a": "826335464532607031",
       "player_b": "1204473206077919295",
       "started_at": 1788582509.0358865,
       "channel_id": 1543389320373862461
+    },
+    "cef1b0f8-1556-48dc-aa59-75bfd00b2eb9": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [
+        "Olivine"
+      ],
+      "id": "cef1b0f8-1556-48dc-aa59-75bfd00b2eb9",
+      "player_a": "1454914344792883305",
+      "player_b": "821574312216756224",
+      "started_at": 1788585484.8289657,
+      "channel_id": 1543214040371699732
     }
   },
   "weekly": {
@@ -3462,7 +3484,7 @@
       "claim": 0
     },
     "1274155690331734175": {
-      "drop": 1,
+      "drop": 0,
       "claim": 1
     },
     "764446760004354048": {
