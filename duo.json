@@ -649,7 +649,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 26,
+      "progress": 27,
       "id": "ee4b19cb-b381-41b7-a70c-48283337e2a8",
       "player_a": "1229889322698674216",
       "player_b": "1273022793931292694",
@@ -782,40 +782,14 @@
         "Logan Fields",
         "Nunnally Lamperouge",
         "Kang Seo-an",
-        "Makoto Niijima"
+        "Makoto Niijima",
+        "Nagisa Momoe & Mami Tomoe"
       ],
       "id": "23439946-25a0-454c-b7af-c8c3234ede44",
       "player_a": "1271962211606204560",
       "player_b": "1249883308075258034",
       "started_at": 1788574394.0643115,
       "channel_id": 1543243298062475335
-    },
-    "91a03369-5f1c-4a1a-8441-fe17f3c53bdb": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "Honkai: Star Rail",
-        "Cyberpunk Edgerunners",
-        "Kaiju No. 8",
-        "Genshin Impact",
-        "Honkai Impact 3rd",
-        "Umamusume: Pretty Derby",
-        "Wuthering Waves",
-        "Messiah Project",
-        "Alien Stage",
-        "Re: Zero - Starting Life in Another World",
-        "Rebound Of The Heart",
-        "Frieren: Beyond Journey\u2019s End",
-        "Zenless Zone Zero",
-        "One Piece"
-      ],
-      "id": "91a03369-5f1c-4a1a-8441-fe17f3c53bdb",
-      "player_a": "1508236825557209179",
-      "player_b": "827119373323206657",
-      "started_at": 1788575234.2346933,
-      "channel_id": 1543688716248416316
     },
     "20763533-f05d-441a-ab08-03126d03ff4f": {
       "type": "claim_rarity4",
@@ -846,6 +820,20 @@
       "player_b": "769484060824698890",
       "started_at": 1788576480.0223958,
       "channel_id": 1543409082462113842
+    },
+    "a1da8380-5eba-4be3-a4e4-d94ed28b782a": {
+      "type": "claim_series",
+      "target": 15,
+      "label": "Claim cards from 15 different series together",
+      "progress": 0,
+      "series_seen": [
+        "Zenless Zone Zero"
+      ],
+      "id": "a1da8380-5eba-4be3-a4e4-d94ed28b782a",
+      "player_a": "968501068524818542",
+      "player_b": "998695603359977553",
+      "started_at": 1788579657.5697021,
+      "channel_id": 1542982405231485080
     }
   },
   "weekly": {
@@ -2783,6 +2771,10 @@
       {
         "timestamp": 1788100381.9780855,
         "partner_id": "1152969942820466819"
+      },
+      {
+        "timestamp": 1788579686.888479,
+        "partner_id": "827119373323206657"
       }
     ],
     "661202852244488192": [
@@ -2825,6 +2817,12 @@
       {
         "timestamp": 1788575414.7642689,
         "partner_id": "764446760004354048"
+      }
+    ],
+    "827119373323206657": [
+      {
+        "timestamp": 1788579686.888479,
+        "partner_id": "1508236825557209179"
       }
     ]
   },
@@ -3110,14 +3108,15 @@
     "1509055520584237137": 1788093342.064984,
     "1183826856449953822": 1788099615.5939064,
     "1095575350035091476": 1788099615.5939064,
-    "1508236825557209179": 1788100381.9780855,
+    "1508236825557209179": 1788579686.888479,
     "661202852244488192": 1788555368.157988,
     "908254172074352641": 1788555368.157988,
     "841292229539528704": 1788555550.0721555,
     "1028046694992064512": 1788568105.9802816,
     "934498436575813693": 1788568105.9802816,
     "1537933905615659049": 1788570212.3039892,
-    "1468926708064325632": 1788575414.7642689
+    "1468926708064325632": 1788575414.7642689,
+    "827119373323206657": 1788579686.888479
   },
   "bonus": {
     "777925664358531102": {
@@ -3882,7 +3881,7 @@
     },
     "827119373323206657": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "838565209287032893": {
       "drop": 0,
@@ -9198,7 +9197,7 @@
     },
     "1508236825557209179": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "1405216217387765780": {
       "drop": 0,
@@ -9253,6 +9252,10 @@
       "claim": 0
     },
     "1117032031881277501": {
+      "drop": 0,
+      "claim": 0
+    },
+    "1376305661079720040": {
       "drop": 0,
       "claim": 0
     }
