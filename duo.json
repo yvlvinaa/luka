@@ -807,33 +807,6 @@
       "started_at": 1788603956.3171806,
       "channel_id": 1543415709445656627
     },
-    "a4b56cb3-84ef-4c48-9a07-59d7c4e5a3a1": {
-      "type": "claim_series",
-      "target": 15,
-      "label": "Claim cards from 15 different series together",
-      "progress": 0,
-      "series_seen": [
-        "DC",
-        "Witch Hat Atelier",
-        "Percy Jackson and The Olympians",
-        "Zenless Zone Zero",
-        "Eddsworld",
-        "One Piece",
-        "Re: Zero - Starting Life in Another World",
-        "Path To Nowhere",
-        "Spongebob Squarepants",
-        "Ensemble Stars!",
-        "WINX CLUB",
-        "Tokyo Debunker",
-        "School Bus Graveyard",
-        "Honkai: Star Rail"
-      ],
-      "id": "a4b56cb3-84ef-4c48-9a07-59d7c4e5a3a1",
-      "player_a": "800838590606606346",
-      "player_b": "774481019822669824",
-      "started_at": 1788604733.4771883,
-      "channel_id": 1543317892274196571
-    },
     "a647ae0d-29b0-4967-baf9-f47e43b5852c": {
       "type": "claim_count",
       "target": 60,
@@ -880,7 +853,8 @@
         "Robin",
         "Luke Davis",
         "Verina",
-        "Skully J. Graves"
+        "Skully J. Graves",
+        "Lee Joobin"
       ],
       "id": "a93c894b-9c7e-4c6c-a95a-bdc9be611733",
       "player_a": "1366637983478054978",
@@ -931,7 +905,8 @@
         "Yoichi Nagumo",
         "Mo Guan Shan",
         "Hanako-kun",
-        "Asuka Langley"
+        "Asuka Langley",
+        "Donald"
       ],
       "id": "8991d600-77d9-45e5-b60c-09364c812a67",
       "player_a": "1409796045118115913",
@@ -3071,6 +3046,18 @@
         "timestamp": 1788627326.7120388,
         "partner_id": "1299833889166065743"
       }
+    ],
+    "800838590606606346": [
+      {
+        "timestamp": 1788630829.906689,
+        "partner_id": "774481019822669824"
+      }
+    ],
+    "774481019822669824": [
+      {
+        "timestamp": 1788630829.906689,
+        "partner_id": "800838590606606346"
+      }
     ]
   },
   "cooldowns": {
@@ -3373,7 +3360,9 @@
     "1279518782838276148": 1788620450.1020567,
     "224627689909256192": 1788626415.2904992,
     "762127115721637898": 1788626415.2904992,
-    "772183077996331009": 1788627326.7120388
+    "772183077996331009": 1788627326.7120388,
+    "800838590606606346": 1788630829.906689,
+    "774481019822669824": 1788630829.906689
   },
   "bonus": {
     "777925664358531102": {
@@ -4869,8 +4858,8 @@
       "claim": 0
     },
     "774481019822669824": {
-      "drop": 0,
-      "claim": 0
+      "drop": 1,
+      "claim": 1
     },
     "1386516937512587424": {
       "drop": 0,
