@@ -498,7 +498,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 25,
+      "progress": 26,
       "id": "91f32540-b1f4-4dd7-814d-effebc7673f7",
       "player_a": "1194615343394607124",
       "player_b": "875492710973329439",
@@ -725,45 +725,14 @@
         "Hotori",
         "Narciso Anasui",
         "Columbina",
-        "Eun Nan-jo"
+        "Eun Nan-jo",
+        "Kanna Kizuchi"
       ],
       "id": "3aae79a9-2dac-4e70-bc38-8e80c7292e4a",
       "player_a": "1245817648193867876",
       "player_b": "627783823375204362",
       "started_at": 1788571347.7684536,
       "channel_id": 1543214590022910032
-    },
-    "489f610c-0ea9-4b03-80f5-ed3c28382881": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Kanato Sakamaki",
-        "Gi Taerim",
-        "Hitori Gotou",
-        "Tatsuomi Ban",
-        "Cerydra",
-        "Uzui Tengen",
-        "Shin Tsukinami",
-        "Alma",
-        "Lain Iwakura",
-        "Ryomen Sukuna",
-        "Sephiroth",
-        "Lennox Ram",
-        "Ohn Wooju",
-        "Kakania",
-        "Yoruichi Shihouin",
-        "Futaba Sakura",
-        "Shishikuno Mogari",
-        "Puruth",
-        "Quanxi"
-      ],
-      "id": "489f610c-0ea9-4b03-80f5-ed3c28382881",
-      "player_a": "1401622768214347796",
-      "player_b": "1208748350523052062",
-      "started_at": 1788572055.105199,
-      "channel_id": 1540149985650282596
     },
     "20763533-f05d-441a-ab08-03126d03ff4f": {
       "type": "claim_rarity4",
@@ -818,7 +787,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 20,
+      "progress": 21,
       "id": "07464f85-e40c-470c-8f99-24d2f7ab7ad3",
       "player_a": "826335464532607031",
       "player_b": "1204473206077919295",
@@ -2875,6 +2844,18 @@
         "timestamp": 1788586959.7601812,
         "partner_id": "886247125292306432"
       }
+    ],
+    "1401622768214347796": [
+      {
+        "timestamp": 1788589162.6164863,
+        "partner_id": "1208748350523052062"
+      }
+    ],
+    "1208748350523052062": [
+      {
+        "timestamp": 1788589162.6164863,
+        "partner_id": "1401622768214347796"
+      }
     ]
   },
   "cooldowns": {
@@ -3168,7 +3149,9 @@
     "1537933905615659049": 1788570212.3039892,
     "1468926708064325632": 1788575414.7642689,
     "827119373323206657": 1788579686.888479,
-    "1125010005066784860": 1788586959.7601812
+    "1125010005066784860": 1788586959.7601812,
+    "1401622768214347796": 1788589162.6164863,
+    "1208748350523052062": 1788589162.6164863
   },
   "bonus": {
     "777925664358531102": {
@@ -3244,7 +3227,7 @@
       "claim": 0
     },
     "886247125292306432": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "1038095869674799134": {
@@ -3724,7 +3707,7 @@
       "claim": 0
     },
     "1208748350523052062": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1399549061043978335": {
@@ -9284,7 +9267,7 @@
       "claim": 0
     },
     "1401622768214347796": {
-      "drop": 0,
+      "drop": 1,
       "claim": 0
     },
     "1017786542506397706": {
