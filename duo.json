@@ -169,7 +169,7 @@
       "type": "claim_rarity4",
       "target": 10,
       "label": "Collect 10 \u2605\u2605\u2605\u2605 cards together",
-      "progress": 3,
+      "progress": 4,
       "id": "4ae68839-1c8b-4dc7-9390-79e4034f723b",
       "player_a": "1378462940096761856",
       "player_b": "533041724638101505",
@@ -583,7 +583,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 40,
+      "progress": 41,
       "id": "4b9ea43d-addc-4643-bab3-c07dde161219",
       "player_a": "224627689909256192",
       "player_b": "762127115721637898",
@@ -660,50 +660,18 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 13,
+      "progress": 14,
       "id": "ee4b19cb-b381-41b7-a70c-48283337e2a8",
       "player_a": "1229889322698674216",
       "player_b": "1273022793931292694",
       "started_at": 1788560074.6989338,
       "channel_id": 1541958013861105816
     },
-    "e51ac98c-b873-4802-8acc-6612aba3d84f": {
-      "type": "claim_characters",
-      "target": 20,
-      "label": "Obtain 20 unique characters together",
-      "progress": 0,
-      "characters_seen": [
-        "Kurapika",
-        "Lee Sa-young",
-        "Nejire Hado",
-        "Poison Ivy",
-        "Chihaya Anon",
-        "Cha Eui-jae",
-        "Diluc",
-        "Russia",
-        "Spike Spiegel",
-        "Dottore",
-        "Sayaka Maizono",
-        "Gallagher",
-        "Ikuya Kirishima",
-        "Cerydra",
-        "Kaveh",
-        "Ibara Saegusa",
-        "Sung Hyunjae",
-        "Nanami Momozono",
-        "Yona"
-      ],
-      "id": "e51ac98c-b873-4802-8acc-6612aba3d84f",
-      "player_a": "1310677632769327257",
-      "player_b": "1537933905615659049",
-      "started_at": 1788560090.8917658,
-      "channel_id": 1542673844349837322
-    },
     "17686117-838e-4f79-a3d6-cadf21e812bb": {
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 27,
+      "progress": 29,
       "id": "17686117-838e-4f79-a3d6-cadf21e812bb",
       "player_a": "1468648929783709768",
       "player_b": "1465450153182761172",
@@ -755,7 +723,9 @@
         "Squidward",
         "Reki Kyan",
         "Cielomort",
-        "Hestia"
+        "Hestia",
+        "Valko",
+        "Ji Eunoh"
       ],
       "id": "dc56a189-9735-4bd3-8efc-8e0b571a755c",
       "player_a": "960884355805351977",
@@ -767,12 +737,23 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 8,
+      "progress": 9,
       "id": "c22818f1-4d12-428b-b157-bcce6548b7c6",
       "player_a": "1299833889166065743",
       "player_b": "772183077996331009",
       "started_at": 1788567141.3854527,
       "channel_id": 1543259382723125388
+    },
+    "369451ff-ac4b-4595-b47f-b9e688a36aed": {
+      "type": "claim_count",
+      "target": 60,
+      "label": "Claim 60 cards together",
+      "progress": 3,
+      "id": "369451ff-ac4b-4595-b47f-b9e688a36aed",
+      "player_a": "1466515237976150272",
+      "player_b": "1231316819395084340",
+      "started_at": 1788570246.9786613,
+      "channel_id": 1542673844349837322
     }
   },
   "weekly": {
@@ -2266,6 +2247,10 @@
       {
         "timestamp": 1788015252.185156,
         "partner_id": "1466515237976150272"
+      },
+      {
+        "timestamp": 1788570212.3039892,
+        "partner_id": "1537933905615659049"
       }
     ],
     "953055801252143175": [
@@ -2725,6 +2710,12 @@
         "timestamp": 1788568105.9802816,
         "partner_id": "1028046694992064512"
       }
+    ],
+    "1537933905615659049": [
+      {
+        "timestamp": 1788570212.3039892,
+        "partner_id": "1310677632769327257"
+      }
     ]
   },
   "cooldowns": {
@@ -2939,7 +2930,7 @@
     "745747833210142784": 1786328020.9832516,
     "1168173661707059325": 1786328020.9832516,
     "1466515237976150272": 1788015252.185156,
-    "1310677632769327257": 1788015252.185156,
+    "1310677632769327257": 1788570212.3039892,
     "953055801252143175": 1786409052.8760228,
     "1185475801248964658": 1786409052.8760228,
     "1200857762922496121": 1786423092.3809495,
@@ -3014,7 +3005,8 @@
     "908254172074352641": 1788555368.157988,
     "841292229539528704": 1788555550.0721555,
     "1028046694992064512": 1788568105.9802816,
-    "934498436575813693": 1788568105.9802816
+    "934498436575813693": 1788568105.9802816,
+    "1537933905615659049": 1788570212.3039892
   },
   "bonus": {
     "777925664358531102": {
@@ -4023,7 +4015,7 @@
     },
     "1310677632769327257": {
       "drop": 0,
-      "claim": 0
+      "claim": 1
     },
     "1212385059546472460": {
       "drop": 0,
@@ -5602,7 +5594,7 @@
       "claim": 0
     },
     "1028046694992064512": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "1348908710331682816": {
