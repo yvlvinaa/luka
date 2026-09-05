@@ -594,7 +594,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 45,
+      "progress": 46,
       "id": "f475ff46-6cf4-4831-993c-4e5986a23d45",
       "player_a": "1274155690331734175",
       "player_b": "894445820613644318",
@@ -715,7 +715,7 @@
       "type": "claim_count",
       "target": 60,
       "label": "Claim 60 cards together",
-      "progress": 9,
+      "progress": 10,
       "id": "369451ff-ac4b-4595-b47f-b9e688a36aed",
       "player_a": "1466515237976150272",
       "player_b": "1231316819395084340",
@@ -789,7 +789,8 @@
       "series_seen": [
         "Honkai: Star Rail",
         "Cyberpunk Edgerunners",
-        "Kaiju No. 8"
+        "Kaiju No. 8",
+        "Genshin Impact"
       ],
       "id": "91a03369-5f1c-4a1a-8441-fe17f3c53bdb",
       "player_a": "1508236825557209179",
@@ -807,6 +808,18 @@
       "player_b": "979524252124471337",
       "started_at": 1788576048.6358597,
       "channel_id": 1542683842354090054
+    },
+    "b5492c14-3a1e-4c20-94a7-6738ee39632e": {
+      "type": "claim_characters",
+      "target": 20,
+      "label": "Obtain 20 unique characters together",
+      "progress": 0,
+      "characters_seen": [],
+      "id": "b5492c14-3a1e-4c20-94a7-6738ee39632e",
+      "player_a": "1210501746477244438",
+      "player_b": "769484060824698890",
+      "started_at": 1788576480.0223958,
+      "channel_id": 1543409082462113842
     }
   },
   "weekly": {
@@ -4254,7 +4267,7 @@
       "claim": 0
     },
     "960884355805351977": {
-      "drop": 1,
+      "drop": 0,
       "claim": 0
     },
     "910310678206746664": {
