@@ -3810,17 +3810,17 @@
   "870354420049776710": [
     {
       "card": {
-        "id": "yusuke_common",
-        "name": "Yusuke Tani",
-        "series": "You and I are Polar Opposites",
-        "stars": 2,
+        "id": "agent_common",
+        "name": "Agent Choi",
+        "series": "Got Dropped into a Ghost Story, Still Gotta Work",
+        "stars": 1,
         "weight": 10,
-        "image": "card_art/yusuke_common.png",
+        "image": "card_art/agent_common.png",
         "frame": "common",
         "version": "common"
       },
-      "print": 9,
-      "claimed_at": 1788620980.2104616
+      "print": 14,
+      "claimed_at": 1788621000.943636
     },
     {
       "card": {
@@ -5071,7 +5071,8 @@
         "version": "common"
       },
       "print": 1,
-      "claimed_at": 1787843824.0066307
+      "claimed_at": 1787843824.0066307,
+      "tags": "hold"
     },
     {
       "card": {
@@ -16578,6 +16579,20 @@
   "745734578005737623": [
     {
       "card": {
+        "id": "yoshiki_common",
+        "name": "Yoshiki",
+        "series": "The Summer Hikaru Died",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/yoshiki_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 7,
+      "claimed_at": 1788574094.0454485
+    },
+    {
+      "card": {
         "id": "co-worker_common",
         "name": "Co-worker",
         "series": "Elevator Hitch",
@@ -20553,6 +20568,20 @@
   "1135702746692059330": [
     {
       "card": {
+        "id": "jude_common",
+        "name": "Jude Callahan",
+        "series": "Sweet Venom",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/jude_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 8,
+      "claimed_at": 1788618396.9359176
+    },
+    {
+      "card": {
         "id": "phrolova_common",
         "name": "Phrolova",
         "series": "Wuthering Waves",
@@ -20752,21 +20781,6 @@
       },
       "print": 5,
       "claimed_at": 1788587713.345171,
-      "tags": "\u035f \ud83d\uddd2\ufe0f\uff0e\u035d\ud80d\udc06 \ud835\udcbbt"
-    },
-    {
-      "card": {
-        "id": "eun_common_2",
-        "name": "Eun Nan-jo",
-        "series": "Borderline",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/eun_common_2.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 5,
-      "claimed_at": 1788586870.5396936,
       "tags": "\u035f \ud83d\uddd2\ufe0f\uff0e\u035d\ud80d\udc06 \ud835\udcbbt"
     },
     {
@@ -33032,6 +33046,20 @@
   "841292229539528704": [
     {
       "card": {
+        "id": "durin_common",
+        "name": "Durin",
+        "series": "Genshin Impact",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/durin_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 9,
+      "claimed_at": 1788621042.1410556
+    },
+    {
+      "card": {
         "id": "kiyoomi_common",
         "name": "Kiyoomi Sakusa",
         "series": "Haikyuu!!",
@@ -37042,6 +37070,20 @@
   "1378462940096761856": [
     {
       "card": {
+        "id": "tobi_common",
+        "name": "Tobi Otogiri",
+        "series": "How to Eat Life",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/tobi_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1788621263.5881925
+    },
+    {
+      "card": {
         "id": "chilchuck_common",
         "name": "Chilchuck Tims",
         "series": "Dungeon Meshi",
@@ -37952,6 +37994,21 @@
   "1411518998767472650": [
     {
       "card": {
+        "id": "eun_common_2",
+        "name": "Eun Nan-jo",
+        "series": "Borderline",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/eun_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 5,
+      "claimed_at": 1788586870.5396936,
+      "tags": "\u035f \ud83d\uddd2\ufe0f\uff0e\u035d\ud80d\udc06 \ud835\udcbbt"
+    },
+    {
+      "card": {
         "id": "erwin_common",
         "name": "Erwin Smith",
         "series": "Attack on Titan",
@@ -38033,20 +38090,6 @@
       },
       "print": 8,
       "claimed_at": 1788618820.945588
-    },
-    {
-      "card": {
-        "id": "jude_common",
-        "name": "Jude Callahan",
-        "series": "Sweet Venom",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/jude_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 8,
-      "claimed_at": 1788618396.9359176
     },
     {
       "card": {
@@ -43051,20 +43094,6 @@
     },
     {
       "card": {
-        "id": "yoshiki_common",
-        "name": "Yoshiki",
-        "series": "The Summer Hikaru Died",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/yoshiki_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 7,
-      "claimed_at": 1788574094.0454485
-    },
-    {
-      "card": {
         "id": "angell_common",
         "name": "Angell",
         "series": "Path To Nowhere",
@@ -46066,6 +46095,20 @@
   "880218394199220334": [],
   "949479338275913799": [],
   "993708628441837649": [
+    {
+      "card": {
+        "id": "hanasato_common",
+        "name": "Hanasato Minori",
+        "series": "Project Sekai: Colorful Stage!",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/hanasato_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 5,
+      "claimed_at": 1788621188.0074167
+    },
     {
       "card": {
         "id": "shinobu_common",
@@ -53872,6 +53915,20 @@
   "1441925768199278643": [
     {
       "card": {
+        "id": "wolfgang_common",
+        "name": "Wolfgang Akire",
+        "series": "Project: Eden\u2019s Garden",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/wolfgang_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 8,
+      "claimed_at": 1788621251.5099764
+    },
+    {
+      "card": {
         "id": "mystic_common",
         "name": "Mystic Flour Cookie",
         "series": "CookieRun Series",
@@ -55574,6 +55631,20 @@
     }
   ],
   "1149907264652705844": [
+    {
+      "card": {
+        "id": "ekko_common",
+        "name": "Ekko",
+        "series": "Arcane",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/ekko_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1788621215.6153777
+    },
     {
       "card": {
         "id": "ji_common_3",
@@ -60742,6 +60813,20 @@
   "891662969107255338": [
     {
       "card": {
+        "id": "jiro_common",
+        "name": "Jiro Kirisaki",
+        "series": "Tokyo Debunker",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/jiro_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 5,
+      "claimed_at": 1788621282.3672514
+    },
+    {
+      "card": {
         "id": "haejoon_common",
         "name": "Haejoon Goh",
         "series": "No Home",
@@ -60753,20 +60838,6 @@
       },
       "print": 9,
       "claimed_at": 1788620775.1357865
-    },
-    {
-      "card": {
-        "id": "osamu_common",
-        "name": "Osamu Dazai",
-        "series": "Bungo Stray Dogs",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/osamu_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 17,
-      "claimed_at": 1788620628.986799
     },
     {
       "card": {
@@ -61344,20 +61415,6 @@
       },
       "print": 8,
       "claimed_at": 1788583809.8781223
-    },
-    {
-      "card": {
-        "id": "osamu_common",
-        "name": "Osamu Dazai",
-        "series": "Bungo Stray Dogs",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/osamu_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 12,
-      "claimed_at": 1788597606.695299
     },
     {
       "card": {
@@ -67692,6 +67749,20 @@
   "821574312216756224": [
     {
       "card": {
+        "id": "yukito_common",
+        "name": "Yukito Tsukishiro",
+        "series": "Cardcaptor Sakura",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/yukito_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1788621079.3379998
+    },
+    {
+      "card": {
         "id": "mafuyu_common",
         "name": "Mafuyu Sato",
         "series": "Given",
@@ -67702,7 +67773,8 @@
         "version": "common"
       },
       "print": 6,
-      "claimed_at": 1788620461.3201406
+      "claimed_at": 1788620461.3201406,
+      "tags": "\ud83c\udf99\ufe0f"
     },
     {
       "card": {
@@ -67716,7 +67788,8 @@
         "version": "common"
       },
       "print": 7,
-      "claimed_at": 1788619907.1526153
+      "claimed_at": 1788619907.1526153,
+      "tags": "\ud83c\udfbb"
     },
     {
       "card": {
@@ -67730,7 +67803,8 @@
         "version": "common"
       },
       "print": 7,
-      "claimed_at": 1788619857.3883083
+      "claimed_at": 1788619857.3883083,
+      "tags": "\ud83d\udc7b"
     },
     {
       "card": {
@@ -67744,7 +67818,8 @@
         "version": "common"
       },
       "print": 9,
-      "claimed_at": 1788619596.6711593
+      "claimed_at": 1788619596.6711593,
+      "tags": "\ud83e\uddac"
     },
     {
       "card": {
@@ -72822,6 +72897,21 @@
     }
   ],
   "1537933905615659049": [
+    {
+      "card": {
+        "id": "li_common_2",
+        "name": "Li Tianchen",
+        "series": "Link Click",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/li_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 6,
+      "claimed_at": 1788557429.7109532,
+      "tags": "\ud83e\uddfeft"
+    },
     {
       "card": {
         "id": "nene_common_2",
@@ -81095,6 +81185,21 @@
   "1271962211606204560": [
     {
       "card": {
+        "id": "misaki_common",
+        "name": "Misaki",
+        "series": "Killer Chat!",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/misaki_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 7,
+      "claimed_at": 1788621178.4121263,
+      "tags": "FT"
+    },
+    {
+      "card": {
         "id": "natsumi_common",
         "name": "Natsumi Nishi",
         "series": "You and I are Polar Opposites",
@@ -82202,7 +82307,7 @@
       },
       "print": 2,
       "claimed_at": 1788046645.363304,
-      "tags": "FT"
+      "tags": "HOLD"
     },
     {
       "card": {
@@ -82631,6 +82736,34 @@
     }
   ],
   "1152969942820466819": [
+    {
+      "card": {
+        "id": "sampo_common",
+        "name": "Sampo Koski",
+        "series": "Honkai: Star Rail",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/sampo_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 4,
+      "claimed_at": 1788570694.309326
+    },
+    {
+      "card": {
+        "id": "velina_common",
+        "name": "Velina",
+        "series": "Zenless Zone Zero",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/velina_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 7,
+      "claimed_at": 1788621171.8658757
+    },
     {
       "card": {
         "id": "chiz_common",
@@ -83725,20 +83858,6 @@
       },
       "print": 3,
       "claimed_at": 1788021334.9390974
-    },
-    {
-      "card": {
-        "id": "bones_common",
-        "name": "Bones",
-        "series": "Jackpot Crash Course",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/bones_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 2,
-      "claimed_at": 1788020712.4665375
     },
     {
       "card": {
@@ -93401,21 +93520,6 @@
     },
     {
       "card": {
-        "id": "li_common_2",
-        "name": "Li Tianchen",
-        "series": "Link Click",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/li_common_2.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 6,
-      "claimed_at": 1788557429.7109532,
-      "tags": "\ud83e\uddfeft"
-    },
-    {
-      "card": {
         "id": "tenya_common",
         "name": "Tenya Iida",
         "series": "My Hero Academia",
@@ -95033,6 +95137,20 @@
     }
   ],
   "1310028877485314098": [
+    {
+      "card": {
+        "id": "gintoki_common",
+        "name": "Gintoki Sakata",
+        "series": "Gintama",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/gintoki_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 5,
+      "claimed_at": 1788621171.9014316
+    },
     {
       "card": {
         "id": "chen_common",
@@ -99459,6 +99577,20 @@
   "1299833889166065743": [
     {
       "card": {
+        "id": "rukia_common",
+        "name": "Rukia Kuchiki",
+        "series": "Bleach",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/rukia_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 9,
+      "claimed_at": 1788621232.775057
+    },
+    {
+      "card": {
         "id": "north_common",
         "name": "North Italy",
         "series": "Hetalia",
@@ -102858,6 +102990,20 @@
     }
   ],
   "1322851438644166766": [
+    {
+      "card": {
+        "id": "du_common",
+        "name": "Du Ruo",
+        "series": "Path To Nowhere",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/du_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 5,
+      "claimed_at": 1788621121.2878292
+    },
     {
       "card": {
         "id": "garu_common",
@@ -107379,6 +107525,34 @@
   "1229889322698674216": [
     {
       "card": {
+        "id": "riyo_common",
+        "name": "Riyo Reaper",
+        "series": "Gachiakuta",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/riyo_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 9,
+      "claimed_at": 1788621258.2045436
+    },
+    {
+      "card": {
+        "id": "bones_common",
+        "name": "Bones",
+        "series": "Jackpot Crash Course",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/bones_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1788020712.4665375
+    },
+    {
+      "card": {
         "id": "akihiko_common",
         "name": "Akihiko Sanada",
         "series": "Persona",
@@ -107460,20 +107634,6 @@
       },
       "print": 2,
       "claimed_at": 1788574322.575574
-    },
-    {
-      "card": {
-        "id": "sampo_common",
-        "name": "Sampo Koski",
-        "series": "Honkai: Star Rail",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/sampo_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 4,
-      "claimed_at": 1788570694.309326
     },
     {
       "card": {
@@ -111790,6 +111950,20 @@
   "514565097981476875": [
     {
       "card": {
+        "id": "caleb_common",
+        "name": "Zayne",
+        "series": "Love And Deepspace",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/caleb_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 5,
+      "claimed_at": 1788621070.8882475
+    },
+    {
+      "card": {
         "id": "kanato_common",
         "name": "Kanato Sakamaki",
         "series": "Diabolik Lovers",
@@ -115468,6 +115642,36 @@
   "1482470698038460459": [
     {
       "card": {
+        "id": "rise_rare",
+        "name": "Rise Kujikawa",
+        "series": "Persona",
+        "stars": 4,
+        "weight": 5,
+        "image": "card_art/rise_rare.png",
+        "frame": "pink",
+        "version": "rare"
+      },
+      "print": 7,
+      "claimed_at": 1788618385.2701328,
+      "tags": "hold"
+    },
+    {
+      "card": {
+        "id": "ren_common",
+        "name": "Ren Amamiya",
+        "series": "Persona",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/ren_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 11,
+      "claimed_at": 1788617723.2927668,
+      "tags": "hold"
+    },
+    {
+      "card": {
         "id": "707_common",
         "name": "707",
         "series": "Mystic Messenger",
@@ -115479,20 +115683,6 @@
       },
       "print": 8,
       "claimed_at": 1788620860.2333145
-    },
-    {
-      "card": {
-        "id": "choso_common",
-        "name": "Choso",
-        "series": "Jujutsu Kaisen",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/choso_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 14,
-      "claimed_at": 1788619926.3887155
     },
     {
       "card": {
@@ -115521,20 +115711,6 @@
       },
       "print": 6,
       "claimed_at": 1788619291.4846275
-    },
-    {
-      "card": {
-        "id": "gyro_common",
-        "name": "Gyro Zeppeli",
-        "series": "Jojo\u2019s Bizarre Adventure",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/gyro_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 2,
-      "claimed_at": 1788108563.3555954
     },
     {
       "card": {
@@ -118629,6 +118805,20 @@
   "1251051306177527878": [
     {
       "card": {
+        "id": "taiga_common_2",
+        "name": "Taiga Aisaka",
+        "series": "Toradora!",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/taiga_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 5,
+      "claimed_at": 1788621011.0531678
+    },
+    {
+      "card": {
         "id": "orphie_common",
         "name": "Orphie",
         "series": "Zenless Zone Zero",
@@ -120265,6 +120455,20 @@
   "755211531674845235": [
     {
       "card": {
+        "id": "touya_common",
+        "name": "Touya Kinomoto & Yukito Tsukishiro",
+        "series": "Cardcaptor Sakura",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/touya_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 4,
+      "claimed_at": 1788600517.297838
+    },
+    {
+      "card": {
         "id": "yoseok_common",
         "name": "Yoseok Nam",
         "series": "Special Civil Servant",
@@ -120290,21 +120494,6 @@
       },
       "print": 8,
       "claimed_at": 1788619106.859252
-    },
-    {
-      "card": {
-        "id": "quincy_common",
-        "name": "Quincy",
-        "series": "NU: Carnival",
-        "stars": 2,
-        "weight": 10,
-        "image": "card_art/quincy_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 3,
-      "claimed_at": 1788016552.7196352,
-      "tags": "\ud83e\udeb8ft!"
     },
     {
       "card": {
@@ -125210,6 +125399,20 @@
     }
   ],
   "826335464532607031": [
+    {
+      "card": {
+        "id": "reiji_common",
+        "name": "Reiji Sakamaki",
+        "series": "Diabolik Lovers",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/reiji_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 7,
+      "claimed_at": 1788621181.0085182
+    },
     {
       "card": {
         "id": "ilay_common",
@@ -132294,6 +132497,20 @@
   "1213941636829155338": [
     {
       "card": {
+        "id": "ye_common",
+        "name": "Ye Shunguang",
+        "series": "Zenless Zone Zero",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/ye_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1788621247.0044382
+    },
+    {
+      "card": {
         "id": "cheongryeo_common",
         "name": "Cheongryeo",
         "series": "Debut or Die",
@@ -132926,6 +133143,20 @@
     }
   ],
   "435630813011378187": [
+    {
+      "card": {
+        "id": "kai_common_2",
+        "name": "Kai Han",
+        "series": "Rebound Of The Heart",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/kai_common_2.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 6,
+      "claimed_at": 1788621221.348146
+    },
     {
       "card": {
         "id": "maria_common",
@@ -139146,6 +139377,48 @@
   "944839588822798387": [
     {
       "card": {
+        "id": "choso_common",
+        "name": "Choso",
+        "series": "Jujutsu Kaisen",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/choso_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 14,
+      "claimed_at": 1788619926.3887155
+    },
+    {
+      "card": {
+        "id": "gyro_common",
+        "name": "Gyro Zeppeli",
+        "series": "Jojo\u2019s Bizarre Adventure",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/gyro_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 2,
+      "claimed_at": 1788108563.3555954
+    },
+    {
+      "card": {
+        "id": "toge_common",
+        "name": "Toge Inumaki",
+        "series": "Jujutsu Kaisen",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/toge_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 9,
+      "claimed_at": 1788621028.7449589
+    },
+    {
+      "card": {
         "id": "atsumu_common",
         "name": "Atsumu Miya",
         "series": "Haikyuu!!",
@@ -139171,36 +139444,6 @@
       },
       "print": 10,
       "claimed_at": 1788619570.2735639
-    },
-    {
-      "card": {
-        "id": "rise_rare",
-        "name": "Rise Kujikawa",
-        "series": "Persona",
-        "stars": 4,
-        "weight": 5,
-        "image": "card_art/rise_rare.png",
-        "frame": "pink",
-        "version": "rare"
-      },
-      "print": 7,
-      "claimed_at": 1788618385.2701328,
-      "tags": "hold"
-    },
-    {
-      "card": {
-        "id": "ren_common",
-        "name": "Ren Amamiya",
-        "series": "Persona",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/ren_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 11,
-      "claimed_at": 1788617723.2927668,
-      "tags": "hold"
     },
     {
       "card": {
@@ -141897,6 +142140,36 @@
   "417141882611826688": [
     {
       "card": {
+        "id": "quincy_common",
+        "name": "Quincy",
+        "series": "NU: Carnival",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/quincy_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 3,
+      "claimed_at": 1788016552.7196352,
+      "tags": "\ufe5f\ud83c\udf43\u1160\u203a\u2800\ud81b\ude6d",
+      "pinned": true
+    },
+    {
+      "card": {
+        "id": "suzaku_common",
+        "name": "Suzaku Kururugi",
+        "series": "Code Geass",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/suzaku_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 7,
+      "claimed_at": 1788620992.324213
+    },
+    {
+      "card": {
         "id": "nie_common",
         "name": "Nie Huaisang",
         "series": "Mo Dao Zu Shi",
@@ -142062,20 +142335,6 @@
       },
       "print": 6,
       "claimed_at": 1788601347.392821
-    },
-    {
-      "card": {
-        "id": "touya_common",
-        "name": "Touya Kinomoto & Yukito Tsukishiro",
-        "series": "Cardcaptor Sakura",
-        "stars": 1,
-        "weight": 10,
-        "image": "card_art/touya_common.png",
-        "frame": "common",
-        "version": "common"
-      },
-      "print": 4,
-      "claimed_at": 1788600517.297838
     },
     {
       "card": {
@@ -142454,8 +142713,8 @@
       },
       "print": 4,
       "claimed_at": 1788085530.5022795,
-      "pinned": true,
-      "tags": "\ufe5f\ud83d\udc9e\u1160\u203a\u2800\ud81b\ude6d",
+      "pinned": false,
+      "tags": "\ufe5f\ud83c\udf43\u1160\u203a\u2800\ud81b\ude6d",
       "showcased": true
     },
     {
@@ -142473,7 +142732,7 @@
       "claimed_at": 1788570448.3782852,
       "tags": "\ufe5f\ud83d\udc9e\u1160\u203a\u2800\ud81b\ude6d",
       "pinned": true,
-      "showcased": true
+      "showcased": false
     },
     {
       "card": {
@@ -144860,6 +145119,20 @@
     }
   ],
   "1079314071461044274": [
+    {
+      "card": {
+        "id": "zani_common",
+        "name": "Zani",
+        "series": "Wuthering Waves",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/zani_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 5,
+      "claimed_at": 1788621058.3563983
+    },
     {
       "card": {
         "id": "jeongcheol_common",
@@ -148114,6 +148387,20 @@
   "1298419501238456452": [
     {
       "card": {
+        "id": "kakania_common",
+        "name": "Kakania",
+        "series": "Reverse: 1999",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/kakania_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 9,
+      "claimed_at": 1788621046.6439464
+    },
+    {
+      "card": {
         "id": "wang_common",
         "name": "Wang Yi",
         "series": "I Want To Be A Big Baddie",
@@ -148400,6 +148687,20 @@
     }
   ],
   "827119373323206657": [
+    {
+      "card": {
+        "id": "yusuke_common",
+        "name": "Yusuke Tani",
+        "series": "You and I are Polar Opposites",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/yusuke_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 9,
+      "claimed_at": 1788620980.2104616
+    },
     {
       "card": {
         "id": "bae_common_3",
@@ -150256,6 +150557,20 @@
   "1398751184373678231": [
     {
       "card": {
+        "id": "mikasa_common",
+        "name": "Mikasa Ackerman",
+        "series": "Attack on Titan",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/mikasa_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 9,
+      "claimed_at": 1788621119.7698946
+    },
+    {
+      "card": {
         "id": "teru_common_3",
         "name": "Teru Mikami",
         "series": "Death Note",
@@ -150679,6 +150994,20 @@
     }
   ],
   "888797740392407040": [
+    {
+      "card": {
+        "id": "roronoa_common",
+        "name": "Roronoa Zoro",
+        "series": "One Piece",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/roronoa_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 9,
+      "claimed_at": 1788621134.363014
+    },
     {
       "card": {
         "id": "c.c._common",
@@ -155528,6 +155857,20 @@
   "1183592552482484245": [
     {
       "card": {
+        "id": "phoebe_common",
+        "name": "Phoebe",
+        "series": "Wuthering Waves",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/phoebe_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 4,
+      "claimed_at": 1788621237.360531
+    },
+    {
+      "card": {
         "id": "sua_common",
         "name": "Sua",
         "series": "Alien Stage",
@@ -156661,6 +157004,20 @@
   "1054746696019615775": [
     {
       "card": {
+        "id": "wataru_common",
+        "name": "Wataru Hibiki",
+        "series": "Ensemble Stars!",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/wataru_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 4,
+      "claimed_at": 1788620999.140467
+    },
+    {
+      "card": {
         "id": "tingyun_common",
         "name": "Tingyun",
         "series": "Honkai: Star Rail",
@@ -157086,6 +157443,20 @@
     }
   ],
   "643593256713584670": [
+    {
+      "card": {
+        "id": "jin_common_5",
+        "name": "Jin Cheong-Woo & Matthew Raynor",
+        "series": "Under The Green Light",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/jin_common_5.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 13,
+      "claimed_at": 1788621118.9241045
+    },
     {
       "card": {
         "id": "ranpo_common",
@@ -158050,6 +158421,20 @@
     }
   ],
   "667365610748903445": [
+    {
+      "card": {
+        "id": "doppo_common",
+        "name": "Doppo Kannonzaka",
+        "series": "Hypnosis Mic",
+        "stars": 3,
+        "weight": 8,
+        "image": "card_art/doppo_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 5,
+      "claimed_at": 1788621210.157051
+    },
     {
       "card": {
         "id": "romeo_common",
@@ -162903,6 +163288,20 @@
   "735119062585049229": [
     {
       "card": {
+        "id": "hook_common",
+        "name": "Hook",
+        "series": "Honkai: Star Rail",
+        "stars": 1,
+        "weight": 10,
+        "image": "card_art/hook_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 7,
+      "claimed_at": 1788621139.37727
+    },
+    {
+      "card": {
         "id": "mikasa_common",
         "name": "Mikasa Ackerman",
         "series": "Attack on Titan",
@@ -163422,7 +163821,8 @@
         "version": "common"
       },
       "print": 5,
-      "claimed_at": 1788620845.077346
+      "claimed_at": 1788620845.077346,
+      "tags": "\u1dbb \ud835\uddd3 \ud803\udc01"
     },
     {
       "card": {
@@ -163436,7 +163836,8 @@
         "version": "common"
       },
       "print": 5,
-      "claimed_at": 1788620363.2491455
+      "claimed_at": 1788620363.2491455,
+      "tags": "\u22c6\u02da\uaa5c\uff61mha !"
     },
     {
       "card": {
@@ -163450,7 +163851,8 @@
         "version": "common"
       },
       "print": 8,
-      "claimed_at": 1788619598.57079
+      "claimed_at": 1788619598.57079,
+      "tags": "\ud834\udd1e\ud834\udd22enstar !"
     },
     {
       "card": {
@@ -164320,5 +164722,34 @@
       "claimed_at": 1788619766.2686622
     }
   ],
-  "1480643238699466977": []
+  "1480643238699466977": [
+    {
+      "card": {
+        "id": "osamu_common",
+        "name": "Osamu Dazai",
+        "series": "Bungo Stray Dogs",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/osamu_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 17,
+      "claimed_at": 1788620628.986799
+    },
+    {
+      "card": {
+        "id": "osamu_common",
+        "name": "Osamu Dazai",
+        "series": "Bungo Stray Dogs",
+        "stars": 2,
+        "weight": 10,
+        "image": "card_art/osamu_common.png",
+        "frame": "common",
+        "version": "common"
+      },
+      "print": 12,
+      "claimed_at": 1788597606.695299
+    }
+  ]
 }
